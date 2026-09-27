@@ -3,10 +3,10 @@
 Slug: pdv-frontend
 Modo: nova_funcionalidade
 Fase atual: implantacao
-Status: pausada
+Status: implantada
 Incidente atual: nenhum
 Criado em: 2026-09-26 00:19
-Última atualização: 2026-09-27 12:28
+Última atualização: 2026-09-27 17:07
 
 <!--
 NÃO altere o nome nem o formato das linhas acima. Os hooks de métricas leem "Fase atual:" literalmente.
@@ -26,7 +26,7 @@ Valores válidos de "Incidente atual": número do incidente aberto na Fase 7 (ex
 | Desenvolvimento | aprovada | Lucas | 2026-09-27 11:30 | 04-desenvolvimento.md |
 | Documentação | aprovada | Lucas | 2026-09-27 11:40 | frontend/docs/v1/documentacao.md |
 | Testes | aprovada | Lucas | 2026-09-27 12:18 | 05-testes.md |
-| Implantação | em_andamento | Lucas (plano) | 2026-09-27 12:28 | 06-implantacao.md |
+| Implantação | aprovada | Lucas (executada na pdv-integracao) | 2026-09-27 17:07 | 06-implantacao.md |
 | Aprendizado (só refatoração) | pendente | | | .claude/aprendizados.md |
 
 <!-- Status de fase: pendente | em_andamento | aprovada | excecao -->

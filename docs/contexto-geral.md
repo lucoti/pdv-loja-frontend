@@ -5,15 +5,15 @@ atualizado a cada entrega; o detalhe de cada aplicação fica na documentação 
 (`<app>/docs/vN/documentacao.md`). O arquivo vive no repositório do front
 (`frontend/docs/contexto-geral.md`); `docs/contexto-geral.md` na pasta do ambiente é um link para ele.
 
-Última atualização: 2026-09-27 (feature pdv-integracao: preparação da publicação; deploy ainda não
-executado).
+Última atualização: 2026-09-27 (feature pdv-integracao concluída: PDV publicado em
+https://pdv-loja-frontend.vercel.app, com catálogo de exemplo).
 
 ## Aplicações no Ambiente
 
 | Aplicação | Responsabilidade | Localização | Situação |
 |---|---|---|---|
-| **pdv-backend** | API do PDV: entrada do vendedor por senha, sessão diária, catálogo, registro de vendas com cálculo e numeração no servidor, vendas do dia e conteúdo do cupom não fiscal; script `pin:trocar` para troca de PIN sem exposição | `backend/` — repositório `lucoti/pdv-loja-backend`, projeto Vercel `pdv-loja-backend` (docs: `backend/docs/v2/documentacao.md`; contrato: `backend/contrato/openapi.yaml`) | v2 configurada para publicação; deploy pendente (Fase 6 da pdv-integracao) |
-| **pdv-frontend** | Página web do vendedor no navegador do celular (React 19 + TypeScript + Vite, página estática; não é PWA): login com PIN, aba Produtos com variações, aba Pedido com descontos e pagamento, fechamento da venda com idempotência, modal "Venda registrada" e aba Dia | `frontend/` — repositório `lucoti/pdv-loja-frontend`, projeto Vercel `pdv-loja-frontend` (docs: `frontend/docs/v2/documentacao.md`; guia técnico: `frontend/README.md`) | v2 configurada para publicação (rewrite `/api`); deploy pendente (Fase 6 da pdv-integracao) |
+| **pdv-backend** | API do PDV: entrada do vendedor por senha, sessão diária, catálogo, registro de vendas com cálculo e numeração no servidor, vendas do dia e conteúdo do cupom não fiscal; script `pin:trocar` para troca de PIN sem exposição | `backend/` — repositório `lucoti/pdv-loja-backend`, projeto Vercel `pdv-loja-backend` (docs: `backend/docs/v2/documentacao.md`; contrato: `backend/contrato/openapi.yaml`) | v2 **no ar** desde 2026-09-27 (`pdv-loja-backend.vercel.app`, função em iad1) |
+| **pdv-frontend** | Página web do vendedor no navegador do celular (React 19 + TypeScript + Vite, página estática; não é PWA): login com PIN, aba Produtos com variações, aba Pedido com descontos e pagamento, fechamento da venda com idempotência, modal "Venda registrada" e aba Dia | `frontend/` — repositório `lucoti/pdv-loja-frontend`, projeto Vercel `pdv-loja-frontend` (docs: `frontend/docs/v2/documentacao.md`; guia técnico: `frontend/README.md`) | v2 **no ar** desde 2026-09-27 em https://pdv-loja-frontend.vercel.app (rewrite `/api`) |
 | **API simulada (MSW)** | Imitação do pdv-backend em memória, com os dados de exemplo do handoff (vendedor Carlos, PIN 1234, pedidos a partir de 1042). Usada no `npm run dev` do front e nos testes; fica fora do build de produção | `frontend/src/simulado/` e `frontend/simulado-publico/` | Parte do pdv-frontend |
 | **Banco Turso `pdv-loja`** (serviço externo) | Banco de dados libSQL da API em produção, exclusivo do PDV | Turso, organização `personal`, região `aws-us-east-1` | Usado só pelo pdv-backend |
 | *design_handoff_pdv_loja* | Especificação de design aprovada (não é aplicação) | `design_handoff_pdv_loja/` | Referência |
@@ -33,7 +33,8 @@ Variáveis de ambiente do back na Vercel (Production e Preview, marcadas como se
 vão para o repositório nem para a documentação.
 
 A publicação segue a ordem: preview do back → produção do back → preview do front → produção do
-front (ADR-I02 da pdv-integracao). Até esta atualização, **nenhum deploy foi feito**.
+front (ADR-I02 da pdv-integracao). Publicação **executada em 2026-09-27** (o primeiro deploy do back foi
+direto para produção, por ser o primeiro do projeto). O banco está sem vendas; o próximo pedido é o #1042.
 
 ### Obsoletos (não usados)
 - O **repositório único antigo** do PDV e o **projeto Vercel antigo** foram substituídos pelos dois

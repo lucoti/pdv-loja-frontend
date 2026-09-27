@@ -1,10 +1,8 @@
 # 06 — Implantação: PDV Loja — Front-end (React)
 
-> **Situação: PLANEJADA, NÃO EXECUTADA.**
-> Por decisão do Lucas (2026-09-27), o deploy do front será feito na feature **pdv-integracao**,
-> depois do deploy do back. Esta feature fica `pausada` até lá. Ao executar este checklist:
-> - marcar `Status: implantada`;
-> - gerar `08-metricas.md`.
+> **Situação: EXECUTADA em 2026-09-27 pela feature pdv-integracao.** Ver `pdv-integracao/06-implantacao.md`
+> (log de execução, verificação e desvios: banco em aws-us-east-1 / função em iad1 em vez de gru;
+> catálogo de exemplo mantido até a feature do catálogo real).
 
 ## Pré-requisitos
 - [x] `05-testes.md` com "Pronto para implantação: sim".

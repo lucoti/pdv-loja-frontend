@@ -21,8 +21,8 @@ do próprio navegador.
 **O que mudou na versão 2 (feature pdv-integracao):** a página foi preparada para ser publicada na
 internet e ligada ao serviço real. As chamadas `/api` feitas no endereço da página passam a ser
 repassadas ao pdv-backend, e a verificação de sessão ao abrir a página ficou mais robusta. As telas
-e regras não mudaram. A publicação em si ainda não foi feita: ela é a próxima etapa (implantação),
-e esta documentação descreve o que está configurado e planejado.
+e regras não mudaram. Publicada em 2026-09-27 em https://pdv-loja-frontend.vercel.app e conferida
+no Chrome de Android e no Safari de iPhone.
 
 ## Funcionalidades Principais
 
@@ -137,10 +137,8 @@ Todos os valores são tratados em centavos, como no servidor.
   feitas numa versão de teste vão para o banco real.
 - **Endereço do serviço fixo no código.** Se o endereço do pdv-backend mudar (por exemplo, com
   domínio próprio), a configuração do repasse precisa ser atualizada e a página publicada de novo.
-- **Publicação ainda pendente.** A configuração foi conferida localmente, mas a página ainda não foi
-  publicada. O plano é publicar primeiro o pdv-backend e depois a página, e conferir o fluxo completo
-  (entrada, venda, aba Dia e sessão mantida ao recarregar) no Chrome de Android e no Safari de
-  iPhone.
+- **Catálogo de exemplo.** A página está no ar com o catálogo de exemplo do design; a loja só passa
+  a usar o PDV depois que o catálogo real for cadastrado (feature futura).
 - **Projeto antigo obsoleto.** O repositório único antigo e o projeto Vercel antigo não são mais
   usados. A remoção deles fica a critério do Lucas.
 
@@ -149,4 +147,4 @@ Todos os valores são tratados em centavos, como no servidor.
 | Versão | Data | Resumo |
 |---|---|---|
 | v1 | 2026-09-27 | Primeira versão: página web do PDV no celular, com entrada por senha, escolha de produtos e variações, pedido com descontos e pagamento, fechamento com proteção contra duplicidade, aviso de venda registrada e vendas do dia. Construída contra a API simulada; integração real pendente (pdv-integracao). |
-| v2 | 2026-09-27 | Preparação para publicação (feature pdv-integracao): repositório e projeto Vercel próprios, repasse de `/api` para o pdv-backend de produção (mesmo domínio, sem CORS), Node 22 fixo e correção na verificação de sessão ao abrir a página (resposta inesperada mostra "Tentar de novo" com mensagem amigável, em vez de travar em "Carregando…"). Publicação ainda não executada. |
+| v2 | 2026-09-27 | Preparação para publicação (feature pdv-integracao): repositório e projeto Vercel próprios, repasse de `/api` para o pdv-backend de produção (mesmo domínio, sem CORS), Node 22 fixo e correção na verificação de sessão ao abrir a página (resposta inesperada mostra "Tentar de novo" com mensagem amigável, em vez de travar em "Carregando…"). Publicada em 2026-09-27. |
