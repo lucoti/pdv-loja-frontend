@@ -1,0 +1,185 @@
+import { http, HttpResponse } from 'msw';
+import type { Venda, VendaEntrada, Vendedor } from '../api/cliente';
+import { calcularItem, calcularTotais, DESCONTOS_ITEM, precoVariacao } from '../dominio/precos';
+import { CATALOGO, CONFIG, PINS, VENDEDORES } from './dados';
+
+/**
+ * Servidor simulado da API (ADR-F04): as mesmas rotas, formatos, regras e códigos de erro do
+ * pdv-backend, em memória. Usado no `npm run dev` (navegador) e nos testes (msw/node).
+ * A sessão é um estado em memória: recarregar a página no modo simulado volta ao login.
+ */
+
+const PRIMEIRO_NUMERO_PEDIDO = 1042;
+const FUSO_LOJA = 'America/Sao_Paulo';
+const horaLocal = new Intl.DateTimeFormat('pt-BR', { timeZone: FUSO_LOJA, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type Codigo = 'entrada_invalida' | 'senha_incorreta' | 'sessao_invalida' | 'sem_itens' | 'sem_pagamento' | 'item_invalido' | 'item_repetido' | 'cpf_invalido' | 'chave_em_uso';
+
+function erro(status: number, codigo: Codigo, mensagem: string) {
+  return HttpResponse.json({ erro: { codigo, mensagem } }, { status });
+}
+
+const semSessao = () => erro(401, 'sessao_invalida', 'Sessão expirada. Entre de novo.');
+
+/** Mesmo cálculo oficial (módulo 11) do back; sequências repetidas não são CPFs reais. */
+function cpfValido(valor: string): boolean {
+  const cpf = valor.replace(/\D/g, '');
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+  const digito = (tamanho: number) => {
+    let soma = 0;
+    for (let i = 0; i < tamanho; i++) soma += Number(cpf[i]) * (tamanho + 1 - i);
+    const resto = (soma * 10) % 11;
+    return resto === 10 ? 0 : resto;
+  };
+  return digito(9) === Number(cpf[9]) && digito(10) === Number(cpf[10]);
+}
+
+const diaLocal = new Intl.DateTimeFormat('en-CA', { timeZone: FUSO_LOJA });
+
+/** Próxima meia-noite em São Paulo (UTC−3, sem horário de verão), como o `expiraEm` do back. */
+function meiaNoiteSeguinte(): string {
+  const hoje = new Date(`${diaLocal.format(new Date())}T03:00:00.000Z`);
+  return new Date(hoje.getTime() + 24 * 60 * 60 * 1000).toISOString();
+}
+
+export interface OpcoesSimulado {
+  vendedores?: Vendedor[];
+  pins?: Record<string, string>;
+  /** Já começa com sessão aberta para este vendedor. */
+  sessaoDe?: string;
+}
+
+/** Cria um simulado com estado próprio (sessão e vendas); cada teste pode começar do zero. */
+export function criarSimulado(opcoes: OpcoesSimulado = {}) {
+  const vendedores = opcoes.vendedores ?? VENDEDORES;
+  const pins = opcoes.pins ?? PINS;
+  const estado = {
+    sessao: opcoes.sessaoDe ?? (null as string | null),
+    vendas: [] as Array<Venda & { chave: string }>,
+  };
+
+  const vendedorDaSessao = () => vendedores.find((v) => v.id === estado.sessao);
+
+  function registrar(vendedor: Vendedor, e: VendaEntrada) {
+    if (e.itens.length === 0) return erro(400, 'sem_itens', 'Inclua uma peça');
+    const pagamento = CATALOGO.pagamentos.find((p) => p.id === e.pagamentoId);
+    if (!pagamento) return erro(400, 'sem_pagamento', 'Escolha o pagamento');
+    const cpfInformado = e.cpf ?? '';
+    if (cpfInformado && (!/^[\d.\-\s]+$/.test(cpfInformado) || !cpfValido(cpfInformado))) return erro(400, 'cpf_invalido', 'CPF inválido');
+
+    const vistas = new Set<string>();
+    const itens: Venda['itens'] = [];
+    for (const [i, item] of e.itens.entries()) {
+      const posicao = `Item ${i + 1}`;
+      const modelo = CATALOGO.modelos.find((m) => m.id === item.modeloId);
+      const tecido = CATALOGO.tecidos.find((t) => t.id === item.tecidoId);
+      const cor = CATALOGO.cores.find((c) => c.nome === item.cor);
+      if (!modelo || !tecido || !cor || !(CATALOGO.tamanhos as string[]).includes(item.tamanho)) {
+        // ATENÇÃO: simplificação — o back distingue modelo, tecido, tamanho e cor na mensagem.
+        return erro(400, 'item_invalido', `${posicao}: modelo indisponível.`);
+      }
+      if (!Number.isInteger(item.qtd) || item.qtd < 1 || !(DESCONTOS_ITEM as readonly number[]).includes(item.descPercent)) {
+        return erro(400, 'entrada_invalida', 'Dados inválidos.');
+      }
+      const chave = `${modelo.id}|${tecido.id}|${item.tamanho}|${cor.nome}`;
+      if (vistas.has(chave)) return erro(400, 'item_repetido', `${posicao}: variação repetida — junte as quantidades numa linha só.`);
+      vistas.add(chave);
+      const precoUnitCentavos = precoVariacao(modelo.precoBaseCentavos, tecido.acrescimoCentavos);
+      itens.push({
+        modeloId: modelo.id,
+        modeloNome: modelo.nome,
+        tecidoId: tecido.id,
+        tecidoNome: tecido.nome,
+        tamanho: item.tamanho,
+        cor: cor.nome,
+        qtd: item.qtd,
+        precoUnitCentavos,
+        descPercent: item.descPercent,
+        subtotalCentavos: calcularItem(precoUnitCentavos, item.qtd, item.descPercent).subtotalCentavos,
+      });
+    }
+
+    const descontoTotal = e.descontoTotalCentavos ?? 0;
+    if (descontoTotal < 0 || descontoTotal % 500 !== 0) return erro(400, 'entrada_invalida', 'Dados inválidos.');
+    const totais = calcularTotais(
+      itens.map((i) => ({ ...calcularItem(i.precoUnitCentavos, i.qtd, i.descPercent), qtd: i.qtd })),
+      descontoTotal,
+    );
+    const agora = new Date();
+    const numero = Math.max(PRIMEIRO_NUMERO_PEDIDO - 1, ...estado.vendas.map((v) => v.numero)) + 1;
+    const venda: Venda = {
+      numero,
+      dataHora: agora.toISOString(),
+      hora: horaLocal.format(agora),
+      vendedor: { id: vendedor.id, nome: vendedor.nome },
+      cliente: e.cliente ?? '',
+      cpf: cpfInformado.replace(/\D/g, ''),
+      pagamento: { id: pagamento.id, nome: pagamento.nome },
+      itens,
+      ...totais,
+    };
+    estado.vendas.push({ ...venda, chave: e.chaveIdempotencia });
+    return HttpResponse.json({ venda }, { status: 201 });
+  }
+
+  const handlers = [
+    http.get('*/api/config', () => HttpResponse.json(CONFIG)),
+
+    http.get('*/api/vendedores', () => HttpResponse.json({ vendedores })),
+
+    http.post('*/api/auth/login', async ({ request }) => {
+      const corpo = (await request.json().catch(() => null)) as { vendedorId?: unknown; pin?: unknown } | null;
+      if (typeof corpo?.vendedorId !== 'string' || typeof corpo.pin !== 'string' || !/^\d{4}$/.test(corpo.pin)) {
+        return erro(400, 'entrada_invalida', 'A senha deve ter 4 números.');
+      }
+      const vendedor = vendedores.find((v) => v.id === corpo.vendedorId);
+      if (!vendedor || pins[vendedor.id] !== corpo.pin) return erro(401, 'senha_incorreta', 'Senha incorreta. Tente de novo.');
+      estado.sessao = vendedor.id;
+      return HttpResponse.json({ vendedor, expiraEm: meiaNoiteSeguinte() });
+    }),
+
+    http.get('*/api/auth/sessao', () => {
+      const vendedor = vendedorDaSessao();
+      return vendedor ? HttpResponse.json({ vendedor, expiraEm: meiaNoiteSeguinte() }) : semSessao();
+    }),
+
+    http.post('*/api/auth/logout', () => {
+      estado.sessao = null;
+      return new HttpResponse(null, { status: 204 });
+    }),
+
+    http.get('*/api/catalogo', () => (vendedorDaSessao() ? HttpResponse.json(CATALOGO) : semSessao())),
+
+    http.post('*/api/vendas', async ({ request }) => {
+      const vendedor = vendedorDaSessao();
+      if (!vendedor) return semSessao();
+      const e = (await request.json().catch(() => null)) as VendaEntrada | null;
+      if (!e || typeof e.chaveIdempotencia !== 'string' || !UUID.test(e.chaveIdempotencia) || !Array.isArray(e.itens)) {
+        return erro(400, 'entrada_invalida', 'Dados inválidos.');
+      }
+      // Idempotência: a mesma chave devolve a venda original (200); de outro vendedor, 409.
+      const anterior = estado.vendas.find((v) => v.chave === e.chaveIdempotencia);
+      if (anterior) {
+        if (anterior.vendedor.id !== vendedor.id) return erro(409, 'chave_em_uso', 'Esta venda já foi registrada por outro vendedor.');
+        const { chave: _chave, ...venda } = anterior;
+        return HttpResponse.json({ venda }, { status: 200 });
+      }
+      return registrar(vendedor, e);
+    }),
+
+    http.get('*/api/vendas/hoje', () => {
+      const vendedor = vendedorDaSessao();
+      if (!vendedor) return semSessao();
+      // Mais recente primeiro, como o back. O simulado não vira o dia: vale enquanto a página estiver aberta.
+      const minhas = estado.vendas.filter((v) => v.vendedor.id === vendedor.id).reverse();
+      return HttpResponse.json({
+        vendas: minhas.map((v) => ({ numero: v.numero, cliente: v.cliente, hora: v.hora, pecas: v.pecas, pagamento: v.pagamento.nome, totalCentavos: v.totalCentavos })),
+        totalDiaCentavos: minhas.reduce((s, v) => s + v.totalCentavos, 0),
+        quantidadePedidos: minhas.length,
+      });
+    }),
+  ];
+
+  return { handlers, estado };
+}

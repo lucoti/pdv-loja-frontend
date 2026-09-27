@@ -1,0 +1,22 @@
+/* Design tokens do handoff (design_handoff_pdv_loja/README.md — "Design Tokens"). */
+:root {
+  --ink: #22201c;
+  --ink-soft: #5c574e;
+  --paper: #f6f4f0;
+  --paper-2: #ffffff;
+  --desk: #e7e4de;
+  --line: #dad5cb;
+  --line-2: #bfb9ad;
+  --green: #1d5b3f;
+  --green-soft: #e6efe9;
+  --green-hover: #16452f;
+  --disabled-bg: #d5d0c6;
+  --disabled-fg: #8a857c;
+  --danger: #8a3a28;
+  --danger-deep: #7a2e1c;
+  --danger-bg: #f6e4de;
+  --danger-line: #c98b76;
+  --accent-warm: #e9b39f;
+
+  --fonte: 'Libre Franklin', Helvetica, Arial, sans-serif;
+}

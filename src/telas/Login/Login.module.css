@@ -1,0 +1,200 @@
+.cabecalho {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 40px 24px 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.marca {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.loja {
+  font-size: 19px;
+  opacity: 0.75;
+}
+
+.conteudo {
+  flex: 1;
+  padding: 28px 20px 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.rodape {
+  padding: 18px 20px 26px;
+  border-top: 2px solid var(--line);
+  font-size: 17px;
+  color: var(--ink-soft);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* Etapa A — seleção de vendedor */
+.selecao {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.titulo {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vendedor {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-height: 88px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  border: 2px solid var(--line);
+  background: var(--paper-2);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.vendedor:active {
+  border-color: var(--green);
+  background: var(--green-soft);
+}
+
+.inicial {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--green-soft);
+  border: 2px solid var(--green);
+  color: var(--green);
+  font-size: 23px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dados {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.nome {
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.cargo {
+  font-size: 17px;
+  color: var(--ink-soft);
+}
+
+.seta {
+  font-size: 30px;
+  color: var(--green);
+  font-weight: 700;
+}
+
+/* Etapa B — senha */
+.senha {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.quem {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.quemTexto {
+  flex: 1;
+  min-width: 0;
+}
+
+.nomeAtual {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.instrucao {
+  font-size: 17px;
+  color: var(--ink-soft);
+  margin-top: 3px;
+}
+
+.marcadores {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 6px 0;
+}
+
+.marcador {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  display: block;
+  background: transparent;
+  border: 2px solid var(--line-2);
+}
+
+.preenchido {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.entrar {
+  padding: 24px;
+}
+
+/* Teclado próprio (sem <input>) */
+.teclado {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.tecla {
+  height: 76px;
+  font-size: 28px;
+  font-weight: 700;
+  border-radius: 14px;
+  border: 2px solid var(--line);
+  background: var(--paper-2);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.apagar {
+  font-size: 19px;
+  background: var(--desk);
+  color: var(--ink-soft);
+}
+
+.vazia {
+  height: 76px;
+}

@@ -1,0 +1,151 @@
+import type { Dispatch } from 'react';
+import type { Catalogo } from '../../api/cliente';
+import { calcularPedido, type AcaoPedido, type Pedido as PedidoEstado } from '../../dominio/carrinho';
+import { formatarReais, textoPecas } from '../../dominio/formatos';
+import { DESCONTOS_ITEM } from '../../dominio/precos';
+import c from '../comum.module.css';
+import s from './Pdv.module.css';
+
+/** Aba Pedido — carrinho e revisão (handoff §2c, RF-F06). */
+export function Pedido({ pedido, catalogo, despachar }: { pedido: PedidoEstado; catalogo: Catalogo; despachar: Dispatch<AcaoPedido> }) {
+  const { itens, totais } = calcularPedido(pedido);
+
+  return (
+    <div className={s.coluna18}>
+      <h1 className={s.tituloTela}>Novo pedido</h1>
+
+      <div className={`${s.cartao} ${s.cartaoCliente}`}>
+        <div className={c.rotulo}>CLIENTE</div>
+        <input
+          className={s.campo}
+          value={pedido.cliente}
+          onChange={(e) => despachar({ tipo: 'cliente', valor: e.target.value })}
+          placeholder="Nome do cliente"
+          aria-label="Nome do cliente"
+          maxLength={120}
+          autoComplete="off"
+        />
+        {/* O CPF é validado só pelo servidor; a mensagem de erro dele aparece acima do botão de fechar. */}
+        <input
+          className={s.campo}
+          value={pedido.cpf}
+          onChange={(e) => despachar({ tipo: 'cpf', valor: e.target.value })}
+          placeholder="CPF (opcional)"
+          aria-label="CPF (opcional)"
+          inputMode="numeric"
+          maxLength={20}
+          autoComplete="off"
+        />
+      </div>
+
+      {itens.length === 0 && (
+        <div className={s.vazio}>
+          Nenhum item ainda.
+          <br />
+          Volte em Produtos para incluir peças.
+        </div>
+      )}
+
+      {itens.map((item) => (
+        <div key={item.chave} className={`${s.cartao} ${s.cartaoItem}`} data-testid="item-pedido">
+          <div className={s.itemTopo}>
+            <div className={s.itemTexto}>
+              <div className={s.itemNome}>{item.modeloNome}</div>
+              <div className={s.itemDetalhe}>
+                {item.tecidoNome} · Tam {item.tamanho} · {item.cor} · {formatarReais(item.precoUnitCentavos)}
+              </div>
+            </div>
+            <button type="button" className={s.excluir} onClick={() => despachar({ tipo: 'remover', chave: item.chave })}>
+              Excluir
+            </button>
+          </div>
+
+          <div className={s.linha}>
+            <button type="button" className={s.menos} aria-label="Diminuir quantidade" onClick={() => despachar({ tipo: 'menos', chave: item.chave })}>
+              −
+            </button>
+            <div className={`${s.qtd} ${c.tabular}`} aria-label="Quantidade">
+              {item.qtd}
+            </div>
+            <button type="button" className={s.mais} aria-label="Aumentar quantidade" onClick={() => despachar({ tipo: 'mais', chave: item.chave })}>
+              +
+            </button>
+            <div className={s.subtotal}>
+              <div className={`${s.subtotalValor} ${c.tabular}`}>{formatarReais(item.subtotalCentavos)}</div>
+              <div className={s.descAplicado}>{item.descPercent ? `−${item.descPercent}% aplicado` : ''}</div>
+            </div>
+          </div>
+
+          <div className={s.linhaDesconto}>
+            <div className={`${c.rotulo} ${s.rotuloDesconto}`}>DESCONTO</div>
+            <div className={s.descontos}>
+              {DESCONTOS_ITEM.map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  className={s.desconto}
+                  aria-pressed={item.descPercent === d}
+                  onClick={() => despachar({ tipo: 'desconto', chave: item.chave, descPercent: d })}
+                >
+                  {d === 0 ? 'sem' : `${d}%`}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+
+      <div className={`${s.cartao} ${s.cartaoDesconto}`}>
+        <div className={c.rotulo}>DESCONTO NO TOTAL</div>
+        <div className={s.linha}>
+          <button type="button" className={s.menos} aria-label="Diminuir desconto no total" onClick={() => despachar({ tipo: 'descontoTotalMenos' })}>
+            −
+          </button>
+          <div className={`${s.valorDescontoTotal} ${c.tabular}`}>
+            {pedido.descontoTotalCentavos ? `− ${formatarReais(pedido.descontoTotalCentavos)}` : 'sem desconto'}
+          </div>
+          <button type="button" className={s.mais} aria-label="Aumentar desconto no total" onClick={() => despachar({ tipo: 'descontoTotalMais' })}>
+            +
+          </button>
+        </div>
+      </div>
+
+      <div className={`${s.cartao} ${s.cartaoPagamento}`}>
+        <div className={c.rotulo}>FORMA DE PAGAMENTO</div>
+        <div className={s.grade2}>
+          {catalogo.pagamentos.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className={s.pagamento}
+              aria-pressed={pedido.pagamentoId === p.id}
+              onClick={() => despachar({ tipo: 'pagamento', pagamentoId: p.id })}
+            >
+              {p.nome}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className={s.totais} data-testid="totais">
+        <div className={s.totalLinha}>
+          <span>{textoPecas(totais.pecas)}</span>
+          <span className={c.tabular}>{formatarReais(totais.brutoCentavos)}</span>
+        </div>
+        <div className={`${s.totalLinha} ${s.totalDescontos}`}>
+          <span>Descontos</span>
+          <span className={c.tabular}>{totais.descontosCentavos ? `− ${formatarReais(totais.descontosCentavos)}` : formatarReais(0)}</span>
+        </div>
+        <div className={s.totalFinal}>
+          <span className={s.totalRotulo}>Total</span>
+          <span className={`${s.totalValor} ${c.tabular}`}>{formatarReais(totais.totalCentavos)}</span>
+        </div>
+      </div>
+
+      {/* Sem confirmação, como no handoff: zera o pedido e gera chave de idempotência nova (ADR-F06). */}
+      <button type="button" className={s.cancelar} onClick={() => despachar({ tipo: 'novo', chaveIdempotencia: crypto.randomUUID() })}>
+        Cancelar pedido
+      </button>
+    </div>
+  );
+}

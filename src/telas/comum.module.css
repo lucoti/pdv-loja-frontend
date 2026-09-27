@@ -1,0 +1,103 @@
+/* Peças visuais compartilhadas entre Login e PDV. */
+
+/* Fundo "desk" com a folha de no máximo 460px centralizada (RNF-F04). */
+.fundo {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  background: var(--desk);
+}
+
+.folha {
+  width: 100%;
+  max-width: 460px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--paper);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 0 0 1px rgba(34, 32, 28, 0.08);
+}
+
+/* Botão de ação principal (CTA), largura total. */
+.cta {
+  width: 100%;
+  font-size: 23px;
+  font-weight: 700;
+  padding: 22px;
+  border-radius: 14px;
+  border: none;
+  background: var(--green);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.cta:disabled {
+  background: var(--disabled-bg);
+  color: var(--disabled-fg);
+  cursor: not-allowed;
+}
+
+/* Botão voltar 58×58. */
+.voltar {
+  width: 58px;
+  height: 58px;
+  flex-shrink: 0;
+  font-size: 26px;
+  font-weight: 700;
+  border-radius: 14px;
+  border: 2px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* Caixa de erro no estilo do login (handoff §1). */
+.erro {
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: var(--danger-bg);
+  border: 2px solid var(--danger-line);
+  color: var(--danger-deep);
+  font-size: 19px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.aviso {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tentarDeNovo {
+  font-size: 19px;
+  font-weight: 700;
+  padding: 18px;
+  border-radius: 14px;
+  border: 2px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.carregando {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 20px;
+}
+
+/* Rótulo de seção: 16px, 700, MAIÚSCULAS, espaçado. */
+.rotulo {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  color: var(--ink-soft);
+}
+
+.tabular { font-variant-numeric: tabular-nums; }

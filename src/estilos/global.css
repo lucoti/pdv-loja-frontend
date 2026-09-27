@@ -1,0 +1,33 @@
+@import './tokens.css';
+
+/* Sem animações nem transições por decisão de projeto (RNF-F03). */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  animation: none !important;
+  transition: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--desk);
+  color: var(--ink);
+  font-family: var(--fonte);
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+}
+
+a { color: var(--green); }
+a:hover { color: var(--green-hover); }
+
+button,
+input {
+  font-family: inherit;
+  margin: 0;
+}
+
+button { touch-action: manipulation; }
+
+input::placeholder { color: var(--disabled-fg); }
