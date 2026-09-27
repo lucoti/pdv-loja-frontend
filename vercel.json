@@ -1,0 +1,4 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [{ "source": "/api/(.*)", "destination": "https://pdv-loja-backend.vercel.app/api/$1" }]
+}

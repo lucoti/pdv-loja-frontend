@@ -211,11 +211,24 @@ describe('RF-F03 — sessão', () => {
     expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
   });
 
-  it('rejeição que não é ErroApi na verificação de sessão mostra o texto do erro', async () => {
+  it('rejeição que não é ErroApi na verificação de sessão → mensagem genérica, sem texto técnico', async () => {
     const espiao = vi.spyOn(api, 'sessao').mockRejectedValueOnce(new Error('falhou'));
     abrirApp();
-    expect(await screen.findByRole('alert')).toHaveTextContent('Error: falhou');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Algo deu errado. Tente de novo.');
+    expect(screen.queryByText(/falhou/)).not.toBeInTheDocument();
     espiao.mockRestore();
+  });
+
+  it('RF-I06: 200 fora do contrato na sessão (sem corpo) → "Tentar de novo", não fica em "Carregando…"', async () => {
+    let foraDoContrato = true;
+    usarSimulado({ sessaoDe: 'carlos' });
+    servidor.use(http.get('*/api/auth/sessao', () => (foraDoContrato ? new HttpResponse(null, { status: 200 }) : undefined)));
+    const { usuario } = abrirApp();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Algo deu errado. Tente de novo.');
+    expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
+    foraDoContrato = false;
+    await usuario.click(screen.getByRole('button', { name: 'Tentar de novo' }));
+    expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
   });
 
   it('401 numa rota protegida (catálogo) volta ao login', async () => {

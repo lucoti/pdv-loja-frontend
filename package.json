@@ -5,7 +5,7 @@
   "description": "Página web do PDV da loja FitMoveOn — React + TypeScript + Vite",
   "type": "module",
   "engines": {
-    "node": ">=22.12"
+    "node": ">=22.12 <23"
   },
   "scripts": {
     "dev": "vite",

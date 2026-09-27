@@ -18,6 +18,8 @@ Reproduz o design em `../design_handoff_pdv_loja/` e conversa com a API do `../b
 
 No modo simulado a sessão fica em memória: recarregar a página volta ao login.
 
+Em produção (Vercel), o `vercel.json` reescreve `/api/*` para `https://pdv-loja-backend.vercel.app/api/*`: para o navegador, página e API ficam no mesmo domínio (cookie de sessão sem CORS).
+
 ## Estrutura
 | Pasta | Conteúdo |
 |---|---|

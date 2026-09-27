@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { api, definirAoPerderSessao, ErroApi, type Vendedor } from './api/cliente';
+import { api, definirAoPerderSessao, ErroApi, MENSAGEM_GENERICA, type Vendedor } from './api/cliente';
 import { Carregando, FalhaAoCarregar } from './telas/Avisos';
 import { Folha } from './telas/Folha';
 import { Login } from './telas/Login/Login';
 import { Pdv } from './telas/Pdv/Pdv';
 
+// Máquina de estados da tela raiz: verificando a sessão, falha ao verificar, login ou PDV aberto.
 type Estado = { tela: 'verificando' } | { tela: 'falha'; mensagem: string } | { tela: 'login' } | { tela: 'pdv'; vendedor: Vendedor };
 
 /**
@@ -13,22 +14,31 @@ type Estado = { tela: 'verificando' } | { tela: 'falha'; mensagem: string } | { 
  */
 export function App() {
   const [estado, setEstado] = useState<Estado>({ tela: 'verificando' });
+  // Contador usado só para disparar de novo a verificação de sessão quando o vendedor toca "Tentar de novo".
   const [tentativa, setTentativa] = useState(0);
 
+  // Registra uma única vez o aviso global de sessão perdida (401 em qualquer chamada) → volta ao login.
   useEffect(() => {
     definirAoPerderSessao(() => setEstado({ tela: 'login' }));
   }, []);
 
   useEffect(() => {
+    // `ativo` evita atualizar o estado depois que o efeito foi descartado (nova tentativa ou desmontagem).
     let ativo = true;
-    api.sessao().then(
-      (r) => ativo && setEstado({ tela: 'pdv', vendedor: r.vendedor }),
-      (e: unknown) => {
+    // `.catch` no fim (e não o 2º argumento do `.then`) pega também uma resposta 200 fora do
+    // contrato (ex.: sem corpo), que quebra no `r.vendedor` — sem isso a página ficaria em "Carregando…".
+    api
+      .sessao()
+      .then((r) => {
+        if (ativo) setEstado({ tela: 'pdv', vendedor: r.vendedor });
+      })
+      .catch((e: unknown) => {
         if (!ativo) return;
+        // 401 = sem sessão válida: caminho normal para o login. Qualquer outro erro mostra a tela de
+        // falha; erros que não vêm da API (ex.: TypeError) viram a mensagem genérica, sem texto técnico.
         if (e instanceof ErroApi && e.status === 401) setEstado({ tela: 'login' });
-        else setEstado({ tela: 'falha', mensagem: e instanceof ErroApi ? e.message : String(e) });
-      },
-    );
+        else setEstado({ tela: 'falha', mensagem: e instanceof ErroApi ? e.message : MENSAGEM_GENERICA });
+      });
     return () => {
       ativo = false;
     };
@@ -39,6 +49,7 @@ export function App() {
       return <Login aoEntrar={(vendedor) => setEstado({ tela: 'pdv', vendedor })} />;
     case 'pdv':
       return <Pdv vendedor={estado.vendedor} />;
+    // 'verificando' e 'falha' compartilham a mesma moldura: carregando ou aviso com "Tentar de novo".
     default:
       return (
         <Folha>
