@@ -38,11 +38,17 @@ direto para produção, por ser o primeiro do projeto). O banco está sem vendas
 
 ### Obsoletos (não usados)
 - O **repositório único antigo** do PDV e o **projeto Vercel antigo** foram substituídos pelos dois
-  repositórios/projetos acima.
-- O **banco Turso antigo `move-on`** (e os demais bancos da organização ligada à integração Vercel,
-  como `portal-aluno`) não é usado nem alterado pelo PDV: o esquema dele é incompatível com o atual.
+  repositórios/projetos acima. A remoção deles fica a critério do Lucas.
 
-A remoção desses itens fica a critério do Lucas.
+### ERP (projeto irmão, futuro)
+- O PDV é "irmão" de um **ERP**, que será desenvolvido depois. No ERP serão cadastrados o catálogo
+  real, os usuários (vendedores) e feitas a gestão de estoque, preços e demais dados que o PDV exibe.
+- O **banco Turso `move-on`** (organização ligada à integração Vercel) é o banco desse ERP. **Não é
+  obsoleto e deve ser preservado.** O PDV não o usa hoje.
+- A forma de o PDV passar a consumir os dados do ERP (catálogo, vendedores, preços, estoque) será
+  decidida numa feature futura.
+- O banco `portal-aluno` e os projetos `portal-aluno-*` pertencem a outro sistema em produção, sem
+  relação com o PDV. Não devem ser alterados.
 
 ### Como rodar localmente
 Node 22.12+ nas duas aplicações (nesta máquina: `export PATH=/usr/local/bin:$PATH`).
