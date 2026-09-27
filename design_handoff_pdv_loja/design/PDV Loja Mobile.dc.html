@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  body { margin:0; background:#E7E4DE; font-family:'Libre Franklin', Helvetica, Arial, sans-serif; -webkit-font-smoothing:antialiased; }
+  a { color:#1D5B3F; } a:hover { color:#16452F; }
+  button, input { font-family:inherit; }
+  input::placeholder { color:#8A857C; }
+</style>
+</helmet>
+<div style="minHeight:100vh; display:flex; justifyContent:center; background:#E7E4DE">
+<div style="width:100%; maxWidth:460px; minHeight:100vh; background:#F6F4F0; color:#22201C; display:flex; flexDirection:column; position:relative; boxShadow:0 0 0 1px rgba(34,32,28,0.08)">
+
+  <header style="position:sticky; top:0; zIndex:20; background:#22201C; color:#F6F4F0; padding:16px 18px; display:flex; alignItems:center; gap:12px">
+    <div style="flex:1; minWidth:0">
+      <div style="fontSize:21px; fontWeight:700; letterSpacing:0.02em">BALCÃO</div>
+      <div style="fontSize:16px; opacity:0.75; marginTop:2px">{{ vendedor }} · pedido {{ pedidoNum }}</div>
+    </div>
+    <div style="fontSize:17px; padding:10px 14px; borderRadius:999px; background:rgba(246,244,240,0.15)">{{ hoje }}</div>
+  </header>
+
+  <main style="flex:1; minWidth:0; padding:18px 16px 150px; display:flex; flexDirection:column; gap:18px">
+
+    <sc-if value="{{ telaProdutos }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex; flexDirection:column; gap:16px">
+        <div style="display:flex; flexWrap:wrap; gap:10px">
+          <sc-for list="{{ categorias }}" as="cat" hint-placeholder-count="4">
+            <button onClick="{{ cat.pick }}" style="{{ cat.style }}">{{ cat.nome }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex; flexDirection:column; gap:12px">
+          <sc-for list="{{ modelos }}" as="m" hint-placeholder-count="5">
+            <button onClick="{{ m.pick }}" style="display:flex; alignItems:center; gap:14px; width:100%; minHeight:84px; padding:18px 20px; borderRadius:16px; border:2px solid #DAD5CB; background:#FFFFFF; color:#22201C; textAlign:left; cursor:pointer" style-active="border:2px solid #1D5B3F; background:#E6EFE9">
+              <span style="flex:1; minWidth:0; display:flex; flexDirection:column; gap:4px">
+                <span style="fontSize:23px; fontWeight:700; lineHeight:1.15">{{ m.nome }}</span>
+                <span style="fontSize:17px; color:#5C574E">{{ m.precoDe }}</span>
+              </span>
+              <span style="fontSize:30px; color:#1D5B3F; fontWeight:700">›</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ telaVariacao }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex; flexDirection:column; gap:22px">
+        <div style="display:flex; alignItems:center; gap:14px">
+          <button onClick="{{ voltar }}" style="width:58px; height:58px; fontSize:26px; fontWeight:700; borderRadius:14px; border:2px solid #22201C; background:transparent; color:#22201C; cursor:pointer">←</button>
+          <div style="fontSize:26px; fontWeight:700; lineHeight:1.15">{{ modeloNome }}</div>
+        </div>
+
+        <div>
+          <div style="fontSize:16px; fontWeight:700; letterSpacing:0.07em; color:#5C574E; marginBottom:10px">TECIDO</div>
+          <div style="display:grid; gridTemplateColumns:1fr 1fr; gap:12px">
+            <sc-for list="{{ tecidos }}" as="t" hint-placeholder-count="2">
+              <button onClick="{{ t.pick }}" style="{{ t.style }}">
+                <span style="fontSize:20px; fontWeight:700; lineHeight:1.2">{{ t.nome }}</span>
+                <span style="fontSize:18px; color:#5C574E">{{ t.preco }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div>
+          <div style="fontSize:16px; fontWeight:700; letterSpacing:0.07em; color:#5C574E; marginBottom:10px">TAMANHO</div>
+          <div style="display:grid; gridTemplateColumns:repeat(4, 1fr); gap:12px">
+            <sc-for list="{{ tamanhos }}" as="s" hint-placeholder-count="4">
+              <button onClick="{{ s.pick }}" style="{{ s.style }}">{{ s.nome }}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div>
+          <div style="fontSize:16px; fontWeight:700; letterSpacing:0.07em; color:#5C574E; marginBottom:10px">COR</div>
+          <div style="display:grid; gridTemplateColumns:1fr 1fr; gap:12px">
+            <sc-for list="{{ cores }}" as="c" hint-placeholder-count="6">
+              <button onClick="{{ c.pick }}" style="{{ c.style }}">
+                <span style="width:30px; height:30px; borderRadius:999px; border:2px solid rgba(34,32,28,0.25); display:block; flexShrink:0; background:{{ c.hex }}"></span>
+                <span style="fontSize:19px; fontWeight:600; textAlign:left">{{ c.nome }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ telaPedido }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex; flexDirection:column; gap:18px">
+        <div style="fontSize:26px; fontWeight:700">Pedido {{ pedidoNum }}</div>
+
+        <div style="display:flex; flexDirection:column; gap:10px; padding:16px; borderRadius:16px; border:2px solid #DAD5CB; background:#FFFFFF">
+          <div style="fontSize:16px; fontWeight:700; letterSpacing:0.07em; color:#5C574E">CLIENTE</div>
+          <input value="{{ cliente }}" onChange="{{ setCliente }}" placeholder="Nome do cliente" style="fontSize:21px; padding:16px; borderRadius:12px; border:2px solid #DAD5CB; background:#F6F4F0; color:#22201C; width:100%; boxSizing:border-box" />
+          <input value="{{ cpf }}" onChange="{{ setCpf }}" placeholder="CPF (opcional)" inputMode="numeric" style="fontSize:21px; padding:16px; borderRadius:12px; border:2px solid #DAD5CB; background:#F6F4F0; color:#22201C; width:100%; boxSizing:border-box" />
+        </div>
+
+        <sc-if value="{{ carrinhoVazio }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:44px 16px; textAlign:center; color:#5C574E; fontSize:20px; lineHeight:1.5">Nenhum item ainda.<br />Volte em Produtos para incluir peças.</div>
+        </sc-if>
+
+        <sc-for list="{{ itens }}" as="it" hint-placeholder-count="0">
+          <div style="border:2px solid #DAD5CB; borderRadius:16px; background:#FFFFFF; padding:16px; display:flex; flexDirection:column; gap:14px">
+            <div style="display:flex; alignItems:flex-start; gap:12px">
+              <div style="flex:1; minWidth:0">
+                <div style="fontSize:21px; fontWeight:700; lineHeight:1.2">{{ it.nome }}</div>
+                <div style="fontSize:17px; color:#5C574E; marginTop:4px">{{ it.detalhe }}</div>
+              </div>
+              <button onClick="{{ it.remover }}" style="fontSize:17px; fontWeight:600; color:#8A3A28; background:transparent; border:none; padding:8px; cursor:pointer; textDecoration:underline">Excluir</button>
+            </div>
+            <div style="display:flex; alignItems:center; gap:12px">
+              <button onClick="{{ it.menos }}" style="width:58px; height:58px; fontSize:28px; fontWeight:700; borderRadius:14px; border:2px solid #22201C; background:transparent; color:#22201C; cursor:pointer">−</button>
+              <div style="minWidth:44px; textAlign:center; fontSize:24px; fontWeight:700; fontVariantNumeric:tabular-nums">{{ it.qtd }}</div>
+              <button onClick="{{ it.mais }}" style="width:58px; height:58px; fontSize:28px; fontWeight:700; borderRadius:14px; border:2px solid #22201C; background:#22201C; color:#F6F4F0; cursor:pointer">+</button>
+              <div style="marginLeft:auto; textAlign:right">
+                <div style="fontSize:22px; fontWeight:700; fontVariantNumeric:tabular-nums">{{ it.subtotal }}</div>
+                <div style="fontSize:16px; color:#8A3A28">{{ it.descLabel }}</div>
+              </div>
+            </div>
+            <div style="display:flex; alignItems:center; gap:10px">
+              <div style="fontSize:16px; fontWeight:700; letterSpacing:0.06em; color:#5C574E">DESCONTO</div>
+              <div style="marginLeft:auto; display:flex; gap:8px">
+                <sc-for list="{{ it.descontos }}" as="d" hint-placeholder-count="4">
+                  <button onClick="{{ d.pick }}" style="{{ d.style }}">{{ d.nome }}</button>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+
+        <div style="display:flex; flexDirection:column; gap:14px; padding:18px 16px; borderRadius:16px; border:2px solid #DAD5CB; background:#FFFFFF">
+          <div style="fontSize:16px; fontWeight:700; letterSpacing:0.07em; color:#5C574E">DESCONTO NO TOTAL</div>
+          <div style="display:flex; alignItems:center; gap:12px">
+            <button onClick="{{ descMenos }}" style="width:58px; height:58px; fontSize:28px; fontWeight:700; borderRadius:14px; border:2px solid #22201C; background:transparent; color:#22201C; cursor:pointer">−</button>
+            <div style="flex:1; textAlign:center; fontSize:24px; fontWeight:700; fontVariantNumeric:tabular-nums">{{ descTotalLabel }}</div>
+            <button onClick="{{ descMais }}" style="width:58px; height:58px; fontSize:28px; fontWeight:700; borderRadius:14px; border:2px solid #22201C; background:#22201C; color:#F6F4F0; cursor:pointer">+</button>
+          </div>
+        </div>
+
+        <div style="display:flex; flexDirection:column; gap:12px; padding:18px 16px; borderRadius:16px; border:2px solid #DAD5CB; background:#FFFFFF">
+          <div style="fontSize:16px; fontWeight:700; letterSpacing:0.07em; color:#5C574E">FORMA DE PAGAMENTO</div>
+          <div style="display:grid; gridTemplateColumns:1fr 1fr; gap:12px">
+            <sc-for list="{{ pagamentos }}" as="p" hint-placeholder-count="4">
+              <button onClick="{{ p.pick }}" style="{{ p.style }}">{{ p.nome }}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:flex; flexDirection:column; gap:8px; padding:18px 16px; borderRadius:16px; background:#22201C; color:#F6F4F0">
+          <div style="display:flex; justifyContent:space-between; fontSize:19px">
+            <span>{{ totalPecas }}</span><span style="fontVariantNumeric:tabular-nums">{{ subtotal }}</span>
+          </div>
+          <div style="display:flex; justifyContent:space-between; fontSize:19px; color:#E9B39F">
+            <span>Descontos</span><span style="fontVariantNumeric:tabular-nums">{{ descontos }}</span>
+          </div>
+          <div style="display:flex; alignItems:baseline; justifyContent:space-between; marginTop:6px; paddingTop:12px; borderTop:1px solid rgba(246,244,240,0.25)">
+            <span style="fontSize:23px; fontWeight:700">Total</span>
+            <span style="fontSize:36px; fontWeight:700; fontVariantNumeric:tabular-nums; lineHeight:1">{{ total }}</span>
+          </div>
+        </div>
+
+        <button onClick="{{ limpar }}" style="fontSize:18px; fontWeight:600; padding:16px; borderRadius:14px; border:2px solid #DAD5CB; background:transparent; color:#5C574E; cursor:pointer">Cancelar pedido</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ telaDia }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex; flexDirection:column; gap:16px">
+        <div style="fontSize:26px; fontWeight:700">Vendas de hoje</div>
+        <div style="display:flex; gap:12px">
+          <div style="flex:1; padding:18px 16px; borderRadius:16px; background:#22201C; color:#F6F4F0">
+            <div style="fontSize:16px; opacity:0.75">Total do dia</div>
+            <div style="fontSize:28px; fontWeight:700; fontVariantNumeric:tabular-nums; marginTop:6px">{{ totalDia }}</div>
+          </div>
+          <div style="flex:1; padding:18px 16px; borderRadius:16px; border:2px solid #DAD5CB; background:#FFFFFF">
+            <div style="fontSize:16px; color:#5C574E">Pedidos</div>
+            <div style="fontSize:28px; fontWeight:700; fontVariantNumeric:tabular-nums; marginTop:6px">{{ qtdPedidosDia }}</div>
+          </div>
+        </div>
+        <sc-if value="{{ semPedidos }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:40px 16px; textAlign:center; color:#5C574E; fontSize:20px">Nenhuma venda registrada ainda.</div>
+        </sc-if>
+        <sc-for list="{{ pedidosDia }}" as="p" hint-placeholder-count="0">
+          <div style="display:flex; alignItems:center; gap:14px; padding:18px 16px; borderRadius:16px; border:2px solid #DAD5CB; background:#FFFFFF">
+            <div style="flex:1; minWidth:0">
+              <div style="fontSize:21px; fontWeight:700">{{ p.titulo }}</div>
+              <div style="fontSize:17px; color:#5C574E; marginTop:4px">{{ p.detalhe }}</div>
+            </div>
+            <div style="fontSize:23px; fontWeight:700; fontVariantNumeric:tabular-nums">{{ p.total }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+  </main>
+
+  <div style="position:sticky; bottom:0; zIndex:20; background:#F6F4F0; borderTop:2px solid #DAD5CB; padding:14px 16px; display:flex; flexDirection:column; gap:12px">
+    <sc-if value="{{ telaVariacao }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex; flexDirection:column; gap:10px">
+        <div style="fontSize:17px; color:#5C574E">{{ resumoEscolha }}</div>
+        <button onClick="{{ adicionar }}" style="{{ btnAdicionarStyle }}">Adicionar ao pedido</button>
+      </div>
+    </sc-if>
+    <sc-if value="{{ telaPedido }}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{ finalizar }}" style="{{ btnFinalizarStyle }}">{{ labelFinalizar }}</button>
+    </sc-if>
+    <div style="display:grid; gridTemplateColumns:repeat(3, 1fr); gap:10px">
+      <sc-for list="{{ abas }}" as="a" hint-placeholder-count="3">
+        <button onClick="{{ a.pick }}" style="{{ a.style }}">{{ a.nome }}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <sc-if value="{{ mostrarSucesso }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; inset:0; background:rgba(34,32,28,0.6); display:flex; alignItems:center; justifyContent:center; padding:22px; zIndex:50">
+      <div style="width:100%; maxWidth:420px; background:#F6F4F0; borderRadius:20px; padding:30px 24px; textAlign:center; display:flex; flexDirection:column; gap:16px">
+        <div style="fontSize:28px; fontWeight:700; color:#1D5B3F">Venda registrada</div>
+        <div style="fontSize:20px; color:#5C574E; lineHeight:1.5">{{ resumoSucesso }}</div>
+        <button onClick="{{ novaVenda }}" style="fontSize:22px; fontWeight:700; padding:22px; borderRadius:14px; border:none; background:#1D5B3F; color:#FFFFFF; cursor:pointer">Nova venda</button>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:460,&quot;height&quot;:900},&quot;vendedor&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Carlos&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;escalaTexto&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1,&quot;min&quot;:0.9,&quot;max&quot;:1.3,&quot;step&quot;:0.05,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Acessibilidade&quot;}}">
+const CAT = [
+  { id: 'calca', nome: 'Calças' },
+  { id: 'bermuda', nome: 'Bermudas' },
+  { id: 'top', nome: 'Tops' },
+  { id: 'conj', nome: 'Conjuntos' }
+];
+
+const MODELOS = [
+  { id: 1, nome: 'Calça Legging', cat: 'calca', base: 89 },
+  { id: 2, nome: 'Calça Flare', cat: 'calca', base: 99 },
+  { id: 3, nome: 'Calça Pantalona', cat: 'calca', base: 109 },
+  { id: 4, nome: 'Calça Corsário', cat: 'calca', base: 79 },
+  { id: 5, nome: 'Bermuda Ciclista', cat: 'bermuda', base: 59 },
+  { id: 6, nome: 'Bermuda Longa', cat: 'bermuda', base: 69 },
+  { id: 7, nome: 'Short Saia', cat: 'bermuda', base: 65 },
+  { id: 8, nome: 'Short Curto', cat: 'bermuda', base: 55 },
+  { id: 9, nome: 'Top Alça Larga', cat: 'top', base: 49 },
+  { id: 10, nome: 'Top Nadador', cat: 'top', base: 55 },
+  { id: 11, nome: 'Blusa Manga Longa', cat: 'top', base: 79 },
+  { id: 12, nome: 'Regata Básica', cat: 'top', base: 45 },
+  { id: 13, nome: 'Conjunto Legging + Top', cat: 'conj', base: 139 },
+  { id: 14, nome: 'Conjunto Ciclista + Top', cat: 'conj', base: 119 }
+];
+
+const TECIDOS = [
+  { id: 'normal', nome: 'Suplex Normal', extra: 0 },
+  { id: 'light', nome: 'Suplex Light', extra: 12 }
+];
+
+const TAMANHOS = ['P', 'M', 'G', 'GG'];
+
+const CORES = [
+  { nome: 'Preto', hex: '#1B1B1B' },
+  { nome: 'Marinho', hex: '#26344F' },
+  { nome: 'Grafite', hex: '#5A5A5A' },
+  { nome: 'Vinho', hex: '#6B2232' },
+  { nome: 'Verde Militar', hex: '#4A5236' },
+  { nome: 'Rosa Antigo', hex: '#B4808A' },
+  { nome: 'Bege', hex: '#C7B299' },
+  { nome: 'Off White', hex: '#EDE8DE' }
+];
+
+const PAGAMENTOS = ['Dinheiro', 'Pix', 'Débito', 'Crédito'];
+const DESCONTOS = [0, 5, 10, 15];
+
+const brl = (v) => 'R$ ' + v.toFixed(2).replace('.', ',');
+
+const chip = (on) => ({
+  fontSize: '19px', fontWeight: 600, padding: '14px 20px', borderRadius: '999px', cursor: 'pointer',
+  border: on ? '2px solid #1D5B3F' : '2px solid #DAD5CB',
+  background: on ? '#1D5B3F' : '#FFFFFF', color: on ? '#FFFFFF' : '#22201C'
+});
+
+class Component extends DCLogic {
+  state = {
+    aba: 'produtos', cat: 'calca', modelo: null, tecido: null, tamanho: null, cor: null,
+    itens: [], pagamento: null, descTotal: 0, cliente: '', cpf: '',
+    pedido: 1042, dia: [], sucesso: null
+  };
+
+  preco(m, tecidoId) {
+    const t = TECIDOS.find((x) => x.id === tecidoId) || TECIDOS[0];
+    return m.base + t.extra;
+  }
+
+  add = () => {
+    const { modelo, tecido, tamanho, cor } = this.state;
+    if (!modelo || !tecido || !tamanho || !cor) return;
+    const key = [modelo.id, tecido, tamanho, cor].join('-');
+    this.setState((s) => {
+      const existe = s.itens.find((i) => i.key === key);
+      const itens = existe
+        ? s.itens.map((i) => (i.key === key ? { ...i, qtd: i.qtd + 1 } : i))
+        : s.itens.concat([{
+            key, nome: modelo.nome, tecidoNome: TECIDOS.find((t) => t.id === tecido).nome,
+            tamanho, cor, qtd: 1, preco: this.preco(modelo, tecido), desc: 0
+          }]);
+      return { itens, modelo: null, tecido: null, tamanho: null, cor: null, aba: 'pedido' };
+    });
+  };
+
+  bruto() { return this.state.itens.reduce((a, i) => a + i.preco * i.qtd, 0); }
+  descItens() { return this.state.itens.reduce((a, i) => a + i.preco * i.qtd * (i.desc / 100), 0); }
+  total() { return Math.max(0, this.bruto() - this.descItens() - this.state.descTotal); }
+  pecas() { return this.state.itens.reduce((a, i) => a + i.qtd, 0); }
+
+  renderVals() {
+    const s = this.state;
+    const escala = this.props.escalaTexto ?? 1;
+    const pecas = this.pecas();
+    const bruto = this.bruto();
+    const descTudo = this.descItens() + s.descTotal;
+    const total = this.total();
+    const podeAdicionar = !!(s.modelo && s.tecido && s.tamanho && s.cor);
+    const podeFechar = s.itens.length > 0 && !!s.pagamento;
+    const naVariacao = !!s.modelo && s.aba === 'produtos';
+
+    return {
+      vendedor: this.props.vendedor ?? 'Carlos',
+      pedidoNum: '#' + s.pedido,
+      hoje: new Date().toLocaleDateString('pt-BR'),
+
+      abas: [
+        { id: 'produtos', nome: 'Produtos' },
+        { id: 'pedido', nome: s.itens.length ? 'Pedido (' + pecas + ')' : 'Pedido' },
+        { id: 'dia', nome: 'Dia' }
+      ].map((a) => ({
+        nome: a.nome,
+        style: {
+          fontSize: Math.round(18 * escala) + 'px', fontWeight: 700, padding: '18px 8px', borderRadius: '14px',
+          cursor: 'pointer', border: 'none',
+          background: s.aba === a.id ? '#22201C' : '#E7E4DE',
+          color: s.aba === a.id ? '#F6F4F0' : '#5C574E'
+        },
+        pick: () => this.setState({ aba: a.id })
+      })),
+
+      telaProdutos: s.aba === 'produtos' && !s.modelo,
+      telaVariacao: naVariacao,
+      telaPedido: s.aba === 'pedido',
+      telaDia: s.aba === 'dia',
+
+      categorias: CAT.map((c) => ({
+        nome: c.nome, style: chip(c.id === s.cat), pick: () => this.setState({ cat: c.id })
+      })),
+
+      modelos: MODELOS.filter((m) => m.cat === s.cat).map((m) => ({
+        nome: m.nome,
+        precoDe: 'a partir de ' + brl(m.base),
+        pick: () => this.setState({ modelo: m, tecido: 'normal', tamanho: null, cor: null, aba: 'produtos' })
+      })),
+
+      modeloNome: s.modelo ? s.modelo.nome : '',
+      voltar: () => this.setState({ modelo: null, tecido: null, tamanho: null, cor: null }),
+
+      tecidos: TECIDOS.map((t) => ({
+        nome: t.nome,
+        preco: s.modelo ? brl(this.preco(s.modelo, t.id)) : '',
+        style: {
+          display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px',
+          padding: '18px 16px', borderRadius: '14px', cursor: 'pointer', minHeight: '88px', textAlign: 'left',
+          border: s.tecido === t.id ? '3px solid #1D5B3F' : '2px solid #DAD5CB',
+          background: s.tecido === t.id ? '#E6EFE9' : '#FFFFFF', color: '#22201C'
+        },
+        pick: () => this.setState({ tecido: t.id })
+      })),
+
+      tamanhos: TAMANHOS.map((n) => ({
+        nome: n,
+        style: {
+          height: '74px', fontSize: '26px', fontWeight: 700, borderRadius: '14px', cursor: 'pointer',
+          border: s.tamanho === n ? '3px solid #1D5B3F' : '2px solid #DAD5CB',
+          background: s.tamanho === n ? '#1D5B3F' : '#FFFFFF', color: s.tamanho === n ? '#FFFFFF' : '#22201C'
+        },
+        pick: () => this.setState({ tamanho: n })
+      })),
+
+      cores: CORES.map((c) => ({
+        nome: c.nome, hex: c.hex,
+        style: {
+          display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', minHeight: '68px',
+          borderRadius: '14px', cursor: 'pointer',
+          border: s.cor === c.nome ? '3px solid #1D5B3F' : '2px solid #DAD5CB',
+          background: s.cor === c.nome ? '#E6EFE9' : '#FFFFFF', color: '#22201C'
+        },
+        pick: () => this.setState({ cor: c.nome })
+      })),
+
+      resumoEscolha: podeAdicionar
+        ? TECIDOS.find((t) => t.id === s.tecido).nome + ' · Tam ' + s.tamanho + ' · ' + s.cor + ' — ' + brl(this.preco(s.modelo, s.tecido))
+        : 'Falta escolher: ' + [!s.tecido && 'tecido', !s.tamanho && 'tamanho', !s.cor && 'cor'].filter(Boolean).join(', '),
+      btnAdicionarStyle: {
+        fontSize: '23px', fontWeight: 700, padding: '22px', borderRadius: '14px', border: 'none', width: '100%',
+        cursor: podeAdicionar ? 'pointer' : 'not-allowed',
+        background: podeAdicionar ? '#1D5B3F' : '#D5D0C6', color: podeAdicionar ? '#FFFFFF' : '#8A857C'
+      },
+      adicionar: this.add,
+
+      cliente: s.cliente,
+      cpf: s.cpf,
+      setCliente: (e) => this.setState({ cliente: e.target.value }),
+      setCpf: (e) => this.setState({ cpf: e.target.value }),
+
+      carrinhoVazio: s.itens.length === 0,
+      itens: s.itens.map((i) => ({
+        nome: i.nome,
+        detalhe: i.tecidoNome + ' · Tam ' + i.tamanho + ' · ' + i.cor + ' · ' + brl(i.preco),
+        qtd: i.qtd,
+        subtotal: brl(i.preco * i.qtd * (1 - i.desc / 100)),
+        descLabel: i.desc ? '−' + i.desc + '% aplicado' : '',
+        descontos: DESCONTOS.map((d) => ({
+          nome: d === 0 ? 'sem' : d + '%',
+          style: {
+            fontSize: '18px', fontWeight: 700, width: '62px', height: '54px', borderRadius: '12px', cursor: 'pointer',
+            border: i.desc === d ? '2px solid #8A3A28' : '2px solid #DAD5CB',
+            background: i.desc === d ? '#8A3A28' : '#F6F4F0', color: i.desc === d ? '#FFFFFF' : '#5C574E'
+          },
+          pick: () => this.setState((st) => ({ itens: st.itens.map((x) => (x.key === i.key ? { ...x, desc: d } : x)) }))
+        })),
+        mais: () => this.setState((st) => ({ itens: st.itens.map((x) => (x.key === i.key ? { ...x, qtd: x.qtd + 1 } : x)) })),
+        menos: () => this.setState((st) => ({ itens: st.itens.flatMap((x) => (x.key === i.key ? (x.qtd > 1 ? [{ ...x, qtd: x.qtd - 1 }] : []) : [x])) })),
+        remover: () => this.setState((st) => ({ itens: st.itens.filter((x) => x.key !== i.key) }))
+      })),
+
+      descTotalLabel: s.descTotal ? '− ' + brl(s.descTotal) : 'sem desconto',
+      descMais: () => this.setState((st) => ({ descTotal: st.descTotal + 5 })),
+      descMenos: () => this.setState((st) => ({ descTotal: Math.max(0, st.descTotal - 5) })),
+
+      pagamentos: PAGAMENTOS.map((p) => ({
+        nome: p,
+        style: {
+          fontSize: '20px', fontWeight: 600, padding: '22px 12px', borderRadius: '14px', cursor: 'pointer',
+          border: s.pagamento === p ? '3px solid #1D5B3F' : '2px solid #DAD5CB',
+          background: s.pagamento === p ? '#E6EFE9' : '#F6F4F0', color: '#22201C'
+        },
+        pick: () => this.setState({ pagamento: p })
+      })),
+
+      totalPecas: pecas + (pecas === 1 ? ' peça' : ' peças'),
+      subtotal: brl(bruto),
+      descontos: descTudo ? '− ' + brl(descTudo) : brl(0),
+      total: brl(total),
+
+      labelFinalizar: s.itens.length === 0 ? 'Inclua uma peça' : (s.pagamento ? 'Fechar venda · ' + brl(total) : 'Escolha o pagamento'),
+      btnFinalizarStyle: {
+        fontSize: '23px', fontWeight: 700, padding: '22px', borderRadius: '14px', border: 'none', width: '100%',
+        cursor: podeFechar ? 'pointer' : 'not-allowed',
+        background: podeFechar ? '#1D5B3F' : '#D5D0C6', color: podeFechar ? '#FFFFFF' : '#8A857C'
+      },
+      finalizar: () => {
+        if (!podeFechar) return;
+        this.setState((st) => ({
+          sucesso: { pedido: st.pedido, total, pecas, pagamento: st.pagamento, cliente: st.cliente },
+          dia: [{ pedido: st.pedido, total, pecas, pagamento: st.pagamento, cliente: st.cliente, hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }].concat(st.dia)
+        }));
+      },
+      limpar: () => this.setState({ itens: [], descTotal: 0, pagamento: null, cliente: '', cpf: '' }),
+
+      mostrarSucesso: !!s.sucesso,
+      resumoSucesso: s.sucesso
+        ? 'Pedido #' + s.sucesso.pedido + ' · ' + s.sucesso.pecas + ' peça(s) · ' + brl(s.sucesso.total) + ' em ' + s.sucesso.pagamento + (s.sucesso.cliente ? ' · ' + s.sucesso.cliente : '')
+        : '',
+      novaVenda: () => this.setState((st) => ({
+        sucesso: null, itens: [], descTotal: 0, pagamento: null, cliente: '', cpf: '',
+        modelo: null, tecido: null, tamanho: null, cor: null, pedido: st.pedido + 1, aba: 'produtos'
+      })),
+
+      semPedidos: s.dia.length === 0,
+      qtdPedidosDia: String(s.dia.length),
+      totalDia: brl(s.dia.reduce((a, p) => a + p.total, 0)),
+      pedidosDia: s.dia.map((p) => ({
+        titulo: 'Pedido #' + p.pedido + (p.cliente ? ' · ' + p.cliente : ''),
+        detalhe: p.hora + ' · ' + p.pecas + ' peça(s) · ' + p.pagamento,
+        total: brl(p.total)
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

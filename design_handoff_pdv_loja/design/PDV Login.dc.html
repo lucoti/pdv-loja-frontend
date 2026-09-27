@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  body { margin:0; background:#E7E4DE; font-family:'Libre Franklin', Helvetica, Arial, sans-serif; -webkit-font-smoothing:antialiased; }
+  a { color:#1D5B3F; } a:hover { color:#16452F; }
+  button, input { font-family:inherit; }
+  input::placeholder { color:#8A857C; }
+</style>
+</helmet>
+<div style="minHeight:100vh; display:flex; justifyContent:center; background:#E7E4DE">
+<div style="width:100%; maxWidth:460px; minHeight:100vh; background:#F6F4F0; color:#22201C; display:flex; flexDirection:column; boxShadow:0 0 0 1px rgba(34,32,28,0.08)">
+
+  <div style="background:#22201C; color:#F6F4F0; padding:40px 24px 34px; display:flex; flexDirection:column; gap:8px">
+    <div style="fontSize:26px; fontWeight:700; letterSpacing:0.02em">BALCÃO</div>
+    <div style="fontSize:19px; opacity:0.75">Ponto de venda · {{ loja }}</div>
+  </div>
+
+  <main style="flex:1; padding:28px 20px 34px; display:flex; flexDirection:column; gap:24px">
+
+    <sc-if value="{{ etapaVendedor }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex; flexDirection:column; gap:18px">
+        <div style="fontSize:26px; fontWeight:700; lineHeight:1.2">Quem está vendendo?</div>
+        <div style="display:flex; flexDirection:column; gap:12px">
+          <sc-for list="{{ vendedores }}" as="v" hint-placeholder-count="4">
+            <button onClick="{{ v.pick }}" style="display:flex; alignItems:center; gap:16px; width:100%; minHeight:88px; padding:18px 20px; borderRadius:16px; border:2px solid #DAD5CB; background:#FFFFFF; color:#22201C; textAlign:left; cursor:pointer" style-active="border:2px solid #1D5B3F; background:#E6EFE9">
+              <span style="width:56px; height:56px; flexShrink:0; borderRadius:999px; background:#E6EFE9; border:2px solid #1D5B3F; color:#1D5B3F; fontSize:23px; fontWeight:700; display:flex; alignItems:center; justifyContent:center">{{ v.inicial }}</span>
+              <span style="flex:1; minWidth:0; display:flex; flexDirection:column; gap:3px">
+                <span style="fontSize:23px; fontWeight:700; lineHeight:1.15">{{ v.nome }}</span>
+                <span style="fontSize:17px; color:#5C574E">{{ v.cargo }}</span>
+              </span>
+              <span style="fontSize:30px; color:#1D5B3F; fontWeight:700">›</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ etapaSenha }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex; flexDirection:column; gap:22px">
+        <div style="display:flex; alignItems:center; gap:14px">
+          <sc-if value="{{ varios }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ trocarVendedor }}" style="width:58px; height:58px; fontSize:26px; fontWeight:700; borderRadius:14px; border:2px solid #22201C; background:transparent; color:#22201C; cursor:pointer">←</button>
+          </sc-if>
+          <div style="flex:1; minWidth:0">
+            <div style="fontSize:24px; fontWeight:700; lineHeight:1.15">{{ nomeAtual }}</div>
+            <div style="fontSize:17px; color:#5C574E; marginTop:3px">Digite sua senha de 4 números</div>
+          </div>
+        </div>
+
+        <div style="display:flex; alignItems:center; justifyContent:center; gap:14px; padding:6px 0">
+          <sc-for list="{{ marcadores }}" as="d" hint-placeholder-count="4">
+            <span style="{{ d.style }}"></span>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ temErro }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 18px; borderRadius:14px; background:#F6E4DE; border:2px solid #C98B76; color:#7A2E1C; fontSize:19px; fontWeight:600; textAlign:center">{{ erro }}</div>
+        </sc-if>
+
+        <div style="display:grid; gridTemplateColumns:repeat(3, 1fr); gap:12px">
+          <sc-for list="{{ teclas }}" as="k" hint-placeholder-count="12">
+            <button onClick="{{ k.press }}" style="{{ k.style }}">{{ k.label }}</button>
+          </sc-for>
+        </div>
+
+        <button onClick="{{ entrar }}" style="{{ btnEntrarStyle }}">Entrar no PDV</button>
+      </div>
+    </sc-if>
+
+  </main>
+
+  <div style="padding:18px 20px 26px; borderTop:2px solid #DAD5CB; fontSize:17px; color:#5C574E; textAlign:center; lineHeight:1.5">Esqueceu a senha? Peça ao gerente.<br />Senha de teste: <strong>1234</strong></div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:460,&quot;height&quot;:900},&quot;loja&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Unidade Centro&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+const VENDEDORES = [
+  { nome: 'Carlos', cargo: 'Vendedor · loja', senha: '1234' }
+];
+
+class Component extends DCLogic {
+  state = { vendedor: VENDEDORES[0], pin: '', erro: '', dentro: false, hora: '' };
+
+  digitar = (n) => this.setState((s) => (s.pin.length >= 4 ? s : { pin: s.pin + n, erro: '' }));
+  apagar = () => this.setState((s) => ({ pin: s.pin.slice(0, -1), erro: '' }));
+
+  entrar = () => {
+    const { vendedor, pin } = this.state;
+    if (!vendedor || pin.length < 4) return;
+    if (pin === vendedor.senha) {
+      this.setState({ pin: '', erro: '' });
+      window.location.href = './PDV Loja Mobile.dc.html';
+    } else {
+      this.setState({ pin: '', erro: 'Senha incorreta. Tente de novo.' });
+    }
+  };
+
+  renderVals() {
+    const s = this.state;
+    const completo = s.pin.length === 4;
+
+    const teclaBase = {
+      height: '76px', fontSize: '28px', fontWeight: 700, borderRadius: '14px', cursor: 'pointer',
+      border: '2px solid #DAD5CB', background: '#FFFFFF', color: '#22201C'
+    };
+
+    const teclas = ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((n) => ({
+      label: n, style: teclaBase, press: () => this.digitar(n)
+    }));
+    teclas.push({ label: '', style: { ...teclaBase, border: 'none', background: 'transparent', cursor: 'default' }, press: () => {} });
+    teclas.push({ label: '0', style: teclaBase, press: () => this.digitar('0') });
+    teclas.push({
+      label: 'apagar',
+      style: { ...teclaBase, fontSize: '19px', background: '#E7E4DE', color: '#5C574E' },
+      press: this.apagar
+    });
+
+    return {
+      loja: this.props.loja ?? 'Unidade Centro',
+      vendedores: VENDEDORES.map((v) => ({
+        nome: v.nome, cargo: v.cargo, inicial: v.nome.charAt(0),
+        pick: () => this.setState({ vendedor: v, pin: '', erro: '' })
+      })),
+
+      etapaVendedor: !s.vendedor,
+      etapaSenha: !!s.vendedor,
+
+      nomeAtual: s.vendedor ? s.vendedor.nome : '',
+      varios: VENDEDORES.length > 1,
+      trocarVendedor: () => this.setState({ vendedor: null, pin: '', erro: '' }),
+
+      marcadores: [0, 1, 2, 3].map((i) => ({
+        style: {
+          width: '26px', height: '26px', borderRadius: '999px', display: 'block',
+          background: i < s.pin.length ? '#1D5B3F' : 'transparent',
+          border: i < s.pin.length ? '2px solid #1D5B3F' : '2px solid #BFB9AD'
+        }
+      })),
+
+      temErro: !!s.erro,
+      erro: s.erro,
+      teclas,
+
+      btnEntrarStyle: {
+        fontSize: '23px', fontWeight: 700, padding: '24px', borderRadius: '14px', border: 'none', width: '100%',
+        cursor: completo ? 'pointer' : 'not-allowed',
+        background: completo ? '#1D5B3F' : '#D5D0C6', color: completo ? '#FFFFFF' : '#8A857C'
+      },
+      entrar: this.entrar,
+
+      sair: () => this.setState({ vendedor: VENDEDORES[0], pin: '', erro: '' })
+    };
+  }
+}
+</script>
+</body>
+</html>

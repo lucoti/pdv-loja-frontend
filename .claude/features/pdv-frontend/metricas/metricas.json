@@ -1,0 +1,208 @@
+{
+  "versao": 1,
+  "feature": "pdv-frontend",
+  "etapas": [
+    {
+      "fase": "planejamento",
+      "tokens": 1661910,
+      "tokens_detalhe": {
+        "input": 14,
+        "output": 6373,
+        "cache_criacao": 311887,
+        "cache_leitura": 1343636
+      },
+      "tempo_execucao_min": 576.7,
+      "intervalos": [
+        [
+          1790392747200,
+          1790392883650
+        ],
+        [
+          1790392883657,
+          1790427290277
+        ],
+        [
+          1790517229576,
+          1790517239237
+        ],
+        [
+          1790517626489,
+          1790517650313
+        ],
+        [
+          1790518041995,
+          1790518069750
+        ]
+      ],
+      "subagentes": {},
+      "atualizado_em": "2026-09-27T14:07:49.755Z"
+    },
+    {
+      "fase": "requisitos",
+      "tokens": 434046,
+      "tokens_detalhe": {
+        "input": 10,
+        "output": 6784,
+        "cache_criacao": 21580,
+        "cache_leitura": 405672
+      },
+      "tempo_execucao_min": 2.5,
+      "intervalos": [
+        [
+          1790518069750,
+          1790518172662
+        ],
+        [
+          1790518393505,
+          1790518443186
+        ]
+      ],
+      "subagentes": {},
+      "atualizado_em": "2026-09-27T14:14:03.188Z"
+    },
+    {
+      "fase": "arquitetura",
+      "tokens": 319477,
+      "tokens_detalhe": {
+        "input": 6,
+        "output": 8205,
+        "cache_criacao": 7704,
+        "cache_leitura": 303562
+      },
+      "tempo_execucao_min": 1.4,
+      "intervalos": [
+        [
+          1790518443186,
+          1790518477852
+        ],
+        [
+          1790518635176,
+          1790518686355
+        ]
+      ],
+      "subagentes": {},
+      "atualizado_em": "2026-09-27T14:18:06.357Z"
+    },
+    {
+      "fase": "desenvolvimento",
+      "tokens": 8362355,
+      "tokens_detalhe": {
+        "input": 90,
+        "output": 63484,
+        "cache_criacao": 113518,
+        "cache_leitura": 8185263
+      },
+      "tempo_execucao_min": 11.1,
+      "intervalos": [
+        [
+          1790518686355,
+          1790519323771
+        ],
+        [
+          1790519381511,
+          1790519408887
+        ]
+      ],
+      "subagentes": {},
+      "atualizado_em": "2026-09-27T14:30:08.889Z"
+    },
+    {
+      "fase": "documentacao",
+      "tokens": 2736494,
+      "tokens_detalhe": {
+        "input": 58,
+        "output": 8695,
+        "cache_criacao": 100622,
+        "cache_leitura": 2627119
+      },
+      "tempo_execucao_min": 5.1,
+      "intervalos": [
+        [
+          1790519422496,
+          1790519691247
+        ],
+        [
+          1790519691329,
+          1790519726074
+        ],
+        [
+          1790520012456,
+          1790520017035
+        ]
+      ],
+      "subagentes": {
+        "fluxo-dev:fluxo-documentador": {
+          "tokens": 1352274,
+          "execucoes": 1
+        }
+      },
+      "atualizado_em": "2026-09-27T14:40:17.038Z"
+    },
+    {
+      "fase": "testes",
+      "tokens": 4045906,
+      "tokens_detalhe": {
+        "input": 70,
+        "output": 3994,
+        "cache_criacao": 157590,
+        "cache_leitura": 3884252
+      },
+      "tempo_execucao_min": 16.5,
+      "intervalos": [
+        [
+          1790520039194,
+          1790520954116
+        ],
+        [
+          1790520954199,
+          1790520997321
+        ],
+        [
+          1790522279719,
+          1790522311709
+        ]
+      ],
+      "subagentes": {
+        "fluxo-dev:fluxo-testador": {
+          "tokens": 3092733,
+          "execucoes": 1
+        }
+      },
+      "atualizado_em": "2026-09-27T15:18:31.711Z"
+    },
+    {
+      "fase": "implantacao",
+      "tokens": 495283,
+      "tokens_detalhe": {
+        "input": 4,
+        "output": 5349,
+        "cache_criacao": 4760,
+        "cache_leitura": 485170
+      },
+      "tempo_execucao_min": 0.6,
+      "intervalos": [
+        [
+          1790522311709,
+          1790522326685
+        ],
+        [
+          1790522915567,
+          1790522938879
+        ]
+      ],
+      "subagentes": {},
+      "atualizado_em": "2026-09-27T15:28:58.880Z"
+    }
+  ],
+  "total": {
+    "tokens": 18055471,
+    "tokens_detalhe": {
+      "input": 252,
+      "output": 102884,
+      "cache_criacao": 717661,
+      "cache_leitura": 17234674
+    },
+    "tempo_execucao_min": 613.9
+  },
+  "atualizado_em": "2026-09-27T15:28:58.880Z"
+}

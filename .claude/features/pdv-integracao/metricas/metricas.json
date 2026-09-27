@@ -1,0 +1,44 @@
+{
+  "versao": 1,
+  "feature": "pdv-integracao",
+  "etapas": [
+    {
+      "fase": "planejamento",
+      "tokens": 2475720,
+      "tokens_detalhe": {
+        "input": 18,
+        "output": 7365,
+        "cache_criacao": 7435,
+        "cache_leitura": 2460902
+      },
+      "tempo_execucao_min": 1.5,
+      "intervalos": [
+        [
+          1790528077253,
+          1790528087168
+        ],
+        [
+          1790528155053,
+          1790528185938
+        ],
+        [
+          1790528320642,
+          1790528369907
+        ]
+      ],
+      "subagentes": {},
+      "atualizado_em": "2026-09-27T16:59:29.910Z"
+    }
+  ],
+  "total": {
+    "tokens": 2475720,
+    "tokens_detalhe": {
+      "input": 18,
+      "output": 7365,
+      "cache_criacao": 7435,
+      "cache_leitura": 2460902
+    },
+    "tempo_execucao_min": 1.5
+  },
+  "atualizado_em": "2026-09-27T16:59:29.910Z"
+}

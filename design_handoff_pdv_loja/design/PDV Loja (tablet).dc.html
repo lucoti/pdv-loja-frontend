@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  body { margin:0; background:#EFEDE8; font-family:'Libre Franklin', Helvetica, Arial, sans-serif; -webkit-font-smoothing:antialiased; }
+  a { color:#1D5B3F; } a:hover { color:#16452F; }
+  button { font-family:inherit; }
+</style>
+</helmet>
+<div style="min-height:100vh; display:flex; flexDirection:column; background:#EFEDE8; color:#22201C; fontSize:{{ baseFont }}">
+
+  <header style="display:flex; alignItems:center; gap:20px; padding:18px 24px; background:#22201C; color:#F6F4F0">
+    <div style="fontSize:22px; fontWeight:700; letterSpacing:0.02em">BALCÃO DE VENDAS</div>
+    <div style="width:1px; height:28px; background:rgba(246,244,240,0.3)"></div>
+    <div style="fontSize:19px">Vendedor: <strong>{{ vendedor }}</strong></div>
+    <div style="marginLeft:auto; display:flex; alignItems:center; gap:16px">
+      <div style="fontSize:19px; opacity:0.8">Pedido {{ pedidoNum }}</div>
+      <div style="fontSize:19px; padding:8px 16px; borderRadius:999px; background:rgba(246,244,240,0.14)">{{ hoje }}</div>
+    </div>
+  </header>
+
+  <div style="flex:1; display:flex; alignItems:stretch; minHeight:0">
+
+    <main style="flex:1; minWidth:0; display:flex; flexDirection:column; padding:22px 22px 26px">
+
+      <sc-if value="{{ escolhendoVariacao }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; flexDirection:column; gap:22px">
+          <div style="display:flex; alignItems:center; gap:18px">
+            <button onClick="{{ voltar }}" style="fontSize:21px; fontWeight:600; padding:16px 22px; borderRadius:12px; border:2px solid #22201C; background:transparent; color:#22201C; cursor:pointer">← Voltar</button>
+            <div>
+              <div style="fontSize:32px; fontWeight:700; lineHeight:1.1">{{ modeloNome }}</div>
+              <div style="fontSize:19px; color:#5C574E; marginTop:4px">Escolha tecido, tamanho e cor</div>
+            </div>
+          </div>
+
+          <div>
+            <div style="fontSize:18px; fontWeight:700; letterSpacing:0.06em; color:#5C574E; marginBottom:12px">1. TECIDO</div>
+            <div style="display:flex; flexWrap:wrap; gap:14px">
+              <sc-for list="{{ tecidos }}" as="t" hint-placeholder-count="2">
+                <button onClick="{{ t.pick }}" style="{{ t.style }}">
+                  <span style="fontSize:24px; fontWeight:600">{{ t.nome }}</span>
+                  <span style="fontSize:19px; color:#5C574E">{{ t.preco }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div>
+            <div style="fontSize:18px; fontWeight:700; letterSpacing:0.06em; color:#5C574E; marginBottom:12px">2. TAMANHO</div>
+            <div style="display:flex; flexWrap:wrap; gap:14px">
+              <sc-for list="{{ tamanhos }}" as="s" hint-placeholder-count="4">
+                <button onClick="{{ s.pick }}" style="{{ s.style }}">{{ s.nome }}</button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div>
+            <div style="fontSize:18px; fontWeight:700; letterSpacing:0.06em; color:#5C574E; marginBottom:12px">3. COR</div>
+            <div style="display:flex; flexWrap:wrap; gap:14px">
+              <sc-for list="{{ cores }}" as="c" hint-placeholder-count="6">
+                <button onClick="{{ c.pick }}" style="{{ c.style }}">
+                  <span style="width:32px; height:32px; borderRadius:999px; border:2px solid rgba(34,32,28,0.25); display:block; background:{{ c.hex }}"></span>
+                  <span style="fontSize:22px; fontWeight:600">{{ c.nome }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="marginTop:auto; display:flex; alignItems:center; gap:20px; paddingTop:10px">
+            <div style="flex:1; minWidth:0; fontSize:21px; color:#5C574E">{{ resumoEscolha }}</div>
+            <button onClick="{{ adicionar }}" style="{{ btnAdicionarStyle }}">Adicionar ao pedido</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ escolhendoModelo }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex; flexDirection:column; gap:18px; minHeight:0">
+          <div style="display:flex; alignItems:center; gap:14px; flexWrap:wrap">
+            <sc-for list="{{ categorias }}" as="cat" hint-placeholder-count="4">
+              <button onClick="{{ cat.pick }}" style="{{ cat.style }}">{{ cat.nome }}</button>
+            </sc-for>
+          </div>
+
+          <div style="display:grid; gridTemplateColumns:repeat(auto-fill, minmax(230px, 1fr)); gap:16px; alignContent:start">
+            <sc-for list="{{ modelos }}" as="m" hint-placeholder-count="9">
+              <button onClick="{{ m.pick }}" style="display:flex; flexDirection:column; alignItems:flex-start; justifyContent:space-between; gap:14px; minHeight:150px; padding:20px; borderRadius:16px; border:2px solid #DAD5CB; background:#F8F6F2; color:#22201C; textAlign:left; cursor:pointer; boxShadow:0 1px 0 rgba(34,32,28,0.06)" style-hover="border:2px solid #1D5B3F; background:#FFFFFF">
+                <span style="fontSize:24px; fontWeight:700; lineHeight:1.15">{{ m.nome }}</span>
+                <span style="display:flex; flexDirection:column; gap:4px">
+                  <span style="fontSize:20px; fontWeight:600; color:#1D5B3F">{{ m.precoDe }}</span>
+                  <span style="fontSize:17px; color:#5C574E">{{ m.variacoes }}</span>
+                </span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+    </main>
+
+    <aside style="width:430px; flexShrink:0; background:#F8F6F2; borderLeft:2px solid #DAD5CB; display:flex; flexDirection:column">
+      <div style="padding:20px 22px; borderBottom:2px solid #DAD5CB; display:flex; alignItems:baseline; gap:12px">
+        <div style="fontSize:26px; fontWeight:700">Pedido</div>
+        <div style="fontSize:20px; color:#5C574E">{{ qtdItens }}</div>
+      </div>
+
+      <div style="flex:1; minHeight:0; overflowY:auto; padding:16px 18px; display:flex; flexDirection:column; gap:12px">
+        <sc-if value="{{ carrinhoVazio }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:40px 16px; textAlign:center; color:#5C574E; fontSize:20px; lineHeight:1.5">Nenhum item ainda.<br />Toque em um produto ao lado.</div>
+        </sc-if>
+        <sc-for list="{{ itens }}" as="it" hint-placeholder-count="0">
+          <div style="border:2px solid #DAD5CB; borderRadius:14px; background:#FFFFFF; padding:14px 16px; display:flex; flexDirection:column; gap:10px">
+            <div style="display:flex; alignItems:flex-start; gap:12px">
+              <div style="flex:1; minWidth:0">
+                <div style="fontSize:21px; fontWeight:700; lineHeight:1.2">{{ it.nome }}</div>
+                <div style="fontSize:18px; color:#5C574E; marginTop:4px">{{ it.detalhe }}</div>
+              </div>
+              <button onClick="{{ it.remover }}" style="fontSize:18px; fontWeight:600; color:#8A3A28; background:transparent; border:none; padding:6px 8px; cursor:pointer; textDecoration:underline">Excluir</button>
+            </div>
+            <div style="display:flex; alignItems:center; gap:12px">
+              <button onClick="{{ it.menos }}" style="width:54px; height:54px; fontSize:28px; fontWeight:700; borderRadius:12px; border:2px solid #22201C; background:transparent; color:#22201C; cursor:pointer">−</button>
+              <div style="minWidth:46px; textAlign:center; fontSize:24px; fontWeight:700; fontVariantNumeric:tabular-nums">{{ it.qtd }}</div>
+              <button onClick="{{ it.mais }}" style="width:54px; height:54px; fontSize:28px; fontWeight:700; borderRadius:12px; border:2px solid #22201C; background:#22201C; color:#F6F4F0; cursor:pointer">+</button>
+              <div style="marginLeft:auto; fontSize:22px; fontWeight:700; fontVariantNumeric:tabular-nums">{{ it.subtotal }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="borderTop:2px solid #DAD5CB; padding:18px 22px 22px; display:flex; flexDirection:column; gap:14px; background:#F1EEE8">
+        <div style="display:flex; alignItems:baseline; justifyContent:space-between">
+          <div style="fontSize:22px; color:#5C574E">Peças</div>
+          <div style="fontSize:22px; fontWeight:600; fontVariantNumeric:tabular-nums">{{ totalPecas }}</div>
+        </div>
+        <div style="display:flex; alignItems:baseline; justifyContent:space-between">
+          <div style="fontSize:26px; fontWeight:700">Total</div>
+          <div style="fontSize:38px; fontWeight:700; fontVariantNumeric:tabular-nums; lineHeight:1">{{ total }}</div>
+        </div>
+        <button onClick="{{ finalizar }}" style="{{ btnFinalizarStyle }}">Fechar venda</button>
+        <button onClick="{{ limpar }}" style="fontSize:19px; fontWeight:600; padding:12px; borderRadius:12px; border:2px solid #DAD5CB; background:transparent; color:#5C574E; cursor:pointer">Cancelar pedido</button>
+      </div>
+    </aside>
+  </div>
+
+  <sc-if value="{{ mostrarPagamento }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; inset:0; background:rgba(34,32,28,0.55); display:flex; alignItems:center; justifyContent:center; padding:30px; zIndex:40">
+      <div style="width:100%; maxWidth:720px; background:#F8F6F2; borderRadius:20px; padding:32px; display:flex; flexDirection:column; gap:24px">
+        <div style="display:flex; alignItems:baseline; justifyContent:space-between; gap:16px">
+          <div style="fontSize:30px; fontWeight:700">Forma de pagamento</div>
+          <div style="fontSize:40px; fontWeight:700; fontVariantNumeric:tabular-nums">{{ total }}</div>
+        </div>
+        <div style="display:grid; gridTemplateColumns:repeat(2, minmax(0,1fr)); gap:16px">
+          <sc-for list="{{ pagamentos }}" as="p" hint-placeholder-count="4">
+            <button onClick="{{ p.pick }}" style="{{ p.style }}">{{ p.nome }}</button>
+          </sc-for>
+        </div>
+        <div style="fontSize:20px; color:#5C574E">{{ resumoPagamento }}</div>
+        <div style="display:flex; gap:14px">
+          <button onClick="{{ fecharPagamento }}" style="flex:1; fontSize:21px; fontWeight:600; padding:20px; borderRadius:14px; border:2px solid #22201C; background:transparent; color:#22201C; cursor:pointer">Voltar</button>
+          <button onClick="{{ confirmar }}" style="{{ btnConfirmarStyle }}">Confirmar venda</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ mostrarSucesso }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; inset:0; background:rgba(34,32,28,0.55); display:flex; alignItems:center; justifyContent:center; padding:30px; zIndex:50">
+      <div style="width:100%; maxWidth:560px; background:#F8F6F2; borderRadius:20px; padding:40px; textAlign:center; display:flex; flexDirection:column; gap:18px">
+        <div style="fontSize:32px; fontWeight:700; color:#1D5B3F">Venda registrada</div>
+        <div style="fontSize:22px; color:#5C574E; lineHeight:1.5">{{ resumoSucesso }}</div>
+        <button onClick="{{ novaVenda }}" style="fontSize:24px; fontWeight:700; padding:22px; borderRadius:14px; border:none; background:#1D5B3F; color:#FFFFFF; cursor:pointer">Nova venda</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;vendedor&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Marta&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;escalaTexto&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1,&quot;min&quot;:0.9,&quot;max&quot;:1.3,&quot;step&quot;:0.05,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Acessibilidade&quot;}}">
+const CAT = [
+  { id: 'calca', nome: 'Calças' },
+  { id: 'bermuda', nome: 'Bermudas / Shorts' },
+  { id: 'top', nome: 'Tops / Blusas' },
+  { id: 'conj', nome: 'Conjuntos' }
+];
+
+const MODELOS = [
+  { id: 1, nome: 'Calça Legging', cat: 'calca', base: 89 },
+  { id: 2, nome: 'Calça Flare', cat: 'calca', base: 99 },
+  { id: 3, nome: 'Calça Pantalona', cat: 'calca', base: 109 },
+  { id: 4, nome: 'Calça Corsário', cat: 'calca', base: 79 },
+  { id: 5, nome: 'Bermuda Ciclista', cat: 'bermuda', base: 59 },
+  { id: 6, nome: 'Bermuda Longa', cat: 'bermuda', base: 69 },
+  { id: 7, nome: 'Short Saia', cat: 'bermuda', base: 65 },
+  { id: 8, nome: 'Short Curto', cat: 'bermuda', base: 55 },
+  { id: 9, nome: 'Top Alça Larga', cat: 'top', base: 49 },
+  { id: 10, nome: 'Top Nadador', cat: 'top', base: 55 },
+  { id: 11, nome: 'Blusa Manga Longa', cat: 'top', base: 79 },
+  { id: 12, nome: 'Regata Básica', cat: 'top', base: 45 },
+  { id: 13, nome: 'Conjunto Legging + Top', cat: 'conj', base: 139 },
+  { id: 14, nome: 'Conjunto Ciclista + Top', cat: 'conj', base: 119 }
+];
+
+const TECIDOS = [
+  { id: 'normal', nome: 'Suplex Normal', extra: 0 },
+  { id: 'light', nome: 'Suplex Light', extra: 12 }
+];
+
+const TAMANHOS = ['P', 'M', 'G', 'GG'];
+
+const CORES = [
+  { nome: 'Preto', hex: '#1B1B1B' },
+  { nome: 'Marinho', hex: '#26344F' },
+  { nome: 'Grafite', hex: '#5A5A5A' },
+  { nome: 'Vinho', hex: '#6B2232' },
+  { nome: 'Verde Militar', hex: '#4A5236' },
+  { nome: 'Rosa Antigo', hex: '#B4808A' },
+  { nome: 'Bege', hex: '#C7B299' },
+  { nome: 'Off White', hex: '#EDE8DE' }
+];
+
+const PAGAMENTOS = ['Dinheiro', 'Pix', 'Cartão de débito', 'Cartão de crédito'];
+
+const brl = (v) => 'R$ ' + v.toFixed(2).replace('.', ',');
+
+const chip = (on) => ({
+  fontSize: '21px', fontWeight: 600, padding: '14px 22px', borderRadius: '999px', cursor: 'pointer',
+  border: on ? '2px solid #1D5B3F' : '2px solid #DAD5CB',
+  background: on ? '#1D5B3F' : '#F8F6F2', color: on ? '#FFFFFF' : '#22201C'
+});
+
+class Component extends DCLogic {
+  state = {
+    cat: 'calca', modelo: null, tecido: null, tamanho: null, cor: null,
+    itens: [], pagamento: null, tela: 'venda', pedido: 1042, ultimo: null
+  };
+
+  preco(modelo, tecidoId) {
+    const t = TECIDOS.find((x) => x.id === tecidoId) || TECIDOS[0];
+    return modelo.base + t.extra;
+  }
+
+  add = () => {
+    const { modelo, tecido, tamanho, cor } = this.state;
+    if (!modelo || !tecido || !tamanho || !cor) return;
+    const key = [modelo.id, tecido, tamanho, cor].join('-');
+    this.setState((s) => {
+      const existe = s.itens.find((i) => i.key === key);
+      const itens = existe
+        ? s.itens.map((i) => (i.key === key ? { ...i, qtd: i.qtd + 1 } : i))
+        : s.itens.concat([{
+            key, nome: modelo.nome, tecidoNome: TECIDOS.find((t) => t.id === tecido).nome,
+            tamanho, cor, qtd: 1, preco: this.preco(modelo, tecido)
+          }]);
+      return { itens, modelo: null, tecido: null, tamanho: null, cor: null };
+    });
+  };
+
+  total() { return this.state.itens.reduce((a, i) => a + i.preco * i.qtd, 0); }
+  pecas() { return this.state.itens.reduce((a, i) => a + i.qtd, 0); }
+
+  renderVals() {
+    const s = this.state;
+    const escala = this.props.escalaTexto ?? 1;
+    const total = this.total();
+    const pecas = this.pecas();
+    const podeAdicionar = !!(s.modelo && s.tecido && s.tamanho && s.cor);
+
+    return {
+      baseFont: Math.round(16 * escala) + 'px',
+      vendedor: this.props.vendedor ?? 'Marta',
+      pedidoNum: '#' + s.pedido,
+      hoje: new Date().toLocaleDateString('pt-BR'),
+
+      escolhendoModelo: !s.modelo,
+      escolhendoVariacao: !!s.modelo,
+      modeloNome: s.modelo ? s.modelo.nome : '',
+
+      categorias: CAT.map((c) => ({
+        nome: c.nome, style: chip(c.id === s.cat),
+        pick: () => this.setState({ cat: c.id })
+      })),
+
+      modelos: MODELOS.filter((m) => m.cat === s.cat).map((m) => ({
+        nome: m.nome,
+        precoDe: 'a partir de ' + brl(m.base),
+        variacoes: TECIDOS.length + ' tecidos · ' + TAMANHOS.join(' ') + ' · ' + CORES.length + ' cores',
+        pick: () => this.setState({ modelo: m, tecido: 'normal', tamanho: null, cor: null })
+      })),
+
+      tecidos: TECIDOS.map((t) => ({
+        nome: t.nome,
+        preco: s.modelo ? brl(this.preco(s.modelo, t.id)) : '',
+        style: {
+          display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px',
+          padding: '18px 26px', borderRadius: '14px', cursor: 'pointer', minWidth: '230px',
+          border: s.tecido === t.id ? '3px solid #1D5B3F' : '2px solid #DAD5CB',
+          background: s.tecido === t.id ? '#E6EFE9' : '#F8F6F2', color: '#22201C'
+        },
+        pick: () => this.setState({ tecido: t.id })
+      })),
+
+      tamanhos: TAMANHOS.map((n) => ({
+        nome: n,
+        style: {
+          width: '96px', height: '86px', fontSize: '32px', fontWeight: 700, borderRadius: '14px', cursor: 'pointer',
+          border: s.tamanho === n ? '3px solid #1D5B3F' : '2px solid #DAD5CB',
+          background: s.tamanho === n ? '#1D5B3F' : '#F8F6F2', color: s.tamanho === n ? '#FFFFFF' : '#22201C'
+        },
+        pick: () => this.setState({ tamanho: n })
+      })),
+
+      cores: CORES.map((c) => ({
+        nome: c.nome, hex: c.hex,
+        style: {
+          display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 20px',
+          borderRadius: '14px', cursor: 'pointer', minHeight: '68px',
+          border: s.cor === c.nome ? '3px solid #1D5B3F' : '2px solid #DAD5CB',
+          background: s.cor === c.nome ? '#E6EFE9' : '#F8F6F2', color: '#22201C'
+        },
+        pick: () => this.setState({ cor: c.nome })
+      })),
+
+      resumoEscolha: podeAdicionar
+        ? s.modelo.nome + ' · ' + TECIDOS.find((t) => t.id === s.tecido).nome + ' · ' + s.tamanho + ' · ' + s.cor + ' — ' + brl(this.preco(s.modelo, s.tecido))
+        : 'Falta escolher: ' + [!s.tecido && 'tecido', !s.tamanho && 'tamanho', !s.cor && 'cor'].filter(Boolean).join(', '),
+
+      btnAdicionarStyle: {
+        fontSize: '24px', fontWeight: 700, padding: '22px 40px', borderRadius: '14px', border: 'none',
+        cursor: podeAdicionar ? 'pointer' : 'not-allowed',
+        background: podeAdicionar ? '#1D5B3F' : '#D5D0C6',
+        color: podeAdicionar ? '#FFFFFF' : '#8A857C'
+      },
+      adicionar: this.add,
+      voltar: () => this.setState({ modelo: null, tecido: null, tamanho: null, cor: null }),
+
+      carrinhoVazio: s.itens.length === 0,
+      qtdItens: s.itens.length ? s.itens.length + (s.itens.length === 1 ? ' produto' : ' produtos') : '',
+      itens: s.itens.map((i) => ({
+        nome: i.nome,
+        detalhe: i.tecidoNome + ' · Tam ' + i.tamanho + ' · ' + i.cor + ' · ' + brl(i.preco),
+        qtd: i.qtd, subtotal: brl(i.preco * i.qtd),
+        mais: () => this.setState((st) => ({ itens: st.itens.map((x) => (x.key === i.key ? { ...x, qtd: x.qtd + 1 } : x)) })),
+        menos: () => this.setState((st) => ({ itens: st.itens.flatMap((x) => (x.key === i.key ? (x.qtd > 1 ? [{ ...x, qtd: x.qtd - 1 }] : []) : [x])) })),
+        remover: () => this.setState((st) => ({ itens: st.itens.filter((x) => x.key !== i.key) }))
+      })),
+      totalPecas: pecas + (pecas === 1 ? ' peça' : ' peças'),
+      total: brl(total),
+      btnFinalizarStyle: {
+        fontSize: '26px', fontWeight: 700, padding: '24px', borderRadius: '14px', border: 'none',
+        cursor: s.itens.length ? 'pointer' : 'not-allowed',
+        background: s.itens.length ? '#1D5B3F' : '#D5D0C6',
+        color: s.itens.length ? '#FFFFFF' : '#8A857C'
+      },
+      finalizar: () => { if (s.itens.length) this.setState({ tela: 'pagamento' }); },
+      limpar: () => this.setState({ itens: [], modelo: null, tecido: null, tamanho: null, cor: null }),
+
+      mostrarPagamento: s.tela === 'pagamento',
+      pagamentos: PAGAMENTOS.map((p) => ({
+        nome: p,
+        style: {
+          fontSize: '24px', fontWeight: 600, padding: '28px 20px', borderRadius: '14px', cursor: 'pointer',
+          border: s.pagamento === p ? '3px solid #1D5B3F' : '2px solid #DAD5CB',
+          background: s.pagamento === p ? '#E6EFE9' : '#FFFFFF', color: '#22201C'
+        },
+        pick: () => this.setState({ pagamento: p })
+      })),
+      resumoPagamento: s.pagamento
+        ? pecas + ' peça(s) · ' + s.pagamento
+        : 'Toque na forma de pagamento para continuar.',
+      btnConfirmarStyle: {
+        flex: 2, fontSize: '24px', fontWeight: 700, padding: '20px', borderRadius: '14px', border: 'none',
+        cursor: s.pagamento ? 'pointer' : 'not-allowed',
+        background: s.pagamento ? '#1D5B3F' : '#D5D0C6', color: s.pagamento ? '#FFFFFF' : '#8A857C'
+      },
+      fecharPagamento: () => this.setState({ tela: 'venda' }),
+      confirmar: () => {
+        if (!s.pagamento) return;
+        this.setState({ tela: 'sucesso', ultimo: { total, pecas, pagamento: s.pagamento, pedido: s.pedido } });
+      },
+
+      mostrarSucesso: s.tela === 'sucesso',
+      resumoSucesso: s.ultimo
+        ? 'Pedido #' + s.ultimo.pedido + ' · ' + s.ultimo.pecas + ' peça(s) · ' + brl(s.ultimo.total) + ' em ' + s.ultimo.pagamento
+        : '',
+      novaVenda: () => this.setState((st) => ({
+        tela: 'venda', itens: [], pagamento: null, modelo: null, tecido: null, tamanho: null, cor: null, pedido: st.pedido + 1
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>
