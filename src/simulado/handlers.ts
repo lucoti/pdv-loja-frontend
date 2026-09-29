@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
-import type { Venda, VendaEntrada, Vendedor } from '../api/cliente';
-import { calcularItem, calcularTotais, DESCONTOS_ITEM, precoVariacao } from '../dominio/precos';
+import type { Catalogo, Venda, VendaEntrada, Vendedor } from '../api/cliente';
+import { calcularItem, calcularTotais, DESCONTOS_ITEM } from '../dominio/precos';
 import { CATALOGO, CONFIG, PINS, VENDEDORES } from './dados';
 
 /**
@@ -14,7 +14,7 @@ const FUSO_LOJA = 'America/Sao_Paulo';
 const horaLocal = new Intl.DateTimeFormat('pt-BR', { timeZone: FUSO_LOJA, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-type Codigo = 'entrada_invalida' | 'senha_incorreta' | 'sessao_invalida' | 'sem_itens' | 'sem_pagamento' | 'item_invalido' | 'item_repetido' | 'cpf_invalido' | 'chave_em_uso';
+type Codigo = 'entrada_invalida' | 'senha_incorreta' | 'sessao_invalida' | 'sem_itens' | 'sem_pagamento' | 'item_invalido' | 'item_repetido' | 'cpf_invalido' | 'chave_em_uso' | 'sem_estoque';
 
 function erro(status: number, codigo: Codigo, mensagem: string) {
   return HttpResponse.json({ erro: { codigo, mensagem } }, { status });
@@ -48,6 +48,8 @@ export interface OpcoesSimulado {
   pins?: Record<string, string>;
   /** Já começa com sessão aberta para este vendedor. */
   sessaoDe?: string;
+  /** Catálogo inicial (padrão: CATALOGO). É copiado: as vendas baixam o saldo só nesta cópia. */
+  catalogo?: Catalogo;
 }
 
 /** Cria um simulado com estado próprio (sessão e vendas); cada teste pode começar do zero. */
@@ -57,48 +59,59 @@ export function criarSimulado(opcoes: OpcoesSimulado = {}) {
   const estado = {
     sessao: opcoes.sessaoDe ?? (null as string | null),
     vendas: [] as Array<Venda & { chave: string }>,
+    catalogo: structuredClone(opcoes.catalogo ?? CATALOGO),
+  };
+
+  // SKU com o produto dele, procurado no catálogo desta instância.
+  const acharSku = (skuId: number) => {
+    for (const produto of estado.catalogo.produtos) {
+      const sku = produto.skus.find((s) => s.id === skuId);
+      if (sku) return { produto, sku };
+    }
+    return undefined;
   };
 
   const vendedorDaSessao = () => vendedores.find((v) => v.id === estado.sessao);
 
   function registrar(vendedor: Vendedor, e: VendaEntrada) {
     if (e.itens.length === 0) return erro(400, 'sem_itens', 'Inclua uma peça');
-    const pagamento = CATALOGO.pagamentos.find((p) => p.id === e.pagamentoId);
+    const pagamento = estado.catalogo.pagamentos.find((p) => p.id === e.pagamentoId);
     if (!pagamento) return erro(400, 'sem_pagamento', 'Escolha o pagamento');
     const cpfInformado = e.cpf ?? '';
     if (cpfInformado && (!/^[\d.\-\s]+$/.test(cpfInformado) || !cpfValido(cpfInformado))) return erro(400, 'cpf_invalido', 'CPF inválido');
 
-    const vistas = new Set<string>();
+    const vistos = new Set<number>();
     const itens: Venda['itens'] = [];
+    const baixas: Array<{ sku: Catalogo['produtos'][number]['skus'][number]; qtd: number }> = [];
+    const faltas: string[] = [];
     for (const [i, item] of e.itens.entries()) {
       const posicao = `Item ${i + 1}`;
-      const modelo = CATALOGO.modelos.find((m) => m.id === item.modeloId);
-      const tecido = CATALOGO.tecidos.find((t) => t.id === item.tecidoId);
-      const cor = CATALOGO.cores.find((c) => c.nome === item.cor);
-      if (!modelo || !tecido || !cor || !(CATALOGO.tamanhos as string[]).includes(item.tamanho)) {
-        // ATENÇÃO: simplificação — o back distingue modelo, tecido, tamanho e cor na mensagem.
-        return erro(400, 'item_invalido', `${posicao}: modelo indisponível.`);
-      }
+      const achado = acharSku(item.skuId);
+      if (!achado) return erro(400, 'item_invalido', `${posicao}: produto indisponível.`);
       if (!Number.isInteger(item.qtd) || item.qtd < 1 || !(DESCONTOS_ITEM as readonly number[]).includes(item.descPercent)) {
         return erro(400, 'entrada_invalida', 'Dados inválidos.');
       }
-      const chave = `${modelo.id}|${tecido.id}|${item.tamanho}|${cor.nome}`;
-      if (vistas.has(chave)) return erro(400, 'item_repetido', `${posicao}: variação repetida — junte as quantidades numa linha só.`);
-      vistas.add(chave);
-      const precoUnitCentavos = precoVariacao(modelo.precoBaseCentavos, tecido.acrescimoCentavos);
+      const { produto, sku } = achado;
+      if (vistos.has(sku.id)) return erro(400, 'item_repetido', `${posicao}: peça repetida — junte as quantidades numa linha só.`);
+      vistos.add(sku.id);
+      if (item.qtd > sku.saldo) faltas.push(`${posicao}: ${produto.nome} · ${sku.cor.nome} · ${sku.tamanho.sigla} — ${sku.saldo > 0 ? `só ${sku.saldo} em estoque` : 'sem estoque'}`);
+      baixas.push({ sku, qtd: item.qtd });
       itens.push({
-        modeloId: modelo.id,
-        modeloNome: modelo.nome,
-        tecidoId: tecido.id,
-        tecidoNome: tecido.nome,
-        tamanho: item.tamanho,
-        cor: cor.nome,
+        modeloId: `produto:${produto.numero}`,
+        modeloNome: produto.nome,
+        // ATENÇÃO: simplificação — o simulado tem um tecido só; o back grava o id real do tecido do produto.
+        tecidoId: 'tecido:1',
+        tecidoNome: produto.tecidoNome,
+        tamanho: sku.tamanho.sigla,
+        cor: sku.cor.nome,
         qtd: item.qtd,
-        precoUnitCentavos,
+        precoUnitCentavos: sku.precoCentavos,
         descPercent: item.descPercent,
-        subtotalCentavos: calcularItem(precoUnitCentavos, item.qtd, item.descPercent).subtotalCentavos,
+        subtotalCentavos: calcularItem(sku.precoCentavos, item.qtd, item.descPercent).subtotalCentavos,
       });
     }
+    // Mesma regra do back: sem saldo não vende, e nada é gravado.
+    if (faltas.length) return erro(409, 'sem_estoque', `${faltas.join('; ')}.`);
 
     const descontoTotal = e.descontoTotalCentavos ?? 0;
     if (descontoTotal < 0 || descontoTotal % 500 !== 0) return erro(400, 'entrada_invalida', 'Dados inválidos.');
@@ -119,6 +132,8 @@ export function criarSimulado(opcoes: OpcoesSimulado = {}) {
       itens,
       ...totais,
     };
+    // A baixa só acontece depois de todas as validações, imitando o batch atômico do back.
+    for (const b of baixas) b.sku.saldo -= b.qtd;
     estado.vendas.push({ ...venda, chave: e.chaveIdempotencia });
     return HttpResponse.json({ venda }, { status: 201 });
   }
@@ -149,7 +164,7 @@ export function criarSimulado(opcoes: OpcoesSimulado = {}) {
       return new HttpResponse(null, { status: 204 });
     }),
 
-    http.get('*/api/catalogo', () => (vendedorDaSessao() ? HttpResponse.json(CATALOGO) : semSessao())),
+    http.get('*/api/catalogo', () => (vendedorDaSessao() ? HttpResponse.json(estado.catalogo) : semSessao())),
 
     http.post('*/api/vendas', async ({ request }) => {
       const vendedor = vendedorDaSessao();

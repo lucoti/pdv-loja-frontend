@@ -298,8 +298,7 @@ export interface paths {
                 };
                 /**
                  * @description `entrada_invalida` (formato), `sem_itens`, `sem_pagamento`, `item_invalido`
-                 *     (modelo/tecido/tamanho/cor inexistente), `item_repetido` (mesma variação em duas linhas),
-                 *     `cpf_invalido`.
+                 *     (SKU inexistente ou inativo), `item_repetido` (mesmo SKU em duas linhas), `cpf_invalido`.
                  */
                 400: {
                     headers: {
@@ -310,7 +309,10 @@ export interface paths {
                     };
                 };
                 401: components["responses"]["SemSessao"];
-                /** @description `chave_em_uso` — a chave de idempotência pertence a venda de outro vendedor. */
+                /**
+                 * @description `chave_em_uso` — a chave de idempotência pertence a venda de outro vendedor.
+                 *     `sem_estoque` — alguma peça pedida acima do saldo; a mensagem nomeia as peças e nada é gravado.
+                 */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -430,7 +432,7 @@ export interface components {
         Erro: {
             erro: {
                 /** @enum {string} */
-                codigo: "entrada_invalida" | "senha_incorreta" | "sessao_invalida" | "sem_itens" | "sem_pagamento" | "item_invalido" | "item_repetido" | "cpf_invalido" | "chave_em_uso" | "venda_nao_encontrada" | "rota_nao_encontrada" | "erro_interno";
+                codigo: "entrada_invalida" | "senha_incorreta" | "sessao_invalida" | "sem_itens" | "sem_pagamento" | "item_invalido" | "item_repetido" | "cpf_invalido" | "chave_em_uso" | "sem_estoque" | "venda_nao_encontrada" | "rota_nao_encontrada" | "erro_interno";
                 mensagem: string;
             };
         };
@@ -451,37 +453,31 @@ export interface components {
              */
             expiraEm: string;
         };
+        /**
+         * @description Catálogo do ERP (integração PDV-ERP): produtos ativos com ao menos um SKU ativo, cada um com
+         *     seus SKUs ativos (cor → tamanho) e o saldo em estoque. Tipos e produtos em ordem alfabética;
+         *     SKUs pela ordem da cor (número) e do tamanho (grade).
+         */
         Catalogo: {
-            categorias: {
-                /** @example calca */
-                id: string;
+            /** @description Só os tipos que têm produto na lista. */
+            tipos: {
+                /** @example 1 */
+                id: number;
                 /** @example Calças */
                 nome: string;
             }[];
-            modelos: {
-                /** @example calca-legging */
-                id: string;
+            produtos: {
+                /** @example 1 */
+                id: number;
+                /** @example 1 */
+                numero: number;
                 /** @example Calça Legging */
                 nome: string;
-                /** @example calca */
-                categoriaId: string;
-                /** @example 8900 */
-                precoBaseCentavos: number;
-            }[];
-            tecidos: {
-                /** @example light */
-                id: string;
-                /** @example Suplex Light */
-                nome: string;
-                /** @example 1200 */
-                acrescimoCentavos: number;
-            }[];
-            tamanhos: ("P" | "M" | "G" | "GG")[];
-            cores: {
-                /** @example Preto */
-                nome: string;
-                /** @example #1B1B1B */
-                hex: string;
+                /** @example 1 */
+                tipoId: number;
+                /** @example Suplex */
+                tecidoNome: string;
+                skus: components["schemas"]["SkuCatalogo"][];
             }[];
             pagamentos: {
                 /** @example pix */
@@ -490,18 +486,38 @@ export interface components {
                 nome: string;
             }[];
         };
+        SkuCatalogo: {
+            /** @example 2 */
+            id: number;
+            /** @example 0001.001.02 */
+            codigo: string;
+            /** @description Cor lisa tem hex; estampa pode ter só a foto. */
+            cor: {
+                /** @example 1 */
+                id: number;
+                /** @example Preto */
+                nome: string;
+                /** @example #1B1B1B */
+                hex: string | null;
+                fotoUrl: string | null;
+            };
+            tamanho: {
+                /** @example M */
+                sigla: string;
+                /** @example 2 */
+                ordem: number;
+            };
+            /** @example 8900 */
+            precoCentavos: number;
+            /** @example 5 */
+            saldo: number;
+        };
         ItemVendaEntrada: {
-            /** @example calca-legging */
-            modeloId: string;
-            /** @example light */
-            tecidoId: string;
-            /** @example M */
-            tamanho: string;
             /**
-             * @description Nome da cor do catálogo
-             * @example Preto
+             * @description Id do SKU no catálogo
+             * @example 2
              */
-            cor: string;
+            skuId: number;
             /** @example 2 */
             qtd: number;
             /**
@@ -511,7 +527,7 @@ export interface components {
             descPercent: 0 | 5 | 10 | 15;
         };
         /**
-         * @description O front NÃO envia preços: o servidor calcula a partir do catálogo. Campos não previstos
+         * @description O front NÃO envia preços: o servidor usa o preço do SKU. Campos não previstos
          *     (ex.: `precoUnitCentavos`) são recusados com 400 `entrada_invalida`.
          *     `chaveIdempotencia` é um UUID gerado pelo aparelho por venda; reenviar a mesma chave
          *     devolve a venda já gravada (200) em vez de criar outra.
@@ -540,9 +556,11 @@ export interface components {
             pagamentoId?: string;
         };
         ItemVenda: {
+            /** @description Vendas pelo catálogo do ERP: "produto:<número>"; vendas antigas: id do modelo do PDV. */
             modeloId: string;
             /** @example Calça Legging */
             modeloNome: string;
+            /** @description Vendas pelo catálogo do ERP: "tecido:<id>"; vendas antigas: id do tecido do PDV. */
             tecidoId: string;
             /** @example Suplex Light */
             tecidoNome: string;

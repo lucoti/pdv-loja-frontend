@@ -52,7 +52,10 @@ function validar(rota: string, metodo: Metodo, res: Resposta): any {
   return corpo;
 }
 
-const linha = { modeloId: 'top-nadador', tecidoId: 'normal', tamanho: 'P', cor: 'Vinho', qtd: 1, descPercent: 0 };
+/** Id do SKU no catálogo de exemplo (mesma regra do back: produto → cor → tamanho, 3 cores × 4 tamanhos). */
+const skuId = (p: number, c: number, t: number) => (p - 1) * 12 + (c - 1) * 4 + t;
+// Top Nadador Vinho P (R$ 55, saldo 5).
+const linha = { skuId: skuId(2, 3, 1), qtd: 1, descPercent: 0 };
 const venda = (extra: Record<string, unknown> = {}) => ({ chaveIdempotencia: crypto.randomUUID(), itens: [linha], pagamentoId: 'pix', ...extra });
 const ANA = { id: 'ana', nome: 'Ana', cargo: 'Gerente' };
 
@@ -102,7 +105,9 @@ describe('respostas do simulado × contrato OpenAPI', () => {
   it('GET /catalogo 401 e 200', async () => {
     expect(validar('/catalogo', 'get', await chamar('get', '/catalogo')).erro.codigo).toBe('sessao_invalida');
     usarSimulado({ sessaoDe: 'carlos' });
-    expect(validar('/catalogo', 'get', await chamar('get', '/catalogo')).tecidos[0].nome).toBe('Suplex Normal');
+    const c = validar('/catalogo', 'get', await chamar('get', '/catalogo'));
+    expect(c.tipos.map((t: { nome: string }) => t.nome)).toEqual(['Bermudas', 'Calças', 'Tops']);
+    expect(c.produtos.find((p: { numero: number }) => p.numero === 3).skus.map((k: { codigo: string }) => k.codigo)).not.toContain('0003.003.04');
   });
 
   it('POST /vendas 201 (venda de referência), 200 (mesma chave) e numeração a partir de 1042', async () => {
@@ -110,8 +115,8 @@ describe('respostas do simulado × contrato OpenAPI', () => {
     const ref = {
       chaveIdempotencia: crypto.randomUUID(),
       itens: [
-        { modeloId: 'calca-legging', tecidoId: 'light', tamanho: 'M', cor: 'Preto', qtd: 2, descPercent: 10 },
-        { modeloId: 'top-nadador', tecidoId: 'normal', tamanho: 'P', cor: 'Vinho', qtd: 1, descPercent: 0 },
+        { skuId: skuId(1, 1, 2), qtd: 2, descPercent: 10 },
+        { skuId: skuId(2, 3, 1), qtd: 1, descPercent: 0 },
       ],
       descontoTotalCentavos: 1500,
       cliente: 'Maria',
@@ -122,13 +127,18 @@ describe('respostas do simulado × contrato OpenAPI', () => {
     const criada = await chamar('post', '/vendas', ref);
     expect(criada.status).toBe(201);
     const v = validar('/vendas', 'post', criada).venda;
-    expect([v.numero, v.pecas, v.brutoCentavos, v.descontosCentavos, v.totalCentavos, v.cpf]).toEqual([1042, 3, 25700, 3520, 22180, '52998224725']);
-    expect(v.itens.map((i: { subtotalCentavos: number }) => i.subtotalCentavos)).toEqual([18180, 5500]);
+    expect([v.numero, v.pecas, v.brutoCentavos, v.descontosCentavos, v.totalCentavos, v.cpf]).toEqual([1042, 3, 23300, 3280, 20020, '52998224725']);
+    expect(v.itens.map((i: { subtotalCentavos: number }) => i.subtotalCentavos)).toEqual([16020, 5500]);
+    expect(v.itens[0]).toMatchObject({ modeloId: 'produto:1', modeloNome: 'Calça Legging', tecidoNome: 'Suplex', tamanho: 'M', cor: 'Preto', precoUnitCentavos: 8900 });
+    // Baixa de saldo no catálogo do simulado (5 → 3 e 5 → 4); o reenvio abaixo não baixa de novo.
+    const saldoDe = (id: number) => estado.catalogo.produtos.flatMap((p) => p.skus).find((k) => k.id === id)!.saldo;
+    expect([saldoDe(skuId(1, 1, 2)), saldoDe(skuId(2, 3, 1))]).toEqual([3, 4]);
 
     const repetida = await chamar('post', '/vendas', ref);
     expect(repetida.status).toBe(200);
     expect(validar('/vendas', 'post', repetida).venda).toEqual(v);
     expect(estado.vendas).toHaveLength(1);
+    expect(saldoDe(skuId(1, 1, 2))).toBe(3);
 
     const segunda = validar('/vendas', 'post', await chamar('post', '/vendas', venda({ descontoTotalCentavos: 99500 }))).venda;
     expect([segunda.numero, segunda.totalCentavos, segunda.cliente, segunda.cpf]).toEqual([1043, 0, '', '']);
@@ -147,10 +157,8 @@ describe('respostas do simulado × contrato OpenAPI', () => {
       [venda({ cpf: '111.111.111-11' }), 'cpf_invalido'],
       [venda({ cpf: '5299822472' }), 'cpf_invalido'],
       [venda({ cpf: '529a982.247-25' }), 'cpf_invalido'],
-      [venda({ itens: [{ ...linha, cor: 'Azul' }] }), 'item_invalido'],
-      [venda({ itens: [{ ...linha, modeloId: 'x' }] }), 'item_invalido'],
-      [venda({ itens: [{ ...linha, tecidoId: 'x' }] }), 'item_invalido'],
-      [venda({ itens: [{ ...linha, tamanho: 'XG' }] }), 'item_invalido'],
+      [venda({ itens: [{ ...linha, skuId: 9999 }] }), 'item_invalido'],
+      [venda({ itens: [{ ...linha, skuId: skuId(3, 3, 4) }] }), 'item_invalido'], // SKU inativo (fora do catálogo)
       [venda({ itens: [{ ...linha, qtd: 0 }] }), 'entrada_invalida'],
       [venda({ itens: [{ ...linha, qtd: 1.5 }] }), 'entrada_invalida'],
       [venda({ itens: [{ ...linha, descPercent: 20 }] }), 'entrada_invalida'],
@@ -187,6 +195,27 @@ describe('respostas do simulado × contrato OpenAPI', () => {
     expect(validar('/vendas', 'post', conflito).erro.codigo).toBe('chave_em_uso');
   });
 
+  it('POST /vendas 409 sem_estoque: nomeia as peças e não baixa nada', async () => {
+    const { estado } = usarSimulado({ sessaoDe: 'carlos' });
+    const res = await chamar('post', '/vendas', venda({ itens: [linha, { skuId: skuId(1, 2, 1), qtd: 2, descPercent: 0 }, { skuId: skuId(2, 3, 4), qtd: 1, descPercent: 0 }] }));
+    expect(res.status).toBe(409);
+    expect(validar('/vendas', 'post', res).erro).toEqual({
+      codigo: 'sem_estoque',
+      mensagem: 'Item 2: Calça Legging · Marinho · P — só 1 em estoque; Item 3: Top Nadador · Vinho · GG — sem estoque.',
+    });
+    expect(estado.vendas).toHaveLength(0);
+    const saldos = estado.catalogo.produtos.flatMap((p) => p.skus);
+    expect(saldos.find((k) => k.id === linha.skuId)!.saldo).toBe(5);
+    expect(saldos.find((k) => k.id === skuId(1, 2, 1))!.saldo).toBe(1);
+  });
+
+  it('cada instância do simulado tem sua cópia do catálogo (a baixa não vaza para o CATALOGO nem para outro simulado)', async () => {
+    usarSimulado({ sessaoDe: 'carlos' });
+    expect((await chamar('post', '/vendas', venda({ itens: [{ skuId: skuId(1, 2, 1), qtd: 1, descPercent: 0 }] }))).status).toBe(201);
+    const { estado } = usarSimulado({ sessaoDe: 'carlos' });
+    expect(estado.catalogo.produtos.flatMap((p) => p.skus).find((k) => k.id === skuId(1, 2, 1))!.saldo).toBe(1);
+  });
+
   it('GET /vendas/hoje 401, 200 vazio e 200 com vendas (mais recente primeiro, só do vendedor)', async () => {
     expect(validar('/vendas/hoje', 'get', await chamar('get', '/vendas/hoje')).erro.codigo).toBe('sessao_invalida');
     usarSimulado({ vendedores: [...VENDEDORES, ANA], pins: { carlos: '1234', ana: '5678' }, sessaoDe: 'carlos' });
@@ -201,7 +230,7 @@ describe('respostas do simulado × contrato OpenAPI', () => {
       [1043, 'João', 2],
       [1042, 'Maria', 1],
     ]);
-    expect([dia.totalDiaCentavos, dia.quantidadePedidos]).toEqual([16500, 2]);
+    expect([dia.totalDiaCentavos, dia.quantidadePedidos]).toEqual([16500, 2]); // 55 + 2 × 55
   });
 });
 

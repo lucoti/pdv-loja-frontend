@@ -5,10 +5,12 @@ atualizado a cada entrega; o detalhe de cada aplicação fica na documentação 
 (`<app>/docs/vN/documentacao.md`). O arquivo vive no repositório do front
 (`frontend/docs/contexto-geral.md`); `docs/contexto-geral.md` na pasta do ambiente é um link para ele.
 
-Última atualização: 2026-09-29 (feature erp-move-on do ERP: o ERP foi desenvolvido e passará a usar
-o mesmo banco `pdv-loja`; o pdv-backend recebeu o ajuste `cores`/`tecidos` → `pdv_cores`/`pdv_tecidos`,
-pronto localmente e **ainda não publicado**). Anterior: 2026-09-27 (feature pdv-integracao concluída:
-PDV publicado em https://pdv-loja-frontend.vercel.app, com catálogo de exemplo).
+Última atualização: 2026-09-29 (feature integracao-pdv-erp do ERP, pós-desenvolvimento: o PDV passa a
+vender pelo catálogo do ERP e a baixar o estoque do ERP na mesma transação da venda — ADR-017 do ERP,
+que revisa o ADR-A01; pdv-backend v4 e pdv-frontend v3 desenvolvidos, **ainda não publicados**).
+Anteriores: 2026-09-29 (feature erp-move-on: ERP publicado no mesmo banco `pdv-loja`; PDV v3 com
+`pdv_cores`/`pdv_tecidos` publicado); 2026-09-27 (feature pdv-integracao: PDV publicado em
+https://pdv-loja-frontend.vercel.app, com catálogo de exemplo).
 
 A visão do ambiente pelo lado do ERP está em `ERP-loja/docs/contexto-geral.md`.
 
@@ -16,24 +18,30 @@ A visão do ambiente pelo lado do ERP está em `ERP-loja/docs/contexto-geral.md`
 
 | Aplicação | Responsabilidade | Localização | Situação |
 |---|---|---|---|
-| **pdv-backend** | API do PDV: entrada do vendedor por senha, sessão diária, catálogo, registro de vendas com cálculo e numeração no servidor, vendas do dia e conteúdo do cupom não fiscal; script `pin:trocar` para troca de PIN sem exposição | `backend/` — repositório `lucoti/pdv-loja-backend`, projeto Vercel `pdv-loja-backend` (docs: `backend/docs/v2/documentacao.md`; contrato: `backend/contrato/openapi.yaml`) | v2 **no ar** desde 2026-09-27 (`pdv-loja-backend.vercel.app`, função em iad1) |
-| **pdv-frontend** | Página web do vendedor no navegador do celular (React 19 + TypeScript + Vite, página estática; não é PWA): login com PIN, aba Produtos com variações, aba Pedido com descontos e pagamento, fechamento da venda com idempotência, modal "Venda registrada" e aba Dia | `frontend/` — repositório `lucoti/pdv-loja-frontend`, projeto Vercel `pdv-loja-frontend` (docs: `frontend/docs/v2/documentacao.md`; guia técnico: `frontend/README.md`) | v2 **no ar** desde 2026-09-27 em https://pdv-loja-frontend.vercel.app (rewrite `/api`) |
-| **API simulada (MSW)** | Imitação do pdv-backend em memória, com os dados de exemplo do handoff (vendedor Carlos, PIN 1234, pedidos a partir de 1042). Usada no `npm run dev` do front e nos testes; fica fora do build de produção | `frontend/src/simulado/` e `frontend/simulado-publico/` | Parte do pdv-frontend |
-| **Banco Turso `pdv-loja`** (serviço externo) | Banco de dados libSQL em produção, **compartilhado com o ERP** (cada tabela tem um único dono; ver "Tabelas por dono") | Turso, organização `personal`, região `aws-us-east-1` | Hoje usado pelo pdv-backend; recebe as tabelas do ERP na implantação do ERP |
-| **erp-backend** (sistema irmão) | API do ERP (NestJS): catálogo, grade de SKUs, preços, estoque, lotes, contagem, etiquetas, IA de estampas e painel de vendas. **Lê** as vendas do PDV no banco compartilhado | `ERP-loja/backend/` — monorepo `ERP-loja`, projeto Vercel previsto `erp-loja-backend` (docs: `ERP-loja/docs/v1/documentacao.md`) | v1 desenvolvida, **não publicada** |
-| **erp-frontend** (sistema irmão) | Página web do ERP (React + Vite) para desktop e celular | `ERP-loja/frontend/` — projeto Vercel previsto `erp-loja-frontend` | v1 desenvolvida, **não publicada** |
+| **pdv-backend** | API do PDV: entrada do vendedor por senha, sessão diária, **catálogo lido do ERP** (tipos, produtos, SKUs com preço e saldo), registro de vendas com cálculo e numeração no servidor **e baixa do estoque do ERP na mesma transação** (409 `sem_estoque`), vendas do dia e conteúdo do cupom não fiscal; script `pin:trocar` | `backend/` — repositório `lucoti/pdv-loja-backend`, projeto Vercel `pdv-loja-backend` (docs: `backend/docs/v4/documentacao.md`; contrato: `backend/contrato/openapi.yaml`) | v3 **no ar** (`pdv-loja-backend.vercel.app`, função em iad1); v4 (integração) desenvolvida, **não publicada** |
+| **pdv-frontend** | Página web do vendedor no navegador do celular (React 19 + TypeScript + Vite, página estática; não é PWA): login com PIN, aba Produtos com tipos do ERP e escolha cor → tamanho com preço e saldo, aba Pedido limitada ao estoque, fechamento com idempotência e tratamento do 409, modal "Venda registrada" e aba Dia | `frontend/` — repositório `lucoti/pdv-loja-frontend`, projeto Vercel `pdv-loja-frontend` (docs: `frontend/docs/v3/documentacao.md`; guia técnico: `frontend/README.md`) | v2 **no ar** em https://pdv-loja-frontend.vercel.app (rewrite `/api`); v3 desenvolvida, **não publicada** — publicar junto com o back v4 |
+| **API simulada (MSW)** | Imitação do pdv-backend em memória (vendedor Carlos, PIN 1234, pedidos a partir de 1042), com catálogo de exemplo no formato do ERP igual ao `SEED_ERP` do back e baixa de saldo a cada venda. Usada no `npm run dev` do front e nos testes; fica fora do build de produção | `frontend/src/simulado/` e `frontend/simulado-publico/` | Parte do pdv-frontend |
+| **Banco Turso `pdv-loja`** (serviço externo) | Banco de dados libSQL em produção, **compartilhado com o ERP** (cada tabela tem um único dono; ver "Tabelas por dono") | Turso, organização `personal`, região `aws-us-east-1` | Em uso pelo PDV e pelo ERP |
+| **erp-backend** (sistema irmão) | API do ERP (NestJS): catálogo, grade de SKUs, preços, estoque, lotes, contagem, etiquetas, IA de estampas e painel de vendas. **Lê** as vendas do PDV; é dono do catálogo e do estoque que o PDV usa; cria o usuário técnico "PDV" (migração 0006) | `ERP-loja/backend/` — repositório `lucoti/erp-loja-backend`, projeto Vercel `erp-loja-backend` (docs: `ERP-loja/docs/v2/documentacao.md`) | v1 **no ar** desde 2026-09-29; v2 (integração) desenvolvida, **não publicada** |
+| **erp-frontend** (sistema irmão) | Página web do ERP (React + Vite) para desktop e celular | `ERP-loja/frontend/` — repositório `lucoti/erp-loja-frontend`, projeto Vercel `erp-loja-frontend` | v1 **no ar** desde 2026-09-29 |
 | *design_handoff_pdv_loja* | Especificação de design aprovada (não é aplicação) | `design_handoff_pdv_loja/` | Referência |
 
 ### Tabelas por dono no banco `pdv-loja`
 - **PDV:** `vendedores`, `sessoes`, `categorias`, `modelos`, `pdv_tecidos`, `pdv_cores`, `pagamentos`,
   `config`, `vendas`, `itens_venda` (DDL em `backend/db/esquema.sql`). Até o ajuste de 2026-09-29 as
   tabelas `pdv_tecidos`/`pdv_cores` se chamavam `tecidos`/`cores`; esses nomes passaram a ser do ERP.
+  Desde a integração, `categorias`/`modelos`/`pdv_tecidos`/`pdv_cores` não são usadas na venda (ficam
+  pelas vendas antigas) e `itens_venda` ganhou `sku_id`/`sku_codigo` (NULL nas vendas antigas).
 - **ERP:** catálogo (`tipos`, `tecidos`, `tamanhos`, `cores`, `produtos`, `skus`…), estoque
   (`movimentacoes`, lotes, contagens), usuários (`usuarios`, `sessoes_usuario`…) e IA — lista completa
   em `ERP-loja/docs/contexto-geral.md`.
-- Nenhuma aplicação escreve em tabela da outra. O ERP só lê `vendas`, `itens_venda`, `modelos`,
-  `categorias` e `pdv_cores`. **Mudanças nas colunas de `vendas`/`itens_venda` precisam ser combinadas
-  com o ERP** (o painel do ERP depende delas).
+- Regra (ADR-017 do ERP, revisa o ADR-A01): o ERP **nunca** escreve em tabela do PDV; só lê `vendas`,
+  `itens_venda`, `modelos`, `categorias` e `pdv_cores`. O PDV lê `tipos`, `produtos`, `skus`, `cores`,
+  `tamanhos`, `tecidos` e `usuarios` (só o técnico, por e-mail) e **escreve só** `skus.saldo`/
+  `atualizado_em` (`saldo = saldo - q`) e INSERT em `movimentacoes` (tipo `venda`), dentro do batch da
+  venda. **Mudanças nas colunas de `vendas`/`itens_venda` precisam ser combinadas com o ERP** (o painel
+  depende delas), e **mudanças nessas tabelas do ERP exigem revisar o PDV** (cópia em
+  `backend/db/erp-esquema.sql`, usada nos testes).
 
 ### Repositórios e projetos Vercel
 Front e back são **dois repositórios git separados**, cada um com seu projeto Vercel (branch de
@@ -58,16 +66,21 @@ direto para produção, por ser o primeiro do projeto). O banco está sem vendas
   repositórios/projetos acima. A remoção deles fica a critério do Lucas.
 
 ### ERP (projeto irmão)
-- O **ERP Move On** (`ERP-loja/`, feature erp-move-on) foi desenvolvido em 2026-09-28/29 e ainda não
-  está publicado. Nele ficam o catálogo real (produtos, cores/estampas, grade de SKUs, preços), o
-  estoque, as etiquetas, a contagem de inventário e o painel de vendas.
+- O **ERP Move On** (`ERP-loja/`, feature erp-move-on) foi publicado em 2026-09-29. Nele ficam o
+  catálogo real (produtos, cores/estampas, grade de SKUs, preços), o estoque, as etiquetas, a contagem
+  de inventário e o painel de vendas. Desde a integração, é também o catálogo de venda do PDV.
 - **Mudou em relação ao plano anterior:** o ERP usa o **mesmo banco `pdv-loja`** do PDV (decisão do
   Lucas, 2026-09-28), e não o banco `move-on`. O **banco Turso `move-on`** fica sem uso; **preservar**
   até decisão do Lucas.
-- Hoje a integração é de mão única: o ERP **lê** as vendas do PDV para o painel. O PDV continua com o
-  seu próprio catálogo (`modelos`, `pdv_tecidos`, `pdv_cores`), registra as vendas por nome (não por
-  SKU) e não baixa o estoque do ERP. Vender por SKU, baixar estoque e unificar vendedores/usuários é
-  ponto em aberto (`ERP-loja/docs/11-pontos-em-aberto.md`, ponto 11).
+- **Integração PDV × catálogo do ERP (feature integracao-pdv-erp, ADR-017; ponto 11 do `docs/11`
+  resolvido):** o PDV vende por SKU do ERP (preço `skus.preco_centavos`, sem vender sem saldo) e, no
+  mesmo batch da venda, baixa `skus.saldo` e grava uma `movimentacao` `venda` por item, com o usuário
+  técnico "PDV" (`pdv@sistema.interno`), `venda_numero` e chave `<chave>:<linha>`. O ERP continua só
+  lendo `vendas`/`itens_venda`. Vendedores do PDV continuam separados dos usuários do ERP.
+- **Ordem de publicação da integração:** migração `0006` do ERP (usuário técnico) → `db:migrar` do PDV
+  (colunas `sku_id`/`sku_codigo`) → pdv-backend v4 e pdv-frontend v3 juntos (o contrato mudou). Sem o
+  usuário técnico, toda venda falha sem gravar nada. Catálogo real e saldos precisam estar no ERP antes
+  do uso na loja.
 - **Implantação coordenada (ADR-A09 do ERP):** o `db:migrar` do ERP renomeia `cores`/`tecidos` do PDV
   para `pdv_cores`/`pdv_tecidos`; em seguida deve ser publicada a versão do pdv-backend que já usa os
   nomes novos (entre os dois passos o catálogo do PDV fica indisponível). O `db:migrar` do PDV faz a
@@ -100,6 +113,8 @@ Node 22.12+ nas duas aplicações (nesta máquina: `export PATH=/usr/local/bin:$
         │  libSQL (URL + token, variáveis sensíveis da Vercel)
         ▼
    Turso "pdv-loja" (org personal, aws-us-east-1)  ◄── compartilhado com o ERP
+     │  pdv-backend: LÊ tipos / produtos / skus / cores / tamanhos / tecidos (catálogo do ERP)
+     │  pdv-backend: ESCREVE skus.saldo + movimentacoes (só no batch da venda, ADR-017)
         ▲
         │  libSQL; só LEITURA de vendas / itens_venda / modelos / categorias / pdv_cores
         │  (escrita apenas nas tabelas do próprio ERP)
@@ -116,13 +131,14 @@ Node 22.12+ nas duas aplicações (nesta máquina: `export PATH=/usr/local/bin:$
    npm run dev:api  → pdv-frontend ──/api──► proxy do Vite ──► pdv-backend em localhost:3001
 ```
 
-A página do vendedor só fala com a API; do lado do PDV, a API é a única que acessa o banco (o ERP
-também acessa o mesmo banco, mas só lê as tabelas de venda do PDV). O contrato
+A página do vendedor só fala com a API; do lado do PDV, a API é a única que acessa o banco. A integração
+com o ERP é toda pelo banco compartilhado, sem chamada HTTP: o pdv-backend lê o catálogo do ERP e baixa
+o estoque na venda; o ERP só lê as tabelas de venda do PDV. O contrato
 `backend/contrato/openapi.yaml` é a fonte única do formato das mensagens: o front gera os tipos a
 partir dele (`npm run gerar:tipos`, arquivo `frontend/src/api/tipos.gerados.ts`) e não há código
-compartilhado entre as aplicações (ADR-001/ADR-002 do back, ADR-F03 do front). A regra de preço
+compartilhado entre as aplicações (ADR-001/ADR-002 do back, ADR-F03 do front). A regra de desconto
 existe nos dois lados, de propósito: o front só a usa para exibir totais; o valor oficial é o do
-back (ADR-F05).
+back (ADR-F05). O preço unitário é o do SKU no ERP, lido pelo back.
 
 A impressão do cupom não faz parte da v1 do front (a loja ainda não tem impressora). A rota de
 cupom do back existe, mas ainda não é consumida.
@@ -141,9 +157,12 @@ cupom do back existe, mas ainda não é consumida.
   meia-noite de São Paulo; qualquer 401 `sessao_invalida` leva o front de volta ao login. Em
   desenvolvimento, `npm run dev:api` usa o proxy do Vite (sem CORS); se o front rodar em outra
   origem, a API libera acesso pela variável `CORS_ORIGENS`.
-- **O quê (usado pelo front v1):** `GET /config` e `GET /vendedores` (tela de entrada, sem sessão);
-  `POST /auth/login` e `GET /auth/sessao`; `GET /catalogo`; `POST /vendas` (sem preços, com chave de
-  idempotência UUID gerada no aparelho e repetida nos reenvios); `GET /vendas/hoje`. Não usados na
+- **O quê (usado pelo front):** `GET /config` e `GET /vendedores` (tela de entrada, sem sessão);
+  `POST /auth/login` e `GET /auth/sessao`; `GET /catalogo` (desde a v3: `tipos`, `produtos` com `skus`
+  — cor, tamanho, `precoCentavos`, `saldo` — e `pagamentos`; recarregado em silêncio após cada venda e
+  após 409/400 `item_invalido`); `POST /vendas` (itens `{skuId, qtd, descPercent}`, sem preços, com chave
+  de idempotência UUID gerada no aparelho e repetida nos reenvios; 409 `sem_estoque` nomeia as peças);
+  `GET /vendas/hoje`. Não usados na
   v1: `POST /auth/logout` (não há botão "Sair") e `GET /vendas/{n}/cupom` (sem impressão).
   Formato e erros definidos em `backend/contrato/openapi.yaml`.
 
@@ -164,9 +183,22 @@ cupom do back existe, mas ainda não é consumida.
   (`iad1`) para que cada requisição cruze o continente uma só vez (ADR-I03). Em desenvolvimento usa
   um arquivo local (`file:./dados/pdv.db`); nos testes, banco em memória. O banco novo recebe
   esquema e dados de exemplo por `npm run db:seed`.
-- **O quê:** vendedores, sessões, catálogo, dados da loja, vendas e itens vendidos. Desde o ajuste de
-  2026-09-29 (a publicar), o catálogo lê `pdv_tecidos`/`pdv_cores`; o `db:migrar` do PDV renomeia
-  `tecidos`/`cores` antigas (formato do PDV) antes de aplicar o esquema.
+- **O quê:** vendedores, sessões, pagamentos, dados da loja, vendas e itens vendidos. O `db:migrar` do
+  PDV renomeia `tecidos`/`cores` antigas (formato do PDV) e acrescenta `itens_venda.sku_id`/`sku_codigo`
+  em bancos existentes. Em dev/testes, o `db:seed` cria um catálogo de exemplo no formato do ERP
+  (`db/erp-esquema.sql`) só se a tabela `skus` não existir.
+
+### pdv-backend → tabelas do ERP (catálogo e estoque)
+- **De:** pdv-backend
+- **Para:** tabelas do ERP no banco compartilhado `pdv-loja`
+- **Como:** a mesma conexão `@libsql/client` do PDV (nenhuma credencial do ERP). Catálogo num batch de
+  leitura; venda num único batch de escrita: INSERT em `vendas`/`itens_venda`, `UPDATE skus SET saldo =
+  saldo - ?` e INSERT em `movimentacoes` (usuário técnico localizado por e-mail no próprio batch). O
+  `CHECK (saldo >= 0)` do ERP desfaz tudo quando falta saldo (resposta 409, inclusive em corrida entre
+  dois caixas); a falta do usuário técnico (NOT NULL) também desfaz tudo.
+- **O quê:** leitura de `tipos`, `produtos`, `skus`, `cores`, `tamanhos`, `tecidos`; escrita só de
+  `skus.saldo`/`atualizado_em` e de `movimentacoes` tipo `venda`. O ERP mostra essas movimentações no
+  histórico do SKU como "Venda · pedido #N".
 
 ### erp-backend → Turso `pdv-loja` (leitura das vendas do PDV)
 - **De:** erp-backend (ERP Move On, painel da tela Início)
@@ -174,8 +206,9 @@ cupom do back existe, mas ainda não é consumida.
 - **Como:** `@libsql/client` com as credenciais do projeto `erp-loja-backend`; só consultas de leitura.
   Não há chamada HTTP entre ERP e PDV.
 - **O quê:** `vendas` (pedidos, `total_centavos`, `pecas`, `data_local`), `itens_venda` (modelo,
-  tecido, cor, tamanho, quantidade), `modelos`/`categorias` (peças por tipo) e `pdv_cores` (cor dos
-  "mais vendidos"). O ERP escreve só nas tabelas dele. Detalhes em `ERP-loja/docs/contexto-geral.md`.
+  tecido, cor, tamanho, quantidade e, nas vendas novas, `sku_id`), peças por tipo (tipo do ERP via
+  `sku_id` nas vendas novas; `modelos`/`categorias` nas antigas) e `pdv_cores` (cor dos "mais vendidos").
+  O ERP escreve só nas tabelas dele. Detalhes em `ERP-loja/docs/contexto-geral.md`.
 
 ### Máquina local → Turso (operação)
 - **De:** terminal do operador, na pasta `backend/`

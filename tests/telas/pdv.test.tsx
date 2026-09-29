@@ -4,6 +4,7 @@ import { getResponse, http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { api } from '../../src/api/cliente';
 import { dataBr } from '../../src/dominio/formatos';
+import type { Catalogo } from '../../src/api/cliente';
 import { CATALOGO } from '../../src/simulado/dados';
 import { resumoEscolha } from '../../src/telas/Pdv/Variacoes';
 import { servidor, usarSimulado } from '../apoio';
@@ -11,10 +12,12 @@ import { ENTRADA_VENDA, validarEntrada } from '../contrato';
 import {
   abrirApp,
   adicionarPeca,
+  botaoCor,
   botaoFechar,
+  botaoTamanho,
   esperarCatalogo,
   itensPedido,
-  LEGGING_LIGHT_M_PRETO,
+  LEGGING_M_PRETO,
   sem_nbsp,
   TOP_NADADOR_P_VINHO,
   totais,
@@ -42,10 +45,10 @@ function capturarVendas() {
 const aba = (nome: RegExp | string) => screen.getByRole('button', { name: nome });
 const texto = (el: HTMLElement) => sem_nbsp(el.textContent);
 
-/** Monta o pedido de referência do back: 2× Legging Light M Preto 10%, Top Nadador P Vinho, −R$ 15, Pix. */
+/** Monta o pedido de referência do back: 2× Legging Preto M 10%, Top Nadador Vinho P, −R$ 15, Pix. */
 async function montarReferencia(usuario: Awaited<ReturnType<typeof abrirPdv>>['usuario']) {
-  await adicionarPeca(usuario, LEGGING_LIGHT_M_PRETO);
-  await adicionarPeca(usuario, LEGGING_LIGHT_M_PRETO);
+  await adicionarPeca(usuario, LEGGING_M_PRETO);
+  await adicionarPeca(usuario, LEGGING_M_PRETO);
   await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
   await usuario.click(within(itensPedido()[0]!).getByRole('button', { name: '10%' }));
   for (let i = 0; i < 3; i++) await usuario.click(screen.getByRole('button', { name: 'Aumentar desconto no total' }));
@@ -65,76 +68,205 @@ describe('RF-F04 — cabeçalho', () => {
   });
 });
 
-describe('RF-F05 — produtos e variações', () => {
-  it('primeira categoria selecionada; modelos com "a partir de"; chips filtram', async () => {
+/** Id do SKU no catálogo de exemplo (produto → cor → tamanho; 3 cores × 4 tamanhos). */
+const skuId = (p: number, c: number, t: number) => (p - 1) * 12 + (c - 1) * 4 + t;
+/** SKU (mutável) no catálogo da instância do simulado: mudar saldo/preço aqui imita uma mudança no ERP. */
+const skuNoSimulado = (simulado: { estado: { catalogo: Catalogo } }, id: number) => simulado.estado.catalogo.produtos.flatMap((p) => p.skus).find((k) => k.id === id)!;
+
+describe('RF-002 — aba Produtos com os tipos do ERP', () => {
+  it('chips = tipos com produto vendável; primeiro selecionado; "a partir de" pelo menor preço; chips filtram', async () => {
     const { usuario } = await abrirPdv();
-    expect(aba('Calças')).toHaveAttribute('aria-pressed', 'true');
-    expect(aba('Tops')).toHaveAttribute('aria-pressed', 'false');
-    expect(texto(aba(/Calça Legging/))).toContain('a partir de R$ 89,00');
-    expect(screen.getAllByRole('button', { name: /a partir de/ })).toHaveLength(4);
-    await usuario.click(aba('Bermudas'));
+    const chips = ['Bermudas', 'Calças', 'Tops'];
+    for (const t of chips) expect(aba(t)).toBeInTheDocument();
     expect(aba('Bermudas')).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.queryByRole('button', { name: /Calça Legging/ })).not.toBeInTheDocument();
-    expect(texto(aba(/Bermuda Ciclista/))).toContain('a partir de R$ 59,00');
-    expect(screen.getAllByRole('button', { name: /a partir de/ })).toHaveLength(4);
+    expect(aba('Calças')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getAllByRole('button', { name: /a partir de/ }).map(texto)).toEqual(['Bermuda CiclistaSuplex · a partir de R$ 59,00›', 'Short CurtoSuplex · a partir de R$ 55,00sem estoque›']);
+    await usuario.click(aba('Calças'));
+    expect(aba('Calças')).toHaveAttribute('aria-pressed', 'true');
+    expect(aba('Bermudas')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByRole('button', { name: /^Bermuda Ciclista/ })).not.toBeInTheDocument();
+    expect(texto(aba(/^Calça Legging/))).toContain('a partir de R$ 89,00');
+    expect(texto(aba(/^Calça Legging/))).not.toContain('sem estoque');
   });
 
-  it('painel: tecido "Suplex Normal" já marcado, tamanho e cor em branco, preços por tecido', async () => {
+  it('"a partir de" usa o menor preço entre os SKUs (acréscimo por tamanho)', async () => {
+    const catalogo = structuredClone(CATALOGO);
+    const legging = catalogo.produtos.find((p) => p.numero === 1)!;
+    for (const k of legging.skus) k.precoCentavos = k.tamanho.sigla === 'P' ? 7900 : 9900;
+    usarSimulado({ sessaoDe: 'carlos', catalogo });
+    const { usuario } = abrirApp();
+    await esperarCatalogo();
+    await usuario.click(aba('Calças'));
+    expect(texto(aba(/^Calça Legging/))).toContain('a partir de R$ 79,00');
+  });
+
+  it('produto sem estoque mostra "sem estoque" e abre para consulta, com todos os tamanhos desabilitados', async () => {
     const { usuario } = await abrirPdv();
-    await usuario.click(aba(/Calça Legging/));
+    await usuario.click(aba(/^Short Curto/));
+    expect(screen.getByRole('heading', { name: 'Short Curto' })).toBeInTheDocument();
+    await usuario.click(botaoCor('Preto'));
+    for (const t of ['P', 'M', 'G', 'GG']) {
+      expect(botaoTamanho(t)).toBeDisabled();
+      expect(texto(botaoTamanho(t))).toContain('sem estoque');
+    }
+    expect(aba('Adicionar ao pedido')).toBeDisabled();
+  });
+
+  it('catálogo do ERP vazio: aviso "Nenhum produto cadastrado no ERP."', async () => {
+    usarSimulado({ sessaoDe: 'carlos', catalogo: { tipos: [], produtos: [], pagamentos: CATALOGO.pagamentos } });
+    abrirApp();
+    expect(await screen.findByText('Nenhum produto cadastrado no ERP.')).toBeInTheDocument();
+  });
+});
+
+describe('RF-003 — variações: cor → tamanho', () => {
+  it('cores do produto com amostra; tamanhos só depois da cor, com preço e "N un."', async () => {
+    const { usuario } = await abrirPdv();
+    await usuario.click(aba('Calças'));
+    await usuario.click(aba(/^Calça Legging/));
     expect(screen.getByRole('heading', { name: 'Calça Legging' })).toBeInTheDocument();
-    expect(aba(/^Suplex Normal/)).toHaveAttribute('aria-pressed', 'true');
-    expect(aba(/^Suplex Light/)).toHaveAttribute('aria-pressed', 'false');
-    expect(texto(aba(/^Suplex Normal/))).toContain('R$ 89,00');
-    expect(texto(aba(/^Suplex Light/))).toContain('R$ 101,00');
-    for (const t of ['P', 'M', 'G', 'GG']) expect(aba(t)).toHaveAttribute('aria-pressed', 'false');
-    for (const c of CATALOGO.cores) expect(aba(c.nome)).toHaveAttribute('aria-pressed', 'false');
-    // Cor como círculo com a cor real.
-    expect(aba('Vinho').querySelector('span[aria-hidden]')).toHaveStyle({ background: '#6B2232' });
+    for (const c of ['Preto', 'Marinho', 'Vinho']) expect(botaoCor(c)).toHaveAttribute('aria-pressed', 'false');
+    expect(botaoCor('Vinho').querySelector('span[aria-hidden]')).toHaveStyle({ background: '#6B2232' });
+    expect(screen.queryByText('TAMANHO')).not.toBeInTheDocument();
+    await usuario.click(botaoCor('Marinho'));
+    expect(botaoCor('Marinho')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByRole('button', { name: /^(P|M|G|GG)R\$/ }).map(texto)).toEqual(['PR$ 89,001 un.', 'MR$ 89,005 un.', 'GR$ 89,005 un.', 'GGR$ 89,005 un.']);
   });
 
-  it('linha de apoio: "Falta escolher: …" só com o que falta; completa → resumo com preço; botão só habilita completo', async () => {
+  it('SKU inativo não aparece (Bermuda Vinho sem GG) e tamanho sem saldo aparece desabilitado', async () => {
     const { usuario } = await abrirPdv();
-    await usuario.click(aba(/Calça Legging/));
+    await usuario.click(aba(/^Bermuda Ciclista/));
+    await usuario.click(botaoCor('Vinho'));
+    expect(screen.getAllByRole('button', { name: /^(P|M|G|GG)R\$/ }).map((b) => texto(b).split('R$')[0])).toEqual(['P', 'M', 'G']);
+    await usuario.click(aba('Voltar para os produtos'));
+    await usuario.click(aba('Tops'));
+    await usuario.click(aba(/^Top Nadador/));
+    await usuario.click(botaoCor('Vinho'));
+    expect(botaoTamanho('GG')).toBeDisabled();
+    expect(texto(botaoTamanho('GG'))).toBe('GGR$ 55,00sem estoque');
+    await usuario.click(botaoTamanho('GG'));
+    expect(botaoTamanho('GG')).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('cor com todos os tamanhos zerados mostra "sem estoque" no botão da cor', async () => {
+    const catalogo = structuredClone(CATALOGO);
+    for (const k of catalogo.produtos.find((p) => p.numero === 3)!.skus) if (k.cor.nome === 'Preto') k.saldo = 0;
+    usarSimulado({ sessaoDe: 'carlos', catalogo });
+    const { usuario } = abrirApp();
+    await esperarCatalogo();
+    await usuario.click(aba(/^Bermuda Ciclista/));
+    expect(texto(botaoCor('Preto'))).toBe('Pretosem estoque');
+    expect(texto(botaoCor('Marinho'))).toBe('Marinho');
+  });
+
+  it('estampa sem hex usa a miniatura da foto como amostra', async () => {
+    const catalogo = structuredClone(CATALOGO);
+    for (const k of catalogo.produtos.find((p) => p.numero === 3)!.skus) if (k.cor.id === 1) k.cor = { ...k.cor, nome: 'Folhagem', hex: null, fotoUrl: 'https://blob.exemplo/folhagem.jpg' };
+    usarSimulado({ sessaoDe: 'carlos', catalogo });
+    const { usuario } = abrirApp();
+    await esperarCatalogo();
+    await usuario.click(aba(/^Bermuda Ciclista/));
+    expect(botaoCor('Folhagem').querySelector('img')).toHaveAttribute('src', 'https://blob.exemplo/folhagem.jpg');
+    expect(botaoCor('Marinho').querySelector('img')).toBeNull();
+  });
+
+  it('trocar de cor mantém o tamanho se ele tem saldo na cor nova; senão limpa a escolha', async () => {
+    const { usuario } = await abrirPdv();
+    await usuario.click(aba('Tops'));
+    await usuario.click(aba(/^Top Nadador/));
+    await usuario.click(botaoCor('Preto'));
+    await usuario.click(botaoTamanho('M'));
+    await usuario.click(botaoCor('Marinho'));
+    expect(botaoTamanho('M')).toHaveAttribute('aria-pressed', 'true');
+    await usuario.click(botaoTamanho('GG'));
+    await usuario.click(botaoCor('Vinho')); // Vinho GG tem saldo 0
+    expect(botaoTamanho('GG')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByText('Falta escolher: tamanho')).toBeInTheDocument();
+    expect(aba('Adicionar ao pedido')).toBeDisabled();
+  });
+
+  it('linha de apoio: "Falta escolher: …"; completa → "Cor · Tam X — R$ preço" e botão habilitado', async () => {
+    const { usuario } = await abrirPdv();
+    await usuario.click(aba('Calças'));
+    await usuario.click(aba(/^Calça Legging/));
     const adicionar = aba('Adicionar ao pedido');
-    expect(screen.getByText('Falta escolher: tamanho, cor')).toBeInTheDocument();
+    expect(screen.getByText('Falta escolher: cor, tamanho')).toBeInTheDocument();
     expect(adicionar).toBeDisabled();
-    await usuario.click(aba('Preto'));
+    await usuario.click(botaoCor('Preto'));
     expect(screen.getByText('Falta escolher: tamanho')).toBeInTheDocument();
     expect(adicionar).toBeDisabled();
-    await usuario.click(aba('G'));
-    await usuario.click(aba(/^Suplex Light/));
-    expect(sem_nbsp(screen.getByText(/^Suplex Light · Tam G · Preto/).textContent)).toBe('Suplex Light · Tam G · Preto — R$ 101,00');
+    await usuario.click(botaoTamanho('G'));
+    expect(sem_nbsp(screen.getByText(/^Preto · Tam G/).textContent)).toBe('Preto · Tam G — R$ 89,00');
     expect(adicionar).toBeEnabled();
-    expect(aba('G')).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('resumoEscolha lista também o tecido quando ele falta', () => {
-    const modelo = CATALOGO.modelos[0]!;
-    expect(resumoEscolha(CATALOGO, modelo, { tecidoId: null, tamanho: null, cor: null })).toBe('Falta escolher: tecido, tamanho, cor');
-    expect(resumoEscolha(CATALOGO, modelo, { tecidoId: 'inexistente', tamanho: 'M', cor: 'Preto' })).toBe('Falta escolher: tecido');
+  it('resumoEscolha: falta cor e tamanho, só tamanho, ou limite atingido', () => {
+    const legging = CATALOGO.produtos.find((p) => p.numero === 1)!;
+    expect(resumoEscolha(legging, { corId: null, tamanho: null }, 0)).toBe('Falta escolher: cor, tamanho');
+    expect(resumoEscolha(legging, { corId: 1, tamanho: null }, 0)).toBe('Falta escolher: tamanho');
+    expect(resumoEscolha(legging, { corId: null, tamanho: 'M' }, 0)).toBe('Falta escolher: cor');
+    expect(resumoEscolha(legging, { corId: 2, tamanho: 'P' }, 1)).toBe('Só 1 em estoque — já no pedido');
+    expect(sem_nbsp(resumoEscolha(legging, { corId: 2, tamanho: 'P' }, 0))).toBe('Marinho · Tam P — R$ 89,00');
   });
 
   it('voltar do painel retorna à lista e descarta a escolha', async () => {
     const { usuario } = await abrirPdv();
-    await usuario.click(aba(/Calça Legging/));
-    await usuario.click(aba('M'));
-    await usuario.click(aba('Voltar para os modelos'));
-    expect(screen.queryByRole('heading', { name: 'Calça Legging' })).not.toBeInTheDocument();
-    await usuario.click(aba(/Calça Legging/));
-    expect(aba('M')).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByText('Falta escolher: tamanho, cor')).toBeInTheDocument();
+    await usuario.click(aba(/^Bermuda Ciclista/));
+    await usuario.click(botaoCor('Preto'));
+    await usuario.click(botaoTamanho('M'));
+    await usuario.click(aba('Voltar para os produtos'));
+    expect(screen.queryByRole('heading', { name: 'Bermuda Ciclista' })).not.toBeInTheDocument();
+    await usuario.click(aba(/^Bermuda Ciclista/));
+    expect(botaoCor('Preto')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByText('Falta escolher: cor, tamanho')).toBeInTheDocument();
   });
 
   it('adicionar vai para a aba Pedido e limpa a variação', async () => {
     const { usuario } = await abrirPdv();
-    await adicionarPeca(usuario, LEGGING_LIGHT_M_PRETO);
+    await adicionarPeca(usuario, LEGGING_M_PRETO);
     expect(aba('Pedido (1)')).toHaveAttribute('aria-current', 'page');
     expect(itensPedido()).toHaveLength(1);
-    expect(texto(itensPedido()[0]!)).toContain('Suplex Light · Tam M · Preto · R$ 101,00');
+    expect(texto(itensPedido()[0]!)).toContain('Suplex · Tam M · Preto · R$ 89,00');
     await usuario.click(aba('Produtos'));
     expect(screen.queryByRole('heading', { name: 'Calça Legging' })).not.toBeInTheDocument();
-    expect(aba(/Calça Legging/)).toBeInTheDocument();
+    expect(aba(/^Calça Legging/)).toBeInTheDocument();
+  });
+});
+
+describe('RF-004 — pedido limitado ao estoque', () => {
+  const LEGGING_P_MARINHO = { tipo: 'Calças', produto: 'Calça Legging', cor: 'Marinho', tamanho: 'P' }; // saldo 1
+
+  it('"+" para no saldo, fica desabilitado e mostra "Só N em estoque"', async () => {
+    const { usuario } = await abrirPdv();
+    await adicionarPeca(usuario, LEGGING_M_PRETO); // saldo 5
+    const item = () => itensPedido()[0]!;
+    const mais = () => within(item()).getByRole('button', { name: 'Aumentar quantidade' });
+    expect(within(item()).queryByText(/em estoque/)).not.toBeInTheDocument();
+    for (let i = 0; i < 4; i++) await usuario.click(mais());
+    expect(within(item()).getByLabelText('Quantidade')).toHaveTextContent('5');
+    expect(mais()).toBeDisabled();
+    expect(within(item()).getByText('Só 5 em estoque')).toBeInTheDocument();
+    await usuario.click(mais());
+    expect(within(item()).getByLabelText('Quantidade')).toHaveTextContent('5');
+    await usuario.click(within(item()).getByRole('button', { name: 'Diminuir quantidade' }));
+    expect(mais()).toBeEnabled();
+    expect(within(item()).queryByText(/em estoque/)).not.toBeInTheDocument();
+  });
+
+  it('adicionar de novo o SKU que já está no limite: resumo "Só N em estoque — já no pedido" e botão desabilitado', async () => {
+    const { usuario } = await abrirPdv();
+    await adicionarPeca(usuario, LEGGING_P_MARINHO);
+    expect(within(itensPedido()[0]!).getByText('Só 1 em estoque')).toBeInTheDocument();
+    expect(within(itensPedido()[0]!).getByRole('button', { name: 'Aumentar quantidade' })).toBeDisabled();
+    await usuario.click(aba('Produtos'));
+    await usuario.click(aba('Calças'));
+    await usuario.click(aba(/^Calça Legging/));
+    await usuario.click(botaoCor('Marinho'));
+    await usuario.click(botaoTamanho('P'));
+    expect(screen.getByText('Só 1 em estoque — já no pedido')).toBeInTheDocument();
+    expect(aba('Adicionar ao pedido')).toBeDisabled();
+    await usuario.click(aba('Adicionar ao pedido'));
+    expect(aba('Pedido (1)')).toBeInTheDocument();
   });
 });
 
@@ -151,23 +283,23 @@ describe('RF-F06 — carrinho', () => {
 
   it('mesma variação adicionada de novo soma na linha; aba mostra total de peças', async () => {
     const { usuario } = await abrirPdv();
-    await adicionarPeca(usuario, LEGGING_LIGHT_M_PRETO);
-    await adicionarPeca(usuario, LEGGING_LIGHT_M_PRETO);
+    await adicionarPeca(usuario, LEGGING_M_PRETO);
+    await adicionarPeca(usuario, LEGGING_M_PRETO);
     expect(itensPedido()).toHaveLength(1);
     expect(within(itensPedido()[0]!).getByLabelText('Quantidade')).toHaveTextContent('2');
-    await adicionarPeca(usuario, { ...LEGGING_LIGHT_M_PRETO, cor: 'Vinho' });
+    await adicionarPeca(usuario, { ...LEGGING_M_PRETO, cor: 'Vinho' });
     expect(itensPedido()).toHaveLength(2);
     expect(aba('Pedido (3)')).toBeInTheDocument();
   });
 
   it('"+" e "−" mudam a quantidade; "−" com qtd 1 remove; "Excluir" remove', async () => {
     const { usuario } = await abrirPdv();
-    await adicionarPeca(usuario, LEGGING_LIGHT_M_PRETO);
+    await adicionarPeca(usuario, LEGGING_M_PRETO);
     await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
     const legging = () => itensPedido()[0]!;
     await usuario.click(within(legging()).getByRole('button', { name: 'Aumentar quantidade' }));
     expect(within(legging()).getByLabelText('Quantidade')).toHaveTextContent('2');
-    expect(texto(within(legging()).getByText(/R\$ 202,00/))).toBe('R$ 202,00');
+    expect(texto(within(legging()).getByText(/R\$ 178,00/))).toBe('R$ 178,00');
     await usuario.click(within(legging()).getByRole('button', { name: 'Diminuir quantidade' }));
     expect(within(legging()).getByLabelText('Quantidade')).toHaveTextContent('1');
     await usuario.click(within(legging()).getByRole('button', { name: 'Diminuir quantidade' }));
@@ -180,22 +312,22 @@ describe('RF-F06 — carrinho', () => {
 
   it('desconto por item: subtotal com desconto e "−N% aplicado"', async () => {
     const { usuario } = await abrirPdv();
-    await adicionarPeca(usuario, LEGGING_LIGHT_M_PRETO);
-    await adicionarPeca(usuario, LEGGING_LIGHT_M_PRETO);
+    await adicionarPeca(usuario, LEGGING_M_PRETO);
+    await adicionarPeca(usuario, LEGGING_M_PRETO);
     const item = itensPedido()[0]!;
     expect(within(item).getByRole('button', { name: 'sem' })).toHaveAttribute('aria-pressed', 'true');
     await usuario.click(within(item).getByRole('button', { name: '10%' }));
     expect(within(item).getByRole('button', { name: '10%' })).toHaveAttribute('aria-pressed', 'true');
     expect(within(item).getByText('−10% aplicado')).toBeInTheDocument();
-    expect(texto(item)).toContain('R$ 181,80');
+    expect(texto(item)).toContain('R$ 160,20');
     await usuario.click(within(item).getByRole('button', { name: 'sem' }));
     expect(within(item).queryByText(/aplicado/)).not.toBeInTheDocument();
-    expect(texto(item)).toContain('R$ 202,00');
+    expect(texto(item)).toContain('R$ 178,00');
   });
 
   it('desconto no total: passos de R$ 5, "sem desconto" e mínimo 0', async () => {
     const { usuario } = await abrirPdv();
-    await adicionarPeca(usuario, LEGGING_LIGHT_M_PRETO);
+    await adicionarPeca(usuario, LEGGING_M_PRETO);
     const mais = aba('Aumentar desconto no total');
     const menos = aba('Diminuir desconto no total');
     expect(screen.getByText('sem desconto')).toBeInTheDocument();
@@ -220,12 +352,12 @@ describe('RF-F06 — carrinho', () => {
     expect(screen.getByRole('textbox', { name: 'Nome do cliente' })).toHaveValue('Maria');
   });
 
-  it('totais do pedido de referência: 3 peças R$ 257,00, descontos − R$ 35,20, total R$ 221,80', async () => {
+  it('totais do pedido de referência: 3 peças R$ 233,00, descontos − R$ 32,80, total R$ 200,20', async () => {
     const { usuario } = await abrirPdv();
     await montarReferencia(usuario);
     const t = screen.getByTestId('totais');
-    expect(texto(t)).toBe('3 peçasR$ 257,00Descontos− R$ 35,20TotalR$ 221,80');
-    expect(texto(botaoFechar())).toBe('Fechar venda · R$ 221,80');
+    expect(texto(t)).toBe('3 peçasR$ 233,00Descontos− R$ 32,80TotalR$ 200,20');
+    expect(texto(botaoFechar())).toBe('Fechar venda · R$ 200,20');
   });
 
   it('total nunca negativo na tela', async () => {
@@ -267,7 +399,7 @@ describe('RF-F07 — fechar venda', () => {
     expect(botaoFechar()).toBeDisabled();
   });
 
-  it('POST /vendas envia só escolhas (sem preços), no formato de VendaEntrada', async () => {
+  it('POST /vendas envia só SKU, quantidade e desconto (sem preços), no formato de VendaEntrada', async () => {
     const corpos = capturarVendas();
     const { usuario } = await abrirPdv();
     await montarReferencia(usuario);
@@ -280,15 +412,15 @@ describe('RF-F07 — fechar venda', () => {
     expect({ ...corpo, chaveIdempotencia: 'x' }).toEqual({
       chaveIdempotencia: 'x',
       itens: [
-        { modeloId: 'calca-legging', tecidoId: 'light', tamanho: 'M', cor: 'Preto', qtd: 2, descPercent: 10 },
-        { modeloId: 'top-nadador', tecidoId: 'normal', tamanho: 'P', cor: 'Vinho', qtd: 1, descPercent: 0 },
+        { skuId: skuId(1, 1, 2), qtd: 2, descPercent: 10 },
+        { skuId: skuId(2, 3, 1), qtd: 1, descPercent: 0 },
       ],
       descontoTotalCentavos: 1500,
       cliente: 'Maria',
       cpf: '529.982.247-25',
       pagamentoId: 'pix',
     });
-    expect(JSON.stringify(corpo)).not.toMatch(/precoUnit|subtotal|brutoCentavos|totalCentavos|modeloNome|tecidoNome/);
+    expect(JSON.stringify(corpo)).not.toMatch(/precoUnit|subtotal|brutoCentavos|totalCentavos|modeloNome|tecidoNome|modeloId|tecidoId/);
     validarEntrada(ENTRADA_VENDA, corpo);
   });
 
@@ -396,7 +528,7 @@ describe('RF-F08 — venda registrada', () => {
     await usuario.click(botaoFechar());
     const modal = await screen.findByRole('dialog');
     expect(within(modal).getByRole('heading', { name: 'Venda registrada' })).toBeInTheDocument();
-    expect(texto(within(modal).getByText(/^Pedido #/))).toBe('Pedido #1042 · 3 peça(s) · R$ 221,80 em Pix · Maria');
+    expect(texto(within(modal).getByText(/^Pedido #/))).toBe('Pedido #1042 · 3 peça(s) · R$ 200,20 em Pix · Maria');
     await usuario.click(within(modal).getByRole('button', { name: 'Nova venda' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(aba('Produtos')).toHaveAttribute('aria-current', 'page');
@@ -466,9 +598,9 @@ describe('RF-F09 — aba Dia', () => {
     await usuario.click(aba('Dia'));
     const linhas = await screen.findAllByTestId('venda-dia');
     const hora = simulado.estado.vendas[1]!.hora;
-    expect(linhas.map(texto)).toEqual([`Pedido #1043${hora} · 1 peça(s) · DinheiroR$ 55,00`, `Pedido #1042 · Maria${simulado.estado.vendas[0]!.hora} · 3 peça(s) · PixR$ 221,80`]);
+    expect(linhas.map(texto)).toEqual([`Pedido #1043${hora} · 1 peça(s) · DinheiroR$ 55,00`, `Pedido #1042 · Maria${simulado.estado.vendas[0]!.hora} · 3 peça(s) · PixR$ 200,20`]);
     expect(hora).toMatch(/^\d{2}:\d{2}$/);
-    expect(texto(screen.getByText('Total do dia').parentElement!)).toBe('Total do diaR$ 276,80');
+    expect(texto(screen.getByText('Total do dia').parentElement!)).toBe('Total do diaR$ 255,20');
     expect(texto(screen.getByText('Pedidos').parentElement!)).toBe('Pedidos2');
   });
 
@@ -626,6 +758,141 @@ describe('RF-F10 — erros da API', () => {
     expect(screen.queryByRole('heading', { name: 'Novo pedido' })).not.toBeInTheDocument();
     liberar();
     expect(await screen.findByRole('heading', { name: 'Novo pedido' })).toBeInTheDocument();
+  });
+});
+
+describe('RF-006 — recarga silenciosa do catálogo (depois da venda, 409 e item_invalido)', () => {
+  /** Conta os GET /catalogo feitos pela tela. */
+  function contarCatalogo() {
+    const conta = { n: 0 };
+    servidor.events.on('request:start', ({ request }) => {
+      if (request.method === 'GET' && request.url.endsWith('/api/catalogo')) conta.n++;
+    });
+    return conta;
+  }
+
+  it('depois da venda o catálogo recarrega sem "Carregando…" e os saldos da tela acompanham a baixa', async () => {
+    const conta = contarCatalogo();
+    const { usuario } = await abrirPdv();
+    await adicionarPeca(usuario, LEGGING_M_PRETO);
+    await usuario.click(within(itensPedido()[0]!).getByRole('button', { name: 'Aumentar quantidade' }));
+    await usuario.click(aba('Pix'));
+    await usuario.click(botaoFechar());
+    await screen.findByRole('dialog');
+    await waitFor(() => expect(conta.n).toBe(2));
+    expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
+    await usuario.click(aba('Nova venda'));
+    await usuario.click(aba('Calças'));
+    await usuario.click(aba(/^Calça Legging/));
+    await usuario.click(botaoCor('Preto'));
+    await waitFor(() => expect(texto(botaoTamanho('M'))).toBe('MR$ 89,003 un.'));
+    servidor.events.removeAllListeners();
+  });
+
+  it('409 sem_estoque: mensagem nomeando a peça, pedido mantido, saldos novos no "+" e a mensagem continua', async () => {
+    const { usuario, simulado } = await abrirPdv();
+    await adicionarPeca(usuario, LEGGING_M_PRETO);
+    const item = () => itensPedido()[0]!;
+    await usuario.click(within(item()).getByRole('button', { name: 'Aumentar quantidade' }));
+    await usuario.click(within(item()).getByRole('button', { name: 'Aumentar quantidade' }));
+    await usuario.click(aba('Pix'));
+    // Outra venda levou peças: sobrou 1 (o catálogo da tela ainda diz 5).
+    skuNoSimulado(simulado, skuId(1, 1, 2)).saldo = 1;
+    await usuario.click(botaoFechar());
+    const alerta = await screen.findByRole('alert');
+    expect(alerta).toHaveTextContent('Item 1: Calça Legging · Preto · M — só 1 em estoque.');
+    expect(within(item()).getByLabelText('Quantidade')).toHaveTextContent('3');
+    await within(item()).findByText('Só 1 em estoque — diminua a quantidade');
+    expect(within(item()).getByRole('button', { name: 'Aumentar quantidade' })).toBeDisabled();
+    // A recarga (e a ação "precos" que ela dispara) não apaga a mensagem nem o pedido.
+    expect(screen.getByRole('alert')).toHaveTextContent('em estoque');
+    expect(aba('Pix')).toHaveAttribute('aria-pressed', 'true');
+    expect(simulado.estado.vendas).toHaveLength(0);
+    // Ajusta o pedido: a mensagem some e a venda passa.
+    await usuario.click(within(item()).getByRole('button', { name: 'Diminuir quantidade' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    await usuario.click(within(item()).getByRole('button', { name: 'Diminuir quantidade' }));
+    expect(within(item()).getByText('Só 1 em estoque')).toBeInTheDocument();
+    await usuario.click(botaoFechar());
+    expect(texto(await screen.findByRole('dialog'))).toContain('Pedido #1042 · 1 peça(s) · R$ 89,00 em Pix');
+  });
+
+  it('recarga atualiza o preço das linhas do pedido (preço mudou no ERP)', async () => {
+    const { usuario, simulado } = await abrirPdv();
+    await adicionarPeca(usuario, LEGGING_M_PRETO);
+    await usuario.click(within(itensPedido()[0]!).getByRole('button', { name: 'Aumentar quantidade' }));
+    await usuario.click(aba('Pix'));
+    const sku = skuNoSimulado(simulado, skuId(1, 1, 2));
+    sku.saldo = 1;
+    sku.precoCentavos = 9900;
+    await usuario.click(botaoFechar());
+    await screen.findByRole('alert');
+    await waitFor(() => expect(texto(itensPedido()[0]!)).toContain('Suplex · Tam M · Preto · R$ 99,00'));
+    expect(texto(totais().getByText('Total').nextElementSibling as HTMLElement)).toBe('R$ 198,00');
+    expect(screen.getByRole('alert')).toHaveTextContent('em estoque');
+  });
+
+  it('400 item_invalido (SKU inativado): recarrega, item pede exclusão e a mensagem continua', async () => {
+    const conta = contarCatalogo();
+    const { usuario, simulado } = await abrirPdv();
+    await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
+    await usuario.click(aba('Pix'));
+    const top = simulado.estado.catalogo.produtos.find((p) => p.numero === 2)!;
+    top.skus = top.skus.filter((k) => k.id !== skuId(2, 3, 1));
+    await usuario.click(botaoFechar());
+    expect(await screen.findByRole('alert')).toHaveTextContent('Item 1: produto indisponível.');
+    expect(await within(itensPedido()[0]!).findByText('Sem estoque — exclua o item')).toBeInTheDocument();
+    expect(within(itensPedido()[0]!).getByRole('button', { name: 'Aumentar quantidade' })).toBeDisabled();
+    // O preço da linha fica o que era (SKU ausente do catálogo novo).
+    expect(texto(itensPedido()[0]!)).toContain('R$ 55,00');
+    expect(screen.getByRole('alert')).toHaveTextContent('Item 1: produto indisponível.');
+    expect(conta.n).toBe(2);
+    servidor.events.removeAllListeners();
+  });
+
+  it('outros erros (ex.: CPF inválido) não recarregam o catálogo', async () => {
+    const conta = contarCatalogo();
+    const { usuario } = await abrirPdv();
+    await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
+    await usuario.type(screen.getByRole('textbox', { name: 'CPF (opcional)' }), '123.456.789-00');
+    await usuario.click(aba('Pix'));
+    await usuario.click(botaoFechar());
+    await screen.findByRole('alert');
+    servidor.events.removeAllListeners();
+    expect(conta.n).toBe(1);
+  });
+
+  it('se o tipo escolhido some na recarga, a aba Produtos volta para o primeiro tipo', async () => {
+    const { usuario, simulado } = await abrirPdv();
+    await adicionarPeca(usuario, TOP_NADADOR_P_VINHO); // deixa "Tops" escolhido
+    await usuario.click(aba('Produtos'));
+    expect(aba('Tops')).toHaveAttribute('aria-pressed', 'true');
+    await usuario.click(aba(/^Pedido/));
+    await usuario.click(aba('Pix'));
+    // O único Top foi inativado no ERP: sai do catálogo junto com o tipo.
+    simulado.estado.catalogo.produtos = simulado.estado.catalogo.produtos.filter((p) => p.numero !== 2);
+    simulado.estado.catalogo.tipos = simulado.estado.catalogo.tipos.filter((t) => t.id !== 2);
+    await usuario.click(botaoFechar());
+    await screen.findByRole('alert');
+    await waitFor(() => expect(within(itensPedido()[0]!).getByText('Sem estoque — exclua o item')).toBeInTheDocument());
+    await usuario.click(aba('Produtos'));
+    expect(screen.queryByRole('button', { name: 'Tops' })).not.toBeInTheDocument();
+    expect(aba('Bermudas')).toHaveAttribute('aria-pressed', 'true');
+    expect(aba(/^Bermuda Ciclista/)).toBeInTheDocument();
+  });
+
+  it('falha na recarga silenciosa mantém o catálogo atual na tela (sem erro de carregamento)', async () => {
+    const { usuario, simulado } = await abrirPdv();
+    await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
+    await usuario.click(aba('Pix'));
+    skuNoSimulado(simulado, skuId(2, 3, 1)).saldo = 0;
+    servidor.use(http.get('*/api/catalogo', () => HttpResponse.error()));
+    await usuario.click(botaoFechar());
+    expect(await screen.findByRole('alert')).toHaveTextContent('em estoque');
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.getByRole('heading', { name: 'Novo pedido' })).toBeInTheDocument();
+    expect(screen.queryByText('Sem conexão. Tente de novo.')).not.toBeInTheDocument();
+    expect(itensPedido()).toHaveLength(1);
   });
 });
 

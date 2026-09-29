@@ -26,10 +26,7 @@ export interface TotaisVenda {
   totalCentavos: number;
 }
 
-/** RN-001: tamanho e cor não entram no preço, só o tecido. */
-export function precoVariacao(precoBaseCentavos: number, acrescimoTecidoCentavos: number): number {
-  return precoBaseCentavos + acrescimoTecidoCentavos;
-}
+// O preço unitário vem pronto do SKU do ERP (skus.preco_centavos); aqui só se aplicam os descontos.
 
 /** RN-002: desconto percentual arredondado ao centavo, meio para cima, sem ponto flutuante. */
 export function calcularItem(precoUnitCentavos: number, qtd: number, descPercent: number): ItemCalculado {

@@ -9,44 +9,55 @@ export const VENDEDORES: Vendedor[] = [{ id: 'carlos', nome: 'Carlos', cargo: 'V
 /** PIN de cada vendedor do simulado. Só existe aqui: o front real nunca conhece PINs. */
 export const PINS: Record<string, string> = { carlos: '1234' };
 
+/*
+ * Catálogo no formato do ERP, igual ao SEED_ERP do back (backend/src/banco/seed.ts): 4 produtos × 3
+ * cores × 4 tamanhos, saldo 5 com exceções para exercitar "sem estoque" e "só N em estoque".
+ */
+const TIPOS = [
+  { id: 1, nome: 'Calças' },
+  { id: 2, nome: 'Tops' },
+  { id: 3, nome: 'Bermudas' },
+];
+const CORES = [
+  { id: 1, nome: 'Preto', hex: '#1B1B1B', fotoUrl: null },
+  { id: 2, nome: 'Marinho', hex: '#26344F', fotoUrl: null },
+  { id: 3, nome: 'Vinho', hex: '#6B2232', fotoUrl: null },
+];
+const TAMANHOS = ['P', 'M', 'G', 'GG'];
+const PRODUTOS = [
+  { numero: 1, nome: 'Calça Legging', tipoId: 1, precoCentavos: 8900 },
+  { numero: 2, nome: 'Top Nadador', tipoId: 2, precoCentavos: 5500 },
+  { numero: 3, nome: 'Bermuda Ciclista', tipoId: 3, precoCentavos: 5900 },
+  { numero: 4, nome: 'Short Curto', tipoId: 3, precoCentavos: 5500 },
+];
+// ATENÇÃO: estes valores precisam acompanhar o SEED_ERP do back; se divergirem, o modo simulado e os
+// testes do back passam a mostrar estoques diferentes.
+const SALDOS: Record<string, number> = { '0002.003.04': 0, '0001.002.01': 1 };
+const SEM_ESTOQUE = [4];
+const INATIVOS = ['0003.003.04'];
+
+const codigo = (p: number, c: number, t: number) => `${String(p).padStart(4, '0')}.${String(c).padStart(3, '0')}.${String(t).padStart(2, '0')}`;
+
 export const CATALOGO: Catalogo = {
-  categorias: [
-    { id: 'calca', nome: 'Calças' },
-    { id: 'bermuda', nome: 'Bermudas' },
-    { id: 'top', nome: 'Tops' },
-    { id: 'conj', nome: 'Conjuntos' },
-  ],
-  modelos: [
-    { id: 'calca-legging', nome: 'Calça Legging', categoriaId: 'calca', precoBaseCentavos: 8900 },
-    { id: 'calca-flare', nome: 'Calça Flare', categoriaId: 'calca', precoBaseCentavos: 9900 },
-    { id: 'calca-pantalona', nome: 'Calça Pantalona', categoriaId: 'calca', precoBaseCentavos: 10900 },
-    { id: 'calca-corsario', nome: 'Calça Corsário', categoriaId: 'calca', precoBaseCentavos: 7900 },
-    { id: 'bermuda-ciclista', nome: 'Bermuda Ciclista', categoriaId: 'bermuda', precoBaseCentavos: 5900 },
-    { id: 'bermuda-longa', nome: 'Bermuda Longa', categoriaId: 'bermuda', precoBaseCentavos: 6900 },
-    { id: 'short-saia', nome: 'Short Saia', categoriaId: 'bermuda', precoBaseCentavos: 6500 },
-    { id: 'short-curto', nome: 'Short Curto', categoriaId: 'bermuda', precoBaseCentavos: 5500 },
-    { id: 'top-alca-larga', nome: 'Top Alça Larga', categoriaId: 'top', precoBaseCentavos: 4900 },
-    { id: 'top-nadador', nome: 'Top Nadador', categoriaId: 'top', precoBaseCentavos: 5500 },
-    { id: 'blusa-manga-longa', nome: 'Blusa Manga Longa', categoriaId: 'top', precoBaseCentavos: 7900 },
-    { id: 'regata-basica', nome: 'Regata Básica', categoriaId: 'top', precoBaseCentavos: 4500 },
-    { id: 'conj-legging-top', nome: 'Conjunto Legging + Top', categoriaId: 'conj', precoBaseCentavos: 13900 },
-    { id: 'conj-ciclista-top', nome: 'Conjunto Ciclista + Top', categoriaId: 'conj', precoBaseCentavos: 11900 },
-  ],
-  tecidos: [
-    { id: 'normal', nome: 'Suplex Normal', acrescimoCentavos: 0 },
-    { id: 'light', nome: 'Suplex Light', acrescimoCentavos: 1200 },
-  ],
-  tamanhos: ['P', 'M', 'G', 'GG'],
-  cores: [
-    { nome: 'Preto', hex: '#1B1B1B' },
-    { nome: 'Marinho', hex: '#26344F' },
-    { nome: 'Grafite', hex: '#5A5A5A' },
-    { nome: 'Vinho', hex: '#6B2232' },
-    { nome: 'Verde Militar', hex: '#4A5236' },
-    { nome: 'Rosa Antigo', hex: '#B4808A' },
-    { nome: 'Bege', hex: '#C7B299' },
-    { nome: 'Off White', hex: '#EDE8DE' },
-  ],
+  tipos: [...TIPOS].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
+  produtos: PRODUTOS.map((p) => ({
+    id: p.numero,
+    numero: p.numero,
+    nome: p.nome,
+    tipoId: p.tipoId,
+    tecidoNome: 'Suplex',
+    // Mesmo id do back: SKUs inseridos produto → cor → tamanho; o inativo fica fora, como no GET /catalogo.
+    skus: CORES.flatMap((cor) =>
+      TAMANHOS.map((sigla, i) => ({
+        id: (p.numero - 1) * 12 + (cor.id - 1) * 4 + i + 1,
+        codigo: codigo(p.numero, cor.id, i + 1),
+        cor,
+        tamanho: { sigla, ordem: i + 1 },
+        precoCentavos: p.precoCentavos,
+        saldo: SEM_ESTOQUE.includes(p.numero) ? 0 : (SALDOS[codigo(p.numero, cor.id, i + 1)] ?? 5),
+      })),
+    ).filter((s) => !INATIVOS.includes(s.codigo)),
+  })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
   pagamentos: [
     { id: 'dinheiro', nome: 'Dinheiro' },
     { id: 'pix', nome: 'Pix' },

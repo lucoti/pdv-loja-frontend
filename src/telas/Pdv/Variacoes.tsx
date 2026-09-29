@@ -1,99 +1,99 @@
-import type { Catalogo } from '../../api/cliente';
+import { coresDoProduto, semEstoque, skuDe, skusDaCor, textoSaldo, type CorSku, type Produto } from '../../dominio/catalogo';
 import { formatarReais } from '../../dominio/formatos';
-import { precoVariacao } from '../../dominio/precos';
 import c from '../comum.module.css';
 import s from './Pdv.module.css';
 
-type Modelo = Catalogo['modelos'][number];
-
+/** Cor e tamanho escolhidos; juntos identificam um SKU do produto. */
 export interface Escolha {
-  tecidoId: string | null;
+  corId: number | null;
   tamanho: string | null;
-  cor: string | null;
 }
 
-/** Painel de variações — tecido, tamanho e cor (handoff §2b, RF-F05). */
-export function Variacoes(props: {
-  catalogo: Catalogo;
-  modelo: Modelo;
-  escolha: Escolha;
-  aoMudar: (escolha: Escolha) => void;
-  aoVoltar: () => void;
-}) {
-  const { catalogo, modelo, escolha, aoMudar } = props;
+/** Amostra da cor: bolinha com o hex; estampa sem hex mostra a miniatura da foto. */
+function Amostra({ cor }: { cor: CorSku }) {
+  if (!cor.hex && cor.fotoUrl) return <img className={s.circulo} src={cor.fotoUrl} alt="" aria-hidden="true" />;
+  return <span className={s.circulo} style={{ background: cor.hex ?? 'var(--line)' }} aria-hidden="true" />;
+}
+
+/** Painel de variações — cor e depois tamanho, com preço e estoque de cada SKU (handoff §2b, RF-003). */
+export function Variacoes(props: { produto: Produto; escolha: Escolha; aoMudar: (escolha: Escolha) => void; aoVoltar: () => void }) {
+  const { produto, escolha, aoMudar } = props;
+  const tamanhos = escolha.corId === null ? [] : skusDaCor(produto, escolha.corId);
+
+  // Ao trocar de cor, o tamanho escolhido continua se existir com estoque na cor nova.
+  const escolherCor = (corId: number) => {
+    const mesmo = skuDe(produto, corId, escolha.tamanho);
+    aoMudar({ corId, tamanho: mesmo && mesmo.saldo > 0 ? escolha.tamanho : null });
+  };
 
   return (
     <div className={s.coluna22}>
       <div className={s.topoVariacao}>
-        <button type="button" className={c.voltar} onClick={props.aoVoltar} aria-label="Voltar para os modelos">
+        <button type="button" className={c.voltar} onClick={props.aoVoltar} aria-label="Voltar para os produtos">
           ←
         </button>
-        <h1 className={s.nomeVariacao}>{modelo.nome}</h1>
+        <div>
+          <h1 className={s.nomeVariacao}>{produto.nome}</h1>
+          <div className={s.modeloPreco}>{produto.tecidoNome}</div>
+        </div>
       </div>
-
-      <section>
-        <div className={`${c.rotulo} ${s.rotuloBloco}`}>TECIDO</div>
-        <div className={s.grade2}>
-          {catalogo.tecidos.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className={s.tecido}
-              aria-pressed={escolha.tecidoId === t.id}
-              onClick={() => aoMudar({ ...escolha, tecidoId: t.id })}
-            >
-              <span className={s.tecidoNome}>{t.nome}</span>
-              <span className={s.tecidoPreco}>{formatarReais(precoVariacao(modelo.precoBaseCentavos, t.acrescimoCentavos))}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <div className={`${c.rotulo} ${s.rotuloBloco}`}>TAMANHO</div>
-        <div className={s.grade4}>
-          {catalogo.tamanhos.map((t) => (
-            <button
-              key={t}
-              type="button"
-              className={s.tamanho}
-              aria-pressed={escolha.tamanho === t}
-              onClick={() => aoMudar({ ...escolha, tamanho: t })}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </section>
 
       <section>
         <div className={`${c.rotulo} ${s.rotuloBloco}`}>COR</div>
         <div className={s.grade2}>
-          {catalogo.cores.map((cor) => (
-            <button
-              key={cor.nome}
-              type="button"
-              className={s.cor}
-              aria-pressed={escolha.cor === cor.nome}
-              onClick={() => aoMudar({ ...escolha, cor: cor.nome })}
-            >
-              <span className={s.circulo} style={{ background: cor.hex }} aria-hidden="true" />
-              <span className={s.corNome}>{cor.nome}</span>
-            </button>
-          ))}
+          {coresDoProduto(produto).map((cor) => {
+            // A cor sem nenhum tamanho com saldo continua clicável, para consulta, mas avisa "sem estoque".
+            const esgotada = semEstoque(skusDaCor(produto, cor.id));
+            return (
+              <button key={cor.id} type="button" className={s.cor} aria-pressed={escolha.corId === cor.id} onClick={() => escolherCor(cor.id)}>
+                <Amostra cor={cor} />
+                <span className={s.corTexto}>
+                  <span className={s.corNome}>{cor.nome}</span>
+                  {esgotada && <span className={s.semEstoque}>sem estoque</span>}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </section>
+
+      {escolha.corId !== null && (
+        <section>
+          <div className={`${c.rotulo} ${s.rotuloBloco}`}>TAMANHO</div>
+          <div className={s.grade4}>
+            {tamanhos.map((sku) => (
+              // Sem saldo não vende (RN-24 do ERP): o tamanho aparece, mas desabilitado.
+              <button
+                key={sku.id}
+                type="button"
+                className={s.tamanho}
+                aria-pressed={escolha.tamanho === sku.tamanho.sigla}
+                disabled={sku.saldo <= 0}
+                onClick={() => aoMudar({ ...escolha, tamanho: sku.tamanho.sigla })}
+              >
+                <span className={s.tamanhoSigla}>{sku.tamanho.sigla}</span>
+                <span className={s.tamanhoPreco}>{formatarReais(sku.precoCentavos)}</span>
+                <span className={s.tamanhoSaldo}>{textoSaldo(sku.saldo)}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
 
-/** Linha de apoio acima de "Adicionar ao pedido": o que falta, ou o resumo com o preço. */
-export function resumoEscolha(catalogo: Catalogo, modelo: Modelo, escolha: Escolha): string {
-  const tecido = catalogo.tecidos.find((t) => t.id === escolha.tecidoId);
-  if (tecido && escolha.tamanho && escolha.cor) {
-    const preco = precoVariacao(modelo.precoBaseCentavos, tecido.acrescimoCentavos);
-    return `${tecido.nome} · Tam ${escolha.tamanho} · ${escolha.cor} — ${formatarReais(preco)}`;
+/**
+ * Linha de apoio acima de "Adicionar ao pedido": o que falta, o resumo com o preço ou, se o pedido
+ * já tem todo o saldo desse SKU, o aviso de limite.
+ */
+export function resumoEscolha(produto: Produto, escolha: Escolha, jaNoPedido: number): string {
+  const sku = skuDe(produto, escolha.corId, escolha.tamanho);
+  if (sku) {
+    // Mesmo aviso do carrinho (RF-004): o pedido já tem todo o saldo deste SKU.
+    if (jaNoPedido >= sku.saldo) return `Só ${sku.saldo} em estoque — já no pedido`;
+    return `${sku.cor.nome} · Tam ${sku.tamanho.sigla} — ${formatarReais(sku.precoCentavos)}`;
   }
-  const falta = [!tecido && 'tecido', !escolha.tamanho && 'tamanho', !escolha.cor && 'cor'].filter(Boolean);
+  const falta = [escolha.corId === null && 'cor', !escolha.tamanho && 'tamanho'].filter(Boolean);
   return `Falta escolher: ${falta.join(', ')}`;
 }

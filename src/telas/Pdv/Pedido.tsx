@@ -1,14 +1,23 @@
 import type { Dispatch } from 'react';
 import type { Catalogo } from '../../api/cliente';
 import { calcularPedido, type AcaoPedido, type Pedido as PedidoEstado } from '../../dominio/carrinho';
+import { saldosPorSku } from '../../dominio/catalogo';
 import { formatarReais, textoPecas } from '../../dominio/formatos';
 import { DESCONTOS_ITEM } from '../../dominio/precos';
 import c from '../comum.module.css';
 import s from './Pdv.module.css';
 
+/** Aviso do item no limite do estoque; acima dele (outra venda levou peças), pede para ajustar. */
+function avisoLimite(qtd: number, saldo: number): string {
+  if (saldo <= 0) return 'Sem estoque — exclua o item';
+  return qtd > saldo ? `Só ${saldo} em estoque — diminua a quantidade` : `Só ${saldo} em estoque`;
+}
+
 /** Aba Pedido — carrinho e revisão (handoff §2c, RF-F06). */
 export function Pedido({ pedido, catalogo, despachar }: { pedido: PedidoEstado; catalogo: Catalogo; despachar: Dispatch<AcaoPedido> }) {
   const { itens, totais } = calcularPedido(pedido);
+  // Saldo atual de cada SKU: limita o "+" e avisa quando o pedido passou do estoque (catálogo recarregado).
+  const saldos = saldosPorSku(catalogo);
 
   return (
     <div className={s.coluna18}>
@@ -46,7 +55,10 @@ export function Pedido({ pedido, catalogo, despachar }: { pedido: PedidoEstado; 
         </div>
       )}
 
-      {itens.map((item) => (
+      {itens.map((item) => {
+        // SKU que sumiu do catálogo recarregado (inativado no ERP) conta como saldo 0: o item pede exclusão.
+        const saldo = saldos.get(item.skuId) ?? 0;
+        return (
         <div key={item.chave} className={`${s.cartao} ${s.cartaoItem}`} data-testid="item-pedido">
           <div className={s.itemTopo}>
             <div className={s.itemTexto}>
@@ -67,7 +79,13 @@ export function Pedido({ pedido, catalogo, despachar }: { pedido: PedidoEstado; 
             <div className={`${s.qtd} ${c.tabular}`} aria-label="Quantidade">
               {item.qtd}
             </div>
-            <button type="button" className={s.mais} aria-label="Aumentar quantidade" onClick={() => despachar({ tipo: 'mais', chave: item.chave })}>
+            <button
+              type="button"
+              className={s.mais}
+              aria-label="Aumentar quantidade"
+              disabled={item.qtd >= saldo}
+              onClick={() => despachar({ tipo: 'mais', chave: item.chave, limite: saldo })}
+            >
               +
             </button>
             <div className={s.subtotal}>
@@ -75,6 +93,8 @@ export function Pedido({ pedido, catalogo, despachar }: { pedido: PedidoEstado; 
               <div className={s.descAplicado}>{item.descPercent ? `−${item.descPercent}% aplicado` : ''}</div>
             </div>
           </div>
+
+          {item.qtd >= saldo && <div className={s.limite}>{avisoLimite(item.qtd, saldo)}</div>}
 
           <div className={s.linhaDesconto}>
             <div className={`${c.rotulo} ${s.rotuloDesconto}`}>DESCONTO</div>
@@ -93,7 +113,8 @@ export function Pedido({ pedido, catalogo, despachar }: { pedido: PedidoEstado; 
             </div>
           </div>
         </div>
-      ))}
+        );
+      })}
 
       <div className={`${s.cartao} ${s.cartaoDesconto}`}>
         <div className={c.rotulo}>DESCONTO NO TOTAL</div>

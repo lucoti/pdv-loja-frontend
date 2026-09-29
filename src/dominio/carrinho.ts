@@ -5,12 +5,16 @@ import { calcularItem, calcularTotais, PASSO_DESCONTO_TOTAL_CENTAVOS, type Desco
  * para o armazenamento do navegador (RNF-F08).
  */
 
-/** Uma linha do carrinho; "chave" identifica a variação (modelo + tecido + tamanho + cor). */
+/**
+ * Uma linha do carrinho = um SKU do ERP; "chave" é o id do SKU em texto. Os nomes e o preço servem
+ * só para exibir: ao fechar, o front manda apenas skuId, qtd e desconto.
+ */
+// O preço da linha é copiado do catálogo quando ela entra no pedido e é refeito pela ação "precos" a cada
+// recarga do catálogo, para o total exibido ser o que o servidor vai cobrar (o preço do SKU no ERP).
 export interface ItemCarrinho {
   chave: string;
-  modeloId: string;
+  skuId: number;
   modeloNome: string;
-  tecidoId: string;
   tecidoNome: string;
   tamanho: string;
   cor: string;
@@ -31,9 +35,10 @@ export interface Pedido {
 
 export type NovaVariacao = Omit<ItemCarrinho, 'chave' | 'qtd' | 'descPercent'>;
 
+// "limite" = saldo do SKU no catálogo: adicionar e "+" nunca passam dele (RN-24 do ERP, RF-004).
 export type AcaoPedido =
-  | { tipo: 'adicionar'; variacao: NovaVariacao }
-  | { tipo: 'mais'; chave: string }
+  | { tipo: 'adicionar'; variacao: NovaVariacao; limite: number }
+  | { tipo: 'mais'; chave: string; limite: number }
   | { tipo: 'menos'; chave: string }
   | { tipo: 'remover'; chave: string }
   | { tipo: 'desconto'; chave: string; descPercent: DescontoItem }
@@ -42,6 +47,8 @@ export type AcaoPedido =
   | { tipo: 'cliente'; valor: string }
   | { tipo: 'cpf'; valor: string }
   | { tipo: 'pagamento'; pagamentoId: string }
+  // Catálogo recarregado: preço atual de cada SKU (skuId → centavos).
+  | { tipo: 'precos'; precos: ReadonlyMap<number, number> }
   // "Cancelar pedido" e "Nova venda": tudo zerado e chave nova (gerada fora, para o reducer ser puro).
   | { tipo: 'novo'; chaveIdempotencia: string };
 
@@ -49,9 +56,14 @@ export function pedidoVazio(chaveIdempotencia: string): Pedido {
   return { itens: [], descontoTotalCentavos: 0, cliente: '', cpf: '', pagamentoId: null, chaveIdempotencia };
 }
 
-/** Mesma composição de chave que o servidor usa para recusar variação repetida (item_repetido). */
-export function chaveVariacao(v: Pick<ItemCarrinho, 'modeloId' | 'tecidoId' | 'tamanho' | 'cor'>): string {
-  return [v.modeloId, v.tecidoId, v.tamanho, v.cor].join('|');
+/** Um SKU = uma linha: é o mesmo critério do servidor para recusar peça repetida (item_repetido). */
+export function chaveVariacao(v: Pick<ItemCarrinho, 'skuId'>): string {
+  return String(v.skuId);
+}
+
+/** Quantidade do SKU já no pedido (0 se não estiver). */
+export function qtdNoPedido(p: Pedido, skuId: number): number {
+  return p.itens.find((i) => i.skuId === skuId)?.qtd ?? 0;
 }
 
 /** Troca a linha da chave pelo retorno de `mudar`; `null` remove a linha. Sempre devolve objetos novos (imutável). */
@@ -68,13 +80,17 @@ function alterarItem(p: Pedido, chave: string, mudar: (i: ItemCarrinho) => ItemC
 export function reduzirPedido(p: Pedido, acao: AcaoPedido): Pedido {
   switch (acao.tipo) {
     case 'adicionar': {
-      // Regra 2 do handoff: a mesma variação soma na linha existente em vez de criar outra.
+      // Regra 2 do handoff: o mesmo SKU soma na linha existente em vez de criar outra.
       const chave = chaveVariacao(acao.variacao);
-      if (p.itens.some((i) => i.chave === chave)) return alterarItem(p, chave, (i) => ({ ...i, qtd: i.qtd + 1 }));
+      if (p.itens.some((i) => i.chave === chave)) return alterarItem(p, chave, (i) => ({ ...i, qtd: i.qtd < acao.limite ? i.qtd + 1 : i.qtd }));
+      // Linha nova só entra se houver ao menos 1 em estoque (defesa extra: a tela já desabilita o botão).
+      if (acao.limite < 1) return p;
       return { ...p, itens: [...p.itens, { ...acao.variacao, chave, qtd: 1, descPercent: 0 }] };
     }
     case 'mais':
-      return alterarItem(p, acao.chave, (i) => ({ ...i, qtd: i.qtd + 1 }));
+      // No limite o "+" não faz nada (o botão já aparece desabilitado). Se o saldo caiu abaixo da
+      // quantidade (catálogo recarregado), a quantidade fica como está até o vendedor diminuir.
+      return alterarItem(p, acao.chave, (i) => ({ ...i, qtd: i.qtd < acao.limite ? i.qtd + 1 : i.qtd }));
     case 'menos':
       // Regra 6: "−" com quantidade 1 remove o item.
       return alterarItem(p, acao.chave, (i) => (i.qtd > 1 ? { ...i, qtd: i.qtd - 1 } : null));
@@ -93,6 +109,13 @@ export function reduzirPedido(p: Pedido, acao: AcaoPedido): Pedido {
       return { ...p, cpf: acao.valor };
     case 'pagamento':
       return { ...p, pagamentoId: acao.pagamentoId };
+    case 'precos': {
+      // SKU fora do catálogo novo (inativado) mantém o preço antigo: o servidor recusa com item_invalido.
+      // Sem nenhuma mudança devolve o mesmo objeto, para não disparar render à toa.
+      const mudou = p.itens.some((i) => { const novo = acao.precos.get(i.skuId); return novo !== undefined && novo !== i.precoUnitCentavos; });
+      if (!mudou) return p;
+      return { ...p, itens: p.itens.map((i) => ({ ...i, precoUnitCentavos: acao.precos.get(i.skuId) ?? i.precoUnitCentavos })) };
+    }
     case 'novo':
       return pedidoVazio(acao.chaveIdempotencia);
   }

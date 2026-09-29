@@ -3,14 +3,9 @@
  * para garantir que a conta exibida na tela é a mesma que o servidor grava.
  */
 import { describe, expect, it } from 'vitest';
-import { calcularItem, calcularTotais, DESCONTOS_ITEM, PASSO_DESCONTO_TOTAL_CENTAVOS, precoVariacao } from '../../src/dominio/precos';
+import { calcularItem, calcularTotais, DESCONTOS_ITEM, PASSO_DESCONTO_TOTAL_CENTAVOS } from '../../src/dominio/precos';
 
-describe('precoVariacao (RN-001)', () => {
-  it('soma preço base e acréscimo do tecido', () => {
-    expect(precoVariacao(8900, 1200)).toBe(10100);
-    expect(precoVariacao(5500, 0)).toBe(5500);
-  });
-});
+// precoVariacao (RN-001) saiu com a integração PDV-ERP: o preço unitário vem do SKU do ERP.
 
 describe('calcularItem (RN-002)', () => {
   it('sem desconto: subtotal = preço × qtd', () => {

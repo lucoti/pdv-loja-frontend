@@ -21,34 +21,39 @@ export async function entrar(usuario: UserEvent, pin = '1234') {
   await screen.findByText(/pedido novo/);
 }
 
-/** Espera o catálogo carregar (lista de modelos visível). */
+/** Espera o catálogo carregar (lista do primeiro tipo, "Bermudas", visível). */
 export async function esperarCatalogo() {
-  await screen.findByRole('button', { name: /Calça Legging/ });
+  await screen.findByRole('button', { name: /^Bermuda Ciclista/ });
 }
 
+/** Peça do catálogo de exemplo (simulado/dados.ts): tipo (chip), produto, cor e tamanho. */
 export interface Peca {
-  categoria?: string;
-  modelo: string;
-  tecido?: string;
-  tamanho: string;
+  tipo?: string;
+  produto: string;
   cor: string;
+  tamanho: string;
 }
 
-/** Aba Produtos → modelo → tecido/tamanho/cor → "Adicionar ao pedido" (vai para a aba Pedido). */
+/** Botão do tamanho: o nome acessível começa pela sigla, seguida do preço ("MR$ 89,005 un."). */
+export const botaoTamanho = (sigla: string) => screen.getByRole('button', { name: new RegExp(`^${sigla}R\\$`) });
+/** Botão da cor: o nome começa pela cor (pode vir seguido de "sem estoque"). */
+export const botaoCor = (cor: string) => screen.getByRole('button', { name: new RegExp(`^${cor}(sem estoque)?$`) });
+
+/** Aba Produtos → chip do tipo → produto → cor → tamanho → "Adicionar ao pedido" (vai para a aba Pedido). */
 export async function adicionarPeca(usuario: UserEvent, p: Peca) {
   const abaProdutos = screen.getByRole('button', { name: 'Produtos' });
   if (abaProdutos.getAttribute('aria-current') !== 'page') await usuario.click(abaProdutos);
-  if (p.categoria) await usuario.click(screen.getByRole('button', { name: p.categoria }));
-  await usuario.click(screen.getByRole('button', { name: new RegExp(`^${p.modelo}`) }));
-  if (p.tecido) await usuario.click(screen.getByRole('button', { name: new RegExp(`^${p.tecido}`) }));
-  await usuario.click(screen.getByRole('button', { name: p.tamanho }));
-  await usuario.click(screen.getByRole('button', { name: p.cor }));
+  if (p.tipo) await usuario.click(screen.getByRole('button', { name: p.tipo }));
+  await usuario.click(screen.getByRole('button', { name: new RegExp(`^${p.produto}`) }));
+  await usuario.click(botaoCor(p.cor));
+  await usuario.click(botaoTamanho(p.tamanho));
   await usuario.click(screen.getByRole('button', { name: 'Adicionar ao pedido' }));
   expect(screen.getByRole('heading', { name: 'Novo pedido' })).toBeInTheDocument();
 }
 
-export const LEGGING_LIGHT_M_PRETO: Peca = { modelo: 'Calça Legging', tecido: 'Suplex Light', tamanho: 'M', cor: 'Preto' };
-export const TOP_NADADOR_P_VINHO: Peca = { categoria: 'Tops', modelo: 'Top Nadador', tamanho: 'P', cor: 'Vinho' };
+// Preços e saldos do catálogo de exemplo: Legging R$ 89 (saldo 5; Marinho P só 1), Top R$ 55 (Vinho GG sem estoque).
+export const LEGGING_M_PRETO: Peca = { tipo: 'Calças', produto: 'Calça Legging', cor: 'Preto', tamanho: 'M' };
+export const TOP_NADADOR_P_VINHO: Peca = { tipo: 'Tops', produto: 'Top Nadador', cor: 'Vinho', tamanho: 'P' };
 
 /** Linhas do carrinho na aba Pedido. */
 export const itensPedido = () => screen.queryAllByTestId('item-pedido');
