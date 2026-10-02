@@ -18,6 +18,15 @@ function Amostra({ cor }: { cor: CorSku }) {
 /** Painel de variações — cor e depois tamanho, com preço e estoque de cada SKU (handoff §2b, RF-003). */
 export function Variacoes(props: { produto: Produto; escolha: Escolha; aoMudar: (escolha: Escolha) => void; aoVoltar: () => void }) {
   const { produto, escolha, aoMudar } = props;
+  // Sem cor escolhida a lista fica vazia e o bloco TAMANHO nem é desenhado. Com cor, vêm todos os SKUs
+  // dela, inclusive os zerados, na ordem da grade de tamanhos do ERP.
+  // Cada tamanho é um botão com três linhas: sigla, preço e saldo (`textoSaldo`: "estoque N").
+  // Os botões ficam na grade `.gradeTamanhos` (Pdv.module.css), de 3 colunas iguais que encolhem com a
+  // tela: com os 6 tamanhos de costume são 3 em cada linha, e um preço de 3 dígitos cabe num celular
+  // de 360px (cerca de 100px por coluna).
+  // ATENÇÃO: num celular de 320px a coluna tem cerca de 88px e um preço de 4 dígitos (R$ 1.110,00)
+  // passa da borda do próprio botão; a página não chega a rolar de lado. Só importa se a loja tiver
+  // peça acima de R$ 999,99.
   const tamanhos = escolha.corId === null ? [] : skusDaCor(produto, escolha.corId);
 
   // Ao trocar de cor, o tamanho escolhido continua se existir com estoque na cor nova.
@@ -60,7 +69,7 @@ export function Variacoes(props: { produto: Produto; escolha: Escolha; aoMudar: 
       {escolha.corId !== null && (
         <section>
           <div className={`${c.rotulo} ${s.rotuloBloco}`}>TAMANHO</div>
-          <div className={s.grade4}>
+          <div className={s.gradeTamanhos}>
             {tamanhos.map((sku) => (
               // Sem saldo não vende (RN-24 do ERP): o tamanho aparece, mas desabilitado.
               <button

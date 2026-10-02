@@ -13,16 +13,7 @@
   gap: 12px;
 }
 
-.cabecalhoTexto { flex: 1; min-width: 0; }
-.marca { font-size: 21px; font-weight: 700; letter-spacing: 0.02em; }
-.subtitulo { font-size: 16px; opacity: 0.75; margin-top: 2px; }
-
-.data {
-  font-size: 17px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: rgba(246, 244, 240, 0.15);
-}
+.etapa { font-size: 21px; font-weight: 700; letter-spacing: 0.02em; }
 
 /* Conteúdo; o padding inferior reserva espaço para a barra fixa. */
 .conteudo {
@@ -90,7 +81,8 @@
 .rotuloBloco { margin-bottom: 10px; }
 
 .grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.grade4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+/* Tamanhos: 3 colunas iguais; minmax(0, …) deixa a coluna encolher em vez de estourar a largura da tela. */
+.gradeTamanhos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 
 .tecido {
   display: flex;

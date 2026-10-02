@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useState } from 'react';
-import { api, ErroApi, MENSAGEM_GENERICA, type Catalogo, type Venda, type Vendedor } from '../../api/cliente';
+import { api, ErroApi, MENSAGEM_GENERICA, type Catalogo, type Venda } from '../../api/cliente';
 import { calcularPedido, pedidoVazio, podeFechar, qtdNoPedido, reduzirPedido, type AcaoPedido, type Pedido as PedidoEstado } from '../../dominio/carrinho';
 import { skuDe } from '../../dominio/catalogo';
 import { formatarReais } from '../../dominio/formatos';
@@ -8,7 +8,7 @@ import c from '../comum.module.css';
 import { Folha } from '../Folha';
 import { useCarregar } from '../useCarregar';
 import { BarraInferior, type Aba } from './BarraInferior';
-import { Cabecalho } from './Cabecalho';
+import { Cabecalho, nomeEtapa } from './Cabecalho';
 import { Dia } from './Dia';
 import { ModalSucesso } from './ModalSucesso';
 import { Pedido } from './Pedido';
@@ -19,7 +19,7 @@ import { resumoEscolha, Variacoes, type Escolha } from './Variacoes';
 const SEM_ESCOLHA: Escolha = { corId: null, tamanho: null };
 
 /** Tela de venda (handoff §2). Carrega o catálogo e só então mostra Produtos e Pedido. */
-export function Pdv({ vendedor }: { vendedor: Vendedor }) {
+export function Pdv() {
   const [aba, setAba] = useState<Aba>('produtos');
   const [carga, tentarDeNovo, atualizarCatalogo] = useCarregar(api.catalogo);
   // O pedido fica aqui, acima de <Venda>, para sobreviver à troca de abas e ao recarregar do catálogo.
@@ -30,9 +30,15 @@ export function Pdv({ vendedor }: { vendedor: Vendedor }) {
   const [pedido, despacharPedido] = useReducer(reduzirPedido, undefined, () => pedidoVazio(crypto.randomUUID()));
   const pecas = calcularPedido(pedido).totais.pecas;
 
+  // O topo mostra a etapa e é desenhado por quem a conhece: <Venda> (que sabe se há um produto aberto)
+  // ou, com o catálogo carregando ou em falha, o ramo abaixo, só pela aba. Nos dois casos ele é o
+  // primeiro filho da folha, para aparecer nas três abas.
+  // ATENÇÃO: os dois ramos montam cada um o seu topo e a sua barra inferior. Quando o catálogo termina
+  // de carregar, os do ramo de baixo saem da página e os de <Venda> entram no lugar: na tela não há
+  // diferença visível, mas um toque numa aba nesse exato instante pode se perder (visto só em teste),
+  // e um teste que guarde o elemento do topo antes da carga fica com um elemento que já saiu da página.
   return (
     <Folha>
-      <Cabecalho vendedor={vendedor.nome} />
       {carga.situacao === 'ok' ? (
         <Venda
           catalogo={carga.dados}
@@ -45,6 +51,7 @@ export function Pdv({ vendedor }: { vendedor: Vendedor }) {
         />
       ) : (
         <>
+          <Cabecalho etapa={nomeEtapa(aba)} />
           <main className={s.conteudo}>
             {/* A aba Dia não depende do catálogo: funciona mesmo com ele carregando ou em falha. */}
             {aba === 'dia' ? (
@@ -173,6 +180,10 @@ function Venda(props: {
     setAba('produtos');
   };
 
+  // A tela de cor/tamanho não é uma aba: é a aba Produtos com um produto aberto. Trocar de aba não
+  // fecha o produto; ao voltar para Produtos, a tela de cor/tamanho reaparece com a escolha feita.
+  // ATENÇÃO: se uma recarga do catálogo tirar o produto aberto, `produto` fica undefined e a tela
+  // volta sozinha para a lista, embora `produtoId` continue guardado.
   const naVariacao = aba === 'produtos' && !!produto;
   const { totais } = calcularPedido(pedido);
   const rotuloFechar =
@@ -202,6 +213,7 @@ function Venda(props: {
 
   return (
     <>
+      <Cabecalho etapa={nomeEtapa(aba, naVariacao)} />
       <main className={s.conteudo}>
         {aba === 'produtos' && !produto && (
           <Produtos catalogo={catalogo} tipoId={tipoId} aoEscolherTipo={setTipoId} aoEscolherProduto={(p) => escolherProduto(p.id)} />

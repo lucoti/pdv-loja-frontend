@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { expect } from 'vitest';
 import { App } from '../../src/App';
@@ -50,10 +50,22 @@ export function numerosDigitados(): number {
   return Number(/^(\d+) de \d+ números digitados$/.exec(rotulo)?.[1] ?? Number.NaN);
 }
 
+/**
+ * Topo do PDV (o <header> com a etapa). É o sinal de que a página saiu do login: o topo do login não
+ * mostra etapa nenhuma. Ponto único dos testes que depende de como o PDV se anuncia.
+ */
+const ETAPAS = /^(Produtos|Cor e tamanho|Pedido|Dia)$/;
+export const topoDoPdv = () => screen.queryByText(ETAPAS, { selector: 'header div' });
+/**
+ * Espera a tela de venda abrir. Confere dentro da espera, sem devolver o elemento: o topo é redesenhado
+ * quando o catálogo termina de carregar, e um elemento guardado antes disso já teria saído da página.
+ */
+export const esperarPdv = () => waitFor(() => expect(topoDoPdv()).toBeInTheDocument());
+
 /** Faz login com um único vendedor (etapa de seleção omitida) e espera a tela de venda. */
 export async function entrar(usuario: UserEvent, pin = PIN_CERTO) {
   await enviarPin(usuario, pin);
-  await screen.findByText(/pedido novo/);
+  await esperarPdv();
 }
 
 /** Espera o catálogo carregar (lista do primeiro tipo, "Bermudas", visível). */
@@ -69,7 +81,7 @@ export interface Peca {
   tamanho: string;
 }
 
-/** Botão do tamanho: o nome acessível começa pela sigla, seguida do preço ("MR$ 89,005 un."). */
+/** Botão do tamanho: o nome acessível começa pela sigla, seguida do preço ("MR$ 89,00estoque 5"). */
 export const botaoTamanho = (sigla: string) => screen.getByRole('button', { name: new RegExp(`^${sigla}R\\$`) });
 /** Botão da cor: o nome começa pela cor (pode vir seguido de "sem estoque"). */
 export const botaoCor = (cor: string) => screen.getByRole('button', { name: new RegExp(`^${cor}(sem estoque)?$`) });

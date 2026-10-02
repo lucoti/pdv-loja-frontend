@@ -85,10 +85,10 @@ describe('saldosPorSku', () => {
 });
 
 describe('textoSaldo', () => {
-  it('"N un." com saldo positivo; "sem estoque" com zero ou negativo', () => {
-    expect(textoSaldo(1)).toBe('1 un.');
-    expect(textoSaldo(3)).toBe('3 un.');
-    expect(textoSaldo(0)).toBe('sem estoque');
-    expect(textoSaldo(-2)).toBe('sem estoque');
+  it('"estoque N" com saldo positivo; "estoque 0" com zero ou negativo', () => {
+    expect(textoSaldo(1)).toBe('estoque 1');
+    expect(textoSaldo(3)).toBe('estoque 3');
+    expect(textoSaldo(0)).toBe('estoque 0');
+    expect(textoSaldo(-2)).toBe('estoque 0');
   });
 });

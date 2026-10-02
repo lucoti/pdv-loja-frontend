@@ -3,10 +3,10 @@
 Slug: pdv-login-8-digitos
 Modo: refatoracao
 Fase atual: implantacao
-Status: em_andamento
+Status: implantada
 Incidente atual: nenhum
 Criado em: 2026-10-01 21:19
-Última atualização: 2026-10-01 22:32
+Última atualização: 2026-10-01 22:53
 
 <!--
 NÃO altere o nome nem o formato das linhas acima. Os hooks de métricas leem "Fase atual:" literalmente.
@@ -26,8 +26,8 @@ Valores válidos de "Incidente atual": número do incidente aberto na Fase 7 (ex
 | Desenvolvimento | aprovada | Lucas | 2026-10-01 21:55 | 04-desenvolvimento.md |
 | Documentação | aprovada | Lucas (execução autorizada em 21:55) | 2026-10-01 21:59 | backend/docs/v6 e frontend/docs/v5 (to-be); v5 e v4 (as-is) |
 | Testes | aprovada | Lucas | 2026-10-01 22:26 | 05-testes.md |
-| Implantação | em_andamento | | | 06-implantacao.md |
-| Aprendizado (só refatoração) | pendente | | | .claude/aprendizados.md |
+| Implantação | aprovada | Lucas (passos 3 e 5 confirmados) | 2026-10-01 22:53 | 06-implantacao.md |
+| Aprendizado (só refatoração) | aprovada | Lucas | 2026-10-01 22:53 | .claude/aprendizados.md (AP-001, AP-002) |
 
 <!-- Status de fase: pendente | em_andamento | aprovada | excecao -->
 

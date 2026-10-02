@@ -3,7 +3,6 @@ import { screen, waitFor, within } from '@testing-library/react';
 import { getResponse, http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { api } from '../../src/api/cliente';
-import { dataBr } from '../../src/dominio/formatos';
 import type { Catalogo } from '../../src/api/cliente';
 import { CATALOGO } from '../../src/simulado/dados';
 import { resumoEscolha } from '../../src/telas/Pdv/Variacoes';
@@ -16,10 +15,12 @@ import {
   botaoFechar,
   botaoTamanho,
   esperarCatalogo,
+  esperarPdv,
   itensPedido,
   LEGGING_M_PRETO,
   sem_nbsp,
   TOP_NADADOR_P_VINHO,
+  topoDoPdv,
   totais,
 } from './ajuda';
 
@@ -58,13 +59,38 @@ async function montarReferencia(usuario: Awaited<ReturnType<typeof abrirPdv>>['u
 }
 
 describe('RF-F04 — cabeçalho', () => {
-  it('"BALCÃO", "{vendedor} · pedido novo" e data de hoje; sem número do pedido', async () => {
-    await abrirPdv();
-    expect(screen.getByText('BALCÃO')).toBeInTheDocument();
-    expect(screen.getByText('Carlos · pedido novo')).toBeInTheDocument();
-    expect(screen.getByText(dataBr())).toBeInTheDocument();
-    expect(dataBr()).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
+  it('mostra só a etapa: "Produtos", "Cor e tamanho", "Pedido" e "Dia"; sem "BALCÃO", vendedor, data ou número do pedido', async () => {
+    const { usuario } = await abrirPdv();
+    const topo = () => texto(screen.getByRole('banner'));
+    expect(topo()).toBe('Produtos');
+    await usuario.click(aba(/^Bermuda Ciclista/));
+    expect(topo()).toBe('Cor e tamanho');
+    await usuario.click(aba('Pedido'));
+    expect(topo()).toBe('Pedido');
+    await usuario.click(aba('Dia'));
+    expect(topo()).toBe('Dia');
+    // Trocar de aba não fecha o produto: ao voltar para Produtos, a etapa volta a ser a de cor/tamanho.
+    await usuario.click(aba('Produtos'));
+    expect(topo()).toBe('Cor e tamanho');
+    await usuario.click(aba('Voltar para os produtos'));
+    expect(topo()).toBe('Produtos');
+    expect(screen.queryByText('BALCÃO')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Carlos/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\d{2}\/\d{2}\/\d{4}/)).not.toBeInTheDocument();
     expect(screen.queryByText(/#\d+/)).not.toBeInTheDocument();
+  });
+
+  it('com o catálogo em falha, o topo mostra a etapa pela aba', async () => {
+    usarSimulado({ sessaoDe: 'carlos' });
+    servidor.use(http.get('*/api/catalogo', () => HttpResponse.json({ erro: { codigo: 'erro_interno', mensagem: 'Falhou.' } }, { status: 500 })));
+    const { usuario } = abrirApp();
+    await esperarPdv();
+    await screen.findByRole('button', { name: /Tentar/ });
+    expect(texto(screen.getByRole('banner'))).toBe('Produtos');
+    await usuario.click(aba('Pedido'));
+    expect(texto(screen.getByRole('banner'))).toBe('Pedido');
+    await usuario.click(aba('Dia'));
+    expect(texto(screen.getByRole('banner'))).toBe('Dia');
   });
 });
 
@@ -107,7 +133,7 @@ describe('RF-002 — aba Produtos com os tipos do ERP', () => {
     await usuario.click(botaoCor('Preto'));
     for (const t of ['P', 'M', 'G', 'GG']) {
       expect(botaoTamanho(t)).toBeDisabled();
-      expect(texto(botaoTamanho(t))).toContain('sem estoque');
+      expect(texto(botaoTamanho(t))).toContain('estoque 0');
     }
     expect(aba('Adicionar ao pedido')).toBeDisabled();
   });
@@ -120,7 +146,7 @@ describe('RF-002 — aba Produtos com os tipos do ERP', () => {
 });
 
 describe('RF-003 — variações: cor → tamanho', () => {
-  it('cores do produto com amostra; tamanhos só depois da cor, com preço e "N un."', async () => {
+  it('cores do produto com amostra; tamanhos só depois da cor, com preço e "estoque N"', async () => {
     const { usuario } = await abrirPdv();
     await usuario.click(aba('Calças'));
     await usuario.click(aba(/^Calça Legging/));
@@ -130,7 +156,7 @@ describe('RF-003 — variações: cor → tamanho', () => {
     expect(screen.queryByText('TAMANHO')).not.toBeInTheDocument();
     await usuario.click(botaoCor('Marinho'));
     expect(botaoCor('Marinho')).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getAllByRole('button', { name: /^(P|M|G|GG)R\$/ }).map(texto)).toEqual(['PR$ 89,001 un.', 'MR$ 89,005 un.', 'GR$ 89,005 un.', 'GGR$ 89,005 un.']);
+    expect(screen.getAllByRole('button', { name: /^(P|M|G|GG)R\$/ }).map(texto)).toEqual(['PR$ 89,00estoque 1', 'MR$ 89,00estoque 5', 'GR$ 89,00estoque 5', 'GGR$ 89,00estoque 5']);
   });
 
   it('SKU inativo não aparece (Bermuda Vinho sem GG) e tamanho sem saldo aparece desabilitado', async () => {
@@ -143,7 +169,7 @@ describe('RF-003 — variações: cor → tamanho', () => {
     await usuario.click(aba(/^Top Nadador/));
     await usuario.click(botaoCor('Vinho'));
     expect(botaoTamanho('GG')).toBeDisabled();
-    expect(texto(botaoTamanho('GG'))).toBe('GGR$ 55,00sem estoque');
+    expect(texto(botaoTamanho('GG'))).toBe('GGR$ 55,00estoque 0');
     await usuario.click(botaoTamanho('GG'));
     expect(botaoTamanho('GG')).toHaveAttribute('aria-pressed', 'false');
   });
@@ -712,7 +738,7 @@ describe('RF-F10 — erros da API', () => {
     simulado.estado.sessao = null;
     await usuario.click(botaoFechar());
     expect(await screen.findByText('Digite sua senha de 8 números')).toBeInTheDocument();
-    expect(screen.queryByText(/pedido novo/)).not.toBeInTheDocument();
+    expect(topoDoPdv()).not.toBeInTheDocument();
     expect(simulado.estado.vendas).toHaveLength(0);
   });
 
@@ -728,7 +754,7 @@ describe('RF-F10 — erros da API', () => {
     let falhar = true;
     servidor.use(http.get('*/api/catalogo', () => (falhar ? HttpResponse.error() : undefined)));
     const { usuario } = abrirApp();
-    await screen.findByText('Carlos · pedido novo');
+    await esperarPdv();
     expect(await screen.findByRole('alert')).toHaveTextContent('Sem conexão. Tente de novo.');
     expect(aba('Pedido')).toBeInTheDocument();
     await usuario.click(aba('Dia'));
@@ -751,7 +777,7 @@ describe('RF-F10 — erros da API', () => {
       }),
     );
     const { usuario } = abrirApp();
-    await screen.findByText('Carlos · pedido novo');
+    await esperarPdv();
     expect(screen.getByRole('status')).toHaveTextContent('Carregando…');
     await usuario.click(aba('Pedido'));
     expect(screen.getByRole('status')).toHaveTextContent('Carregando…');
@@ -785,7 +811,7 @@ describe('RF-006 — recarga silenciosa do catálogo (depois da venda, 409 e ite
     await usuario.click(aba('Calças'));
     await usuario.click(aba(/^Calça Legging/));
     await usuario.click(botaoCor('Preto'));
-    await waitFor(() => expect(texto(botaoTamanho('M'))).toBe('MR$ 89,003 un.'));
+    await waitFor(() => expect(texto(botaoTamanho('M'))).toBe('MR$ 89,00estoque 3'));
     servidor.events.removeAllListeners();
   });
 

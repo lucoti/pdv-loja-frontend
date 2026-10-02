@@ -46,5 +46,8 @@ export function saldosPorSku(catalogo: Catalogo): Map<number, number> {
   return new Map(catalogo.produtos.flatMap((p) => p.skus.map((s) => [s.id, s.saldo] as const)));
 }
 
-/** "1 un." / "3 un." — quantidade em estoque exibida em cada tamanho. */
-export const textoSaldo = (saldo: number) => (saldo > 0 ? `${saldo} un.` : 'sem estoque');
+// Saldo zero ou negativo vira "estoque 0" (o botão do tamanho também fica desabilitado, em
+// Variacoes.tsx, que é o único lugar que usa esta função). Cabe em uma linha do botão do tamanho.
+// O "sem estoque" da cor e o do card do produto são textos escritos nas próprias telas, não vêm daqui.
+/** "estoque 3" / "estoque 0" — quantidade em estoque exibida em cada tamanho. */
+export const textoSaldo = (saldo: number) => `estoque ${Math.max(0, saldo)}`;

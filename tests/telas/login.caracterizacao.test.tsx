@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { VENDEDORES } from '../../src/simulado/dados';
 import { servidor, usarSimulado } from '../apoio';
 import { ENTRADA_LOGIN, validarEntrada } from '../contrato';
-import { abrirApp, digitarPin, enviarPin, esperarEtapaSenha, numerosDigitados, PIN_CERTO, PIN_ERRADO, toqueRapidoExtra } from './ajuda';
+import { abrirApp, digitarPin, enviarPin, esperarEtapaSenha, esperarPdv, numerosDigitados, PIN_CERTO, PIN_ERRADO, topoDoPdv, toqueRapidoExtra } from './ajuda';
 
 const ANA = { id: 'ana', nome: 'Ana', cargo: 'Gerente' };
 
@@ -41,7 +41,7 @@ describe('INV-011 — trocar de vendedor limpa os números e o erro', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 
     await enviarPin(usuario, PIN_CERTO);
-    expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
+    await esperarPdv();
     escuta.parar();
     expect(escuta.corpos).toEqual([
       { vendedorId: 'ana', pin: PIN_CERTO },
@@ -69,7 +69,7 @@ describe('INV-013 / INV-014 — senha errada, "apagar" e mensagem de erro', () =
     await enviarPin(usuario, PIN_ERRADO);
     expect(await screen.findByRole('alert')).toHaveTextContent('Senha incorreta. Tente de novo.');
     expect(numerosDigitados()).toBe(0);
-    expect(screen.queryByText(/pedido novo/)).not.toBeInTheDocument();
+    expect(topoDoPdv()).not.toBeInTheDocument();
 
     await digitarPin(usuario, '70');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -90,7 +90,7 @@ describe('INV-013 / INV-014 — senha errada, "apagar" e mensagem de erro', () =
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(numerosDigitados()).toBe(0);
     await enviarPin(usuario, PIN_CERTO);
-    expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
+    await esperarPdv();
   });
 });
 
@@ -104,7 +104,7 @@ describe('INV-015 / INV-016 — uma tentativa, um pedido, corpo no contrato', ()
     expect(escuta.corpos).toEqual([{ vendedorId: 'carlos', pin: PIN_ERRADO }]);
 
     await enviarPin(usuario, PIN_CERTO);
-    expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
+    await esperarPdv();
     escuta.parar();
     expect(escuta.corpos).toEqual([
       { vendedorId: 'carlos', pin: PIN_ERRADO },
@@ -133,7 +133,7 @@ describe('INV-015 / INV-016 — uma tentativa, um pedido, corpo no contrato', ()
     await toqueRapidoExtra(usuario);
     expect(pedidos).toBe(1);
     liberar();
-    expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
+    await esperarPdv();
     expect(pedidos).toBe(1);
   });
 
@@ -144,7 +144,7 @@ describe('INV-015 / INV-016 — uma tentativa, um pedido, corpo no contrato', ()
     const { usuario } = abrirApp();
     await esperarEtapaSenha();
     await enviarPin(usuario, comZero);
-    expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
+    await esperarPdv();
     escuta.parar();
     expect(escuta.corpos).toEqual([{ vendedorId: 'carlos', pin: comZero }]);
   });
@@ -163,13 +163,13 @@ describe('INV-018 — sessão', () => {
     servidor.events.removeAllListeners();
     expect(respostas).toEqual([{ status: 401, codigo: 'sessao_invalida' }]);
     expect(screen.getByText('Carlos')).toBeInTheDocument();
-    expect(screen.queryByText(/pedido novo/)).not.toBeInTheDocument();
+    expect(topoDoPdv()).not.toBeInTheDocument();
   });
 
   it('sessão existente abre a venda sem mostrar o teclado da senha', async () => {
     usarSimulado({ sessaoDe: 'carlos' });
     abrirApp();
-    expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
+    await esperarPdv();
     expect(screen.queryByRole('img', { name: /números digitados/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'apagar' })).not.toBeInTheDocument();
   });

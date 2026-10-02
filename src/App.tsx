@@ -6,6 +6,8 @@ import { Login } from './telas/Login/Login';
 import { Pdv } from './telas/Pdv/Pdv';
 
 // Máquina de estados da tela raiz: verificando a sessão, falha ao verificar, login ou PDV aberto.
+// O vendedor da sessão continua guardado aqui, mas não é mais repassado ao <Pdv>: o topo do PDV
+// mostra só a etapa da venda, e o nome do vendedor não aparece em nenhum lugar da tela de venda.
 type Estado = { tela: 'verificando' } | { tela: 'falha'; mensagem: string } | { tela: 'login' } | { tela: 'pdv'; vendedor: Vendedor };
 
 /**
@@ -48,7 +50,7 @@ export function App() {
     case 'login':
       return <Login aoEntrar={(vendedor) => setEstado({ tela: 'pdv', vendedor })} />;
     case 'pdv':
-      return <Pdv vendedor={estado.vendedor} />;
+      return <Pdv />;
     // 'verificando' e 'falha' compartilham a mesma moldura: carregando ou aviso com "Tentar de novo".
     default:
       return (

@@ -6,7 +6,7 @@ import { api } from '../../src/api/cliente';
 import { VENDEDORES } from '../../src/simulado/dados';
 import { servidor, usarSimulado } from '../apoio';
 import { ENTRADA_LOGIN, validarEntrada } from '../contrato';
-import { abrirApp, digitarPin, entrar } from './ajuda';
+import { abrirApp, digitarPin, entrar, esperarPdv, topoDoPdv } from './ajuda';
 
 const ANA = { id: 'ana', nome: 'Ana', cargo: 'Gerente' };
 const marcadores = () => screen.getByRole('img', { name: /números digitados/ }).getAttribute('aria-label');
@@ -61,6 +61,11 @@ describe('RF-F01 — escolha do vendedor', () => {
 
   it('escolher vendedor abre o PIN; voltar retorna à seleção e limpa o PIN', async () => {
     usarSimulado({ vendedores: [...VENDEDORES, ANA], pins: { carlos: '12345678', ana: '56781234' } });
+    // O PDV não mostra mais o nome do vendedor: quem entrou é conferido pelo corpo enviado ao login.
+    const corpos: unknown[] = [];
+    servidor.events.on('request:start', async ({ request }) => {
+      if (request.method === 'POST' && request.url.endsWith('/api/auth/login')) corpos.push(await request.clone().json());
+    });
     const { usuario } = abrirApp();
     await usuario.click(await screen.findByRole('button', { name: /Ana/ }));
     expect(screen.getByText('Ana')).toBeInTheDocument();
@@ -71,7 +76,9 @@ describe('RF-F01 — escolha do vendedor', () => {
     await usuario.click(screen.getByRole('button', { name: /Ana/ }));
     expect(marcadores()).toBe('0 de 8 números digitados');
     await digitarPin(usuario, '56781234');
-    expect(await screen.findByText('Ana · pedido novo')).toBeInTheDocument();
+    await esperarPdv();
+    servidor.events.removeAllListeners();
+    expect(corpos).toEqual([{ vendedorId: 'ana', pin: '56781234' }]);
   });
 
   it('cabeçalho "BALCÃO" e "Ponto de venda · {unidade}"; rodapé só com "Esqueceu a senha?"', async () => {
@@ -111,7 +118,7 @@ describe('RF-F02 — PIN', () => {
     // Com menos de 8 números nada é enviado.
     expect(logins).toBe(1);
     await digitarPin(usuario, '78');
-    expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
+    await esperarPdv();
     servidor.events.removeAllListeners();
     expect(logins).toBe(2);
   });
@@ -126,7 +133,7 @@ describe('RF-F02 — PIN', () => {
     expect(corpos).toEqual([{ vendedorId: 'carlos', pin: '12345678' }]);
     expect(marcadores()).toBe('8 de 8 números digitados');
     liberar();
-    expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
+    await esperarPdv();
     expect(corpos).toHaveLength(1);
   });
 
@@ -140,7 +147,7 @@ describe('RF-F02 — PIN', () => {
     tocarSemRedesenhar([...'78']);
     await waitFor(() => expect(corpos).toEqual([{ vendedorId: 'carlos', pin: '12345678' }]));
     liberar();
-    expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
+    await esperarPdv();
     expect(corpos).toHaveLength(1);
   });
 
@@ -155,7 +162,7 @@ describe('RF-F02 — PIN', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Senha incorreta. Tente de novo.');
     expect(marcadores()).toBe('0 de 8 números digitados');
     tocarSemRedesenhar([...'12345678']);
-    expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
+    await esperarPdv();
     servidor.events.removeAllListeners();
     expect(corpos).toEqual([
       { vendedorId: 'carlos', pin: '87654321' },
@@ -216,7 +223,7 @@ describe('RF-F02 — PIN', () => {
     expect(marcadores()).toBe('0 de 8 números digitados');
     falhar = false;
     await digitarPin(usuario, '12345678');
-    expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
+    await esperarPdv();
   });
 
   it('PIN certo abre a venda direto; o corpo enviado segue o contrato', async () => {
@@ -228,7 +235,7 @@ describe('RF-F02 — PIN', () => {
     await screen.findByText('Digite sua senha de 8 números');
     await entrar(usuario);
     servidor.events.removeAllListeners();
-    expect(screen.getByText('Carlos · pedido novo')).toBeInTheDocument();
+    expect(topoDoPdv()).toBeInTheDocument();
     expect(corpos).toEqual([{ vendedorId: 'carlos', pin: '12345678' }]);
     validarEntrada(ENTRADA_LOGIN, corpos[0]);
   });
@@ -268,7 +275,7 @@ describe('RF-F03 — sessão', () => {
   it('sessão válida ao abrir → vai direto para a venda, sem login', async () => {
     usarSimulado({ sessaoDe: 'carlos' });
     abrirApp();
-    expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
+    await esperarPdv();
     expect(screen.queryByText('Digite sua senha de 8 números')).not.toBeInTheDocument();
   });
 
@@ -286,7 +293,7 @@ describe('RF-F03 — sessão', () => {
     expect(screen.queryByText('Digite sua senha de 8 números')).not.toBeInTheDocument();
     falhar = false;
     await usuario.click(screen.getByRole('button', { name: 'Tentar de novo' }));
-    expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
+    await esperarPdv();
   });
 
   it('500 na verificação de sessão → mensagem da API e "Tentar de novo"', async () => {
@@ -313,7 +320,7 @@ describe('RF-F03 — sessão', () => {
     expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
     foraDoContrato = false;
     await usuario.click(screen.getByRole('button', { name: 'Tentar de novo' }));
-    expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
+    await esperarPdv();
   });
 
   it('401 numa rota protegida (catálogo) volta ao login', async () => {
@@ -326,6 +333,6 @@ describe('RF-F03 — sessão', () => {
     );
     abrirApp();
     expect(await screen.findByText('Digite sua senha de 8 números')).toBeInTheDocument();
-    await waitFor(() => expect(screen.queryByText(/pedido novo/)).not.toBeInTheDocument());
+    await waitFor(() => expect(topoDoPdv()).not.toBeInTheDocument());
   });
 });

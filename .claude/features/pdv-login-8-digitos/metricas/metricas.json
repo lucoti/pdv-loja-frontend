@@ -174,14 +174,14 @@
     },
     {
       "fase": "implantacao",
-      "tokens": 480168,
+      "tokens": 2434480,
       "tokens_detalhe": {
-        "input": 4,
-        "output": 5385,
-        "cache_criacao": 8955,
-        "cache_leitura": 465824
+        "input": 28,
+        "output": 15017,
+        "cache_criacao": 60108,
+        "cache_leitura": 2359327
       },
-      "tempo_execucao_min": 0.8,
+      "tempo_execucao_min": 7.5,
       "intervalos": [
         [
           1790904385961,
@@ -189,22 +189,58 @@
         ],
         [
           1790904709346,
-          1790904729903
+          1790904824783
+        ],
+        [
+          1790905455970,
+          1790905764778
         ]
       ],
       "subagentes": {},
-      "atualizado_em": "2026-10-02T01:32:09.906Z"
+      "atualizado_em": "2026-10-02T01:49:24.781Z"
+    },
+    {
+      "fase": "aprendizado",
+      "tokens": 778135,
+      "tokens_detalhe": {
+        "input": 20,
+        "output": 9426,
+        "cache_criacao": 66233,
+        "cache_leitura": 702456
+      },
+      "tempo_execucao_min": 1.9,
+      "intervalos": [
+        [
+          1790905774823,
+          1790905828400
+        ],
+        [
+          1790905828476,
+          1790905844103
+        ],
+        [
+          1790905940278,
+          1790905987958
+        ]
+      ],
+      "subagentes": {
+        "fluxo-dev:fluxo-aprendizado": {
+          "tokens": 99458,
+          "execucoes": 1
+        }
+      },
+      "atualizado_em": "2026-10-02T01:53:07.960Z"
     }
   ],
   "total": {
-    "tokens": 13169039,
+    "tokens": 15901486,
     "tokens_detalhe": {
-      "input": 210,
-      "output": 74502,
-      "cache_criacao": 758528,
-      "cache_leitura": 12335799
+      "input": 254,
+      "output": 93560,
+      "cache_criacao": 875914,
+      "cache_leitura": 14931758
     },
-    "tempo_execucao_min": 48.9
+    "tempo_execucao_min": 57.5
   },
-  "atualizado_em": "2026-10-02T01:32:09.906Z"
+  "atualizado_em": "2026-10-02T01:53:07.960Z"
 }
