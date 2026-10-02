@@ -711,7 +711,7 @@ describe('RF-F10 — erros da API', () => {
     await usuario.click(aba('Pix'));
     simulado.estado.sessao = null;
     await usuario.click(botaoFechar());
-    expect(await screen.findByRole('button', { name: 'Entrar no PDV' })).toBeInTheDocument();
+    expect(await screen.findByText('Digite sua senha de 8 números')).toBeInTheDocument();
     expect(screen.queryByText(/pedido novo/)).not.toBeInTheDocument();
     expect(simulado.estado.vendas).toHaveLength(0);
   });
@@ -720,7 +720,7 @@ describe('RF-F10 — erros da API', () => {
     const { usuario, simulado } = await abrirPdv();
     simulado.estado.sessao = null;
     await usuario.click(aba('Dia'));
-    expect(await screen.findByRole('button', { name: 'Entrar no PDV' })).toBeInTheDocument();
+    expect(await screen.findByText('Digite sua senha de 8 números')).toBeInTheDocument();
   });
 
   it('catálogo: "Carregando…", falha com "Tentar de novo" e a aba Dia funciona sem catálogo', async () => {
@@ -901,9 +901,8 @@ describe('RNF-F08 — PIN e CPF só em memória', () => {
     const metodos = ['log', 'info', 'warn', 'error', 'debug'] as const;
     const espioes = metodos.map((m) => vi.spyOn(console, m));
     const { usuario } = abrirApp();
-    await screen.findByText('Digite sua senha de 4 números');
-    for (const d of '1234') await usuario.click(screen.getByRole('button', { name: d }));
-    await usuario.click(screen.getByRole('button', { name: 'Entrar no PDV' }));
+    await screen.findByText('Digite sua senha de 8 números');
+    for (const d of '12345678') await usuario.click(screen.getByRole('button', { name: d }));
     await esperarCatalogo();
     await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
     await usuario.type(screen.getByRole('textbox', { name: 'CPF (opcional)' }), '529.982.247-25');
@@ -912,8 +911,8 @@ describe('RNF-F08 — PIN e CPF só em memória', () => {
     await screen.findByRole('dialog');
     const registrado = espioes.flatMap((e) => e.mock.calls.map((c) => c.map(String).join(' '))).join('\n');
     espioes.forEach((e) => e.mockRestore());
-    expect(registrado).not.toMatch(/1234|529\.?982|52998224725/);
+    expect(registrado).not.toMatch(/12345678|529\.?982|52998224725/);
     expect([localStorage.length, sessionStorage.length]).toEqual([0, 0]);
-    expect(window.location.href).not.toMatch(/1234|529/);
+    expect(window.location.href).not.toMatch(/12345678|529/);
   });
 });

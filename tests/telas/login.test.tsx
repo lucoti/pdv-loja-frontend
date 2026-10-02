@@ -1,5 +1,5 @@
 /** Login (RF-F01, RF-F02) e sessão (RF-F03) pela página inteira. */
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { api } from '../../src/api/cliente';
@@ -11,6 +11,34 @@ import { abrirApp, digitarPin, entrar } from './ajuda';
 const ANA = { id: 'ana', nome: 'Ana', cargo: 'Gerente' };
 const marcadores = () => screen.getByRole('img', { name: /números digitados/ }).getAttribute('aria-label');
 
+/**
+ * Toques "no mesmo instante": cliques nativos em sequência dentro de um único act, de modo que a tela
+ * NÃO é redesenhada entre um toque e outro (o React só redesenha ao sair do act). É o que acontece no
+ * navegador com toques mais rápidos que o redesenho. fireEvent/userEvent não servem aqui: redesenham
+ * a cada toque e escondem o defeito de ler a senha (ou a trava) do estado em vez do useRef.
+ */
+function tocarSemRedesenhar(nomes: string[]) {
+  const teclas = nomes.map((nome) => screen.getByRole('button', { name: nome }));
+  act(() => {
+    for (const tecla of teclas) tecla.click();
+  });
+}
+
+/** Deixa o login pendente até `liberar()` e registra o corpo de cada pedido recebido. */
+function prenderLogin() {
+  const corpos: unknown[] = [];
+  let liberar = () => {};
+  const preso = new Promise<void>((r) => (liberar = r));
+  servidor.use(
+    http.post('*/api/auth/login', async ({ request }) => {
+      corpos.push(await request.clone().json());
+      await preso;
+      return undefined; // segue para o login do simulado
+    }),
+  );
+  return { corpos, liberar: () => liberar() };
+}
+
 describe('RF-F01 — escolha do vendedor', () => {
   it('com mais de um vendedor mostra "Quem está vendendo?" com inicial, nome e cargo', async () => {
     usarSimulado({ vendedores: [...VENDEDORES, ANA] });
@@ -20,30 +48,29 @@ describe('RF-F01 — escolha do vendedor', () => {
     expect(carlos).toHaveTextContent('C');
     expect(carlos).toHaveTextContent('Vendedor · loja');
     expect(screen.getByRole('button', { name: /Ana/ })).toHaveTextContent('Gerente');
-    expect(screen.queryByRole('button', { name: 'Entrar no PDV' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Digite sua senha de 8 números')).not.toBeInTheDocument();
   });
 
   it('com um único vendedor a seleção é omitida e não há botão voltar', async () => {
     abrirApp();
-    expect(await screen.findByText('Digite sua senha de 4 números')).toBeInTheDocument();
+    expect(await screen.findByText('Digite sua senha de 8 números')).toBeInTheDocument();
     expect(screen.getByText('Carlos')).toBeInTheDocument();
     expect(screen.queryByText('Quem está vendendo?')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Trocar vendedor' })).not.toBeInTheDocument();
   });
 
   it('escolher vendedor abre o PIN; voltar retorna à seleção e limpa o PIN', async () => {
-    usarSimulado({ vendedores: [...VENDEDORES, ANA], pins: { carlos: '1234', ana: '5678' } });
+    usarSimulado({ vendedores: [...VENDEDORES, ANA], pins: { carlos: '12345678', ana: '56781234' } });
     const { usuario } = abrirApp();
     await usuario.click(await screen.findByRole('button', { name: /Ana/ }));
     expect(screen.getByText('Ana')).toBeInTheDocument();
     await digitarPin(usuario, '56');
-    expect(marcadores()).toBe('2 de 4 números digitados');
+    expect(marcadores()).toBe('2 de 8 números digitados');
     await usuario.click(screen.getByRole('button', { name: 'Trocar vendedor' }));
     expect(screen.getByRole('heading', { name: 'Quem está vendendo?' })).toBeInTheDocument();
     await usuario.click(screen.getByRole('button', { name: /Ana/ }));
-    expect(marcadores()).toBe('0 de 4 números digitados');
-    await digitarPin(usuario, '5678');
-    await usuario.click(screen.getByRole('button', { name: 'Entrar no PDV' }));
+    expect(marcadores()).toBe('0 de 8 números digitados');
+    await digitarPin(usuario, '56781234');
     expect(await screen.findByText('Ana · pedido novo')).toBeInTheDocument();
   });
 
@@ -59,64 +86,137 @@ describe('RF-F01 — escolha do vendedor', () => {
 describe('RF-F02 — PIN', () => {
   it('teclado próprio: sem <input>, teclas 0–9 e "apagar"', async () => {
     const { container } = abrirApp();
-    await screen.findByText('Digite sua senha de 4 números');
+    await screen.findByText('Digite sua senha de 8 números');
     expect(container.querySelector('input')).toBeNull();
     for (const d of '0123456789') expect(screen.getByRole('button', { name: d })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'apagar' })).toBeInTheDocument();
   });
 
-  it('aceita no máximo 4 dígitos, "apagar" remove o último e "Entrar" só habilita com 4', async () => {
+  it('não há botão "Entrar no PDV": o 8º número valida a senha; "apagar" remove o último', async () => {
+    let logins = 0;
+    servidor.events.on('request:start', ({ request }) => {
+      if (request.url.endsWith('/api/auth/login')) logins++;
+    });
     const { usuario } = abrirApp();
-    await screen.findByText('Digite sua senha de 4 números');
-    const entrarBtn = screen.getByRole('button', { name: 'Entrar no PDV' });
-    expect(entrarBtn).toBeDisabled();
-    await digitarPin(usuario, '123');
-    expect(entrarBtn).toBeDisabled();
-    await digitarPin(usuario, '45');
-    expect(marcadores()).toBe('4 de 4 números digitados');
-    expect(entrarBtn).toBeEnabled();
+    await screen.findByText('Digite sua senha de 8 números');
+    expect(screen.queryByRole('button', { name: 'Entrar no PDV' })).not.toBeInTheDocument();
+    await digitarPin(usuario, '12345679');
+    // 8 números errados: valida sozinho, falha e limpa.
+    expect(await screen.findByRole('alert')).toHaveTextContent('Senha incorreta. Tente de novo.');
+    expect(logins).toBe(1);
+    await digitarPin(usuario, '1234567');
+    expect(marcadores()).toBe('7 de 8 números digitados');
     await usuario.click(screen.getByRole('button', { name: 'apagar' }));
-    expect(marcadores()).toBe('3 de 4 números digitados');
-    expect(entrarBtn).toBeDisabled();
-    // O 5º dígito foi ignorado: com "4" o PIN volta a ser 1234 e entra.
-    await digitarPin(usuario, '4');
-    await usuario.click(entrarBtn);
+    expect(marcadores()).toBe('6 de 8 números digitados');
+    // Com menos de 8 números nada é enviado.
+    expect(logins).toBe(1);
+    await digitarPin(usuario, '78');
     expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
+    servidor.events.removeAllListeners();
+    expect(logins).toBe(2);
+  });
+
+  it('toques mais rápidos que o redesenho da tela não perdem números nem enviam duas vezes', async () => {
+    const { corpos, liberar } = prenderLogin();
+    abrirApp();
+    await screen.findByText('Digite sua senha de 8 números');
+    // Depois do 8º número vêm, no mesmo instante, um 9º número, um "apagar" e mais um número: todos ignorados.
+    tocarSemRedesenhar([...'123456789', 'apagar', '8']);
+    await waitFor(() => expect(corpos).toHaveLength(1));
+    expect(corpos).toEqual([{ vendedorId: 'carlos', pin: '12345678' }]);
+    expect(marcadores()).toBe('8 de 8 números digitados');
+    liberar();
+    expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
+    expect(corpos).toHaveLength(1);
+  });
+
+  it('toques no mesmo instante: "apagar" no meio da senha vale, e o envio sai só no 8º número', async () => {
+    const { corpos, liberar } = prenderLogin();
+    abrirApp();
+    await screen.findByText('Digite sua senha de 8 números');
+    tocarSemRedesenhar([...'1239', 'apagar', ...'456']);
+    expect(marcadores()).toBe('6 de 8 números digitados');
+    expect(corpos).toEqual([]);
+    tocarSemRedesenhar([...'78']);
+    await waitFor(() => expect(corpos).toEqual([{ vendedorId: 'carlos', pin: '12345678' }]));
+    liberar();
+    expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
+    expect(corpos).toHaveLength(1);
+  });
+
+  it('depois de um erro, toques no mesmo instante recomeçam do zero e enviam a senha nova inteira', async () => {
+    const corpos: unknown[] = [];
+    servidor.events.on('request:start', async ({ request }) => {
+      if (request.url.endsWith('/api/auth/login')) corpos.push(await request.clone().json());
+    });
+    abrirApp();
+    await screen.findByText('Digite sua senha de 8 números');
+    tocarSemRedesenhar([...'87654321']);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Senha incorreta. Tente de novo.');
+    expect(marcadores()).toBe('0 de 8 números digitados');
+    tocarSemRedesenhar([...'12345678']);
+    expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
+    servidor.events.removeAllListeners();
+    expect(corpos).toEqual([
+      { vendedorId: 'carlos', pin: '87654321' },
+      { vendedorId: 'carlos', pin: '12345678' },
+    ]);
+  });
+
+  it('enquanto valida, o teclado e "Trocar vendedor" ficam travados e os 8 marcadores preenchidos', async () => {
+    usarSimulado({ vendedores: [...VENDEDORES, ANA], pins: { carlos: '12345678', ana: '56781234' } });
+    let liberar = () => {};
+    const preso = new Promise<void>((r) => (liberar = r));
+    servidor.use(
+      http.post('*/api/auth/login', async () => {
+        await preso;
+        return HttpResponse.error();
+      }),
+    );
+    const { usuario } = abrirApp();
+    await usuario.click(await screen.findByRole('button', { name: /Ana/ }));
+    await digitarPin(usuario, '56781234');
+    expect(marcadores()).toBe('8 de 8 números digitados');
+    for (const nome of [...'0123456789', 'apagar', 'Trocar vendedor']) expect(screen.getByRole('button', { name: nome })).toBeDisabled();
+    liberar();
+    // Depois da resposta o teclado volta a responder.
+    await screen.findByRole('alert');
+    for (const nome of [...'0123456789', 'apagar', 'Trocar vendedor']) expect(screen.getByRole('button', { name: nome })).toBeEnabled();
   });
 
   it('PIN errado (401) limpa o PIN e mostra o erro; novo dígito apaga o erro', async () => {
     const { usuario } = abrirApp();
-    await screen.findByText('Digite sua senha de 4 números');
-    await digitarPin(usuario, '9999');
-    await usuario.click(screen.getByRole('button', { name: 'Entrar no PDV' }));
+    await screen.findByText('Digite sua senha de 8 números');
+    await digitarPin(usuario, '99999999');
     expect(await screen.findByRole('alert')).toHaveTextContent('Senha incorreta. Tente de novo.');
-    expect(marcadores()).toBe('0 de 4 números digitados');
+    expect(marcadores()).toBe('0 de 8 números digitados');
     await digitarPin(usuario, '1');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     await digitarPin(usuario, '99');
     await usuario.click(screen.getByRole('button', { name: 'apagar' }));
-    expect(marcadores()).toBe('2 de 4 números digitados');
+    expect(marcadores()).toBe('2 de 8 números digitados');
   });
 
   it('"apagar" também apaga a mensagem de erro', async () => {
     const { usuario } = abrirApp();
-    await screen.findByText('Digite sua senha de 4 números');
-    await digitarPin(usuario, '0000');
-    await usuario.click(screen.getByRole('button', { name: 'Entrar no PDV' }));
+    await screen.findByText('Digite sua senha de 8 números');
+    await digitarPin(usuario, '00000000');
     await screen.findByRole('alert');
     await usuario.click(screen.getByRole('button', { name: 'apagar' }));
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  it('falha de rede no login mantém o PIN e mostra "Sem conexão. Tente de novo."', async () => {
-    servidor.use(http.post('*/api/auth/login', () => HttpResponse.error()));
+  it('falha de rede no login limpa o PIN e mostra "Sem conexão. Tente de novo."; digitar de novo entra', async () => {
+    let falhar = true;
+    servidor.use(http.post('*/api/auth/login', () => (falhar ? HttpResponse.error() : undefined)));
     const { usuario } = abrirApp();
-    await screen.findByText('Digite sua senha de 4 números');
-    await digitarPin(usuario, '1234');
-    await usuario.click(screen.getByRole('button', { name: 'Entrar no PDV' }));
+    await screen.findByText('Digite sua senha de 8 números');
+    await digitarPin(usuario, '12345678');
     expect(await screen.findByRole('alert')).toHaveTextContent('Sem conexão. Tente de novo.');
-    expect(marcadores()).toBe('4 de 4 números digitados');
-    expect(screen.getByRole('button', { name: 'Entrar no PDV' })).toBeEnabled();
+    expect(marcadores()).toBe('0 de 8 números digitados');
+    falhar = false;
+    await digitarPin(usuario, '12345678');
+    expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
   });
 
   it('PIN certo abre a venda direto; o corpo enviado segue o contrato', async () => {
@@ -125,26 +225,12 @@ describe('RF-F02 — PIN', () => {
       if (request.url.endsWith('/api/auth/login')) corpos.push(await request.clone().json());
     });
     const { usuario } = abrirApp();
-    await screen.findByText('Digite sua senha de 4 números');
+    await screen.findByText('Digite sua senha de 8 números');
     await entrar(usuario);
     servidor.events.removeAllListeners();
     expect(screen.getByText('Carlos · pedido novo')).toBeInTheDocument();
-    expect(corpos).toEqual([{ vendedorId: 'carlos', pin: '1234' }]);
+    expect(corpos).toEqual([{ vendedorId: 'carlos', pin: '12345678' }]);
     validarEntrada(ENTRADA_LOGIN, corpos[0]);
-  });
-
-  it('toque duplo em "Entrar" envia um único login', async () => {
-    let logins = 0;
-    servidor.events.on('request:start', ({ request }) => {
-      if (request.url.endsWith('/api/auth/login')) logins++;
-    });
-    const { usuario } = abrirApp();
-    await screen.findByText('Digite sua senha de 4 números');
-    await digitarPin(usuario, '1234');
-    await usuario.dblClick(screen.getByRole('button', { name: 'Entrar no PDV' }));
-    await screen.findByText('Carlos · pedido novo');
-    servidor.events.removeAllListeners();
-    expect(logins).toBe(1);
   });
 
   it('falha ao carregar config/vendedores → erro e "Tentar de novo" que recarrega', async () => {
@@ -155,7 +241,7 @@ describe('RF-F02 — PIN', () => {
     expect(screen.getByText('Ponto de venda')).toBeInTheDocument();
     falhar = false;
     await usuario.click(screen.getByRole('button', { name: 'Tentar de novo' }));
-    expect(await screen.findByText('Digite sua senha de 4 números')).toBeInTheDocument();
+    expect(await screen.findByText('Digite sua senha de 8 números')).toBeInTheDocument();
     expect(screen.getByText('Ponto de venda · Unidade Centro')).toBeInTheDocument();
   });
 
@@ -163,7 +249,7 @@ describe('RF-F02 — PIN', () => {
     abrirApp();
     // Primeiro a verificação de sessão, depois config/vendedores: ambos em "Carregando…".
     expect(screen.getByRole('status')).toHaveTextContent('Carregando…');
-    await screen.findByText('Digite sua senha de 4 números');
+    await screen.findByText('Digite sua senha de 8 números');
     expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
   });
 
@@ -171,11 +257,10 @@ describe('RF-F02 — PIN', () => {
     // Resposta 200 sem corpo: api.login resolve com undefined e o acesso a .vendedor lança TypeError.
     servidor.use(http.post('*/api/auth/login', () => new HttpResponse(null, { status: 200 })));
     const { usuario } = abrirApp();
-    await screen.findByText('Digite sua senha de 4 números');
-    await digitarPin(usuario, '1234');
-    await usuario.click(screen.getByRole('button', { name: 'Entrar no PDV' }));
+    await screen.findByText('Digite sua senha de 8 números');
+    await digitarPin(usuario, '12345678');
     expect(await screen.findByRole('alert')).toHaveTextContent('Algo deu errado. Tente de novo.');
-    expect(marcadores()).toBe('4 de 4 números digitados');
+    expect(marcadores()).toBe('0 de 8 números digitados');
   });
 });
 
@@ -184,12 +269,12 @@ describe('RF-F03 — sessão', () => {
     usarSimulado({ sessaoDe: 'carlos' });
     abrirApp();
     expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
-    expect(screen.queryByText('Digite sua senha de 4 números')).not.toBeInTheDocument();
+    expect(screen.queryByText('Digite sua senha de 8 números')).not.toBeInTheDocument();
   });
 
   it('sem sessão → login', async () => {
     abrirApp();
-    expect(await screen.findByRole('button', { name: 'Entrar no PDV' })).toBeInTheDocument();
+    expect(await screen.findByText('Digite sua senha de 8 números')).toBeInTheDocument();
   });
 
   it('falha de rede ao verificar a sessão → "Tentar de novo" (não manda ao login)', async () => {
@@ -198,7 +283,7 @@ describe('RF-F03 — sessão', () => {
     servidor.use(http.get('*/api/auth/sessao', () => (falhar ? HttpResponse.error() : undefined)));
     const { usuario } = abrirApp();
     expect(await screen.findByRole('alert')).toHaveTextContent('Sem conexão. Tente de novo.');
-    expect(screen.queryByRole('button', { name: 'Entrar no PDV' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Digite sua senha de 8 números')).not.toBeInTheDocument();
     falhar = false;
     await usuario.click(screen.getByRole('button', { name: 'Tentar de novo' }));
     expect(await screen.findByText('Carlos · pedido novo')).toBeInTheDocument();
@@ -240,7 +325,7 @@ describe('RF-F03 — sessão', () => {
       }),
     );
     abrirApp();
-    expect(await screen.findByRole('button', { name: 'Entrar no PDV' })).toBeInTheDocument();
+    expect(await screen.findByText('Digite sua senha de 8 números')).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText(/pedido novo/)).not.toBeInTheDocument());
   });
 });

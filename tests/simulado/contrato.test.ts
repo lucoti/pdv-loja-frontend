@@ -77,21 +77,47 @@ describe('respostas do simulado × contrato OpenAPI', () => {
   });
 
   it('POST /auth/login 200, 400 e 401', async () => {
-    const ok = validar('/auth/login', 'post', await chamar('post', '/auth/login', { vendedorId: 'carlos', pin: '1234' }));
+    const ok = validar('/auth/login', 'post', await chamar('post', '/auth/login', { vendedorId: 'carlos', pin: '12345678' }));
     expect(ok.vendedor.id).toBe('carlos');
     // expiraEm = próxima meia-noite em São Paulo (03:00 UTC), no futuro.
     expect(ok.expiraEm).toMatch(/T03:00:00\.000Z$/);
     expect(Date.parse(ok.expiraEm)).toBeGreaterThan(Date.now());
     expect(validar('/auth/login', 'post', await chamar('post', '/auth/login', { vendedorId: 'carlos', pin: '12' })).erro.codigo).toBe('entrada_invalida');
     expect(validar('/auth/login', 'post', await chamar('post', '/auth/login', 'nao é json')).erro.codigo).toBe('entrada_invalida');
-    expect(validar('/auth/login', 'post', await chamar('post', '/auth/login', { vendedorId: 7, pin: '1234' })).erro.codigo).toBe('entrada_invalida');
-    expect(validar('/auth/login', 'post', await chamar('post', '/auth/login', { vendedorId: 'carlos', pin: '9999' })).erro.codigo).toBe('senha_incorreta');
-    expect(validar('/auth/login', 'post', await chamar('post', '/auth/login', { vendedorId: 'ninguem', pin: '1234' })).erro.codigo).toBe('senha_incorreta');
+    expect(validar('/auth/login', 'post', await chamar('post', '/auth/login', { vendedorId: 7, pin: '12345678' })).erro.codigo).toBe('entrada_invalida');
+    expect(validar('/auth/login', 'post', await chamar('post', '/auth/login', { vendedorId: 'carlos', pin: '99999999' })).erro.codigo).toBe('senha_incorreta');
+    expect(validar('/auth/login', 'post', await chamar('post', '/auth/login', { vendedorId: 'ninguem', pin: '12345678' })).erro.codigo).toBe('senha_incorreta');
+  });
+
+  it('POST /auth/login: o simulado recusa com 400 exatamente as senhas que o contrato recusa (8 números, nem mais nem menos)', async () => {
+    const entradaValida = ajv.getSchema(ENTRADA_LOGIN)!;
+    const casos: Array<[string, boolean]> = [
+      ['12345678', true],
+      ['01234567', true],
+      ['1234', false],
+      ['1234567', false],
+      ['123456789', false],
+      ['a12345678', false],
+      ['12345678a', false],
+      ['1234a678', false],
+      [' 12345678', false],
+      ['', false],
+    ];
+    for (const [pin, aceita] of casos) {
+      const corpo = { vendedorId: 'carlos', pin };
+      // O contrato e o simulado têm de concordar caso a caso; o esperado fixo pega os dois errando juntos.
+      expect(entradaValida(corpo), `contrato × "${pin}"`).toBe(aceita);
+      const res = await chamar('post', '/auth/login', corpo);
+      expect(res.status !== 400, `simulado × "${pin}" (status ${res.status})`).toBe(aceita);
+    }
+    // Senha de 4 números (formato antigo) nunca chega a ser comparada: 400, mesmo sendo a senha cadastrada.
+    usarSimulado({ pins: { carlos: '1234' } });
+    expect(validar('/auth/login', 'post', await chamar('post', '/auth/login', { vendedorId: 'carlos', pin: '1234' })).erro.codigo).toBe('entrada_invalida');
   });
 
   it('GET /auth/sessao 401 e 200 (depois do login)', async () => {
     expect(validar('/auth/sessao', 'get', await chamar('get', '/auth/sessao')).erro.codigo).toBe('sessao_invalida');
-    await chamar('post', '/auth/login', { vendedorId: 'carlos', pin: '1234' });
+    await chamar('post', '/auth/login', { vendedorId: 'carlos', pin: '12345678' });
     expect(validar('/auth/sessao', 'get', await chamar('get', '/auth/sessao')).vendedor.nome).toBe('Carlos');
   });
 
@@ -186,10 +212,10 @@ describe('respostas do simulado × contrato OpenAPI', () => {
   });
 
   it('POST /vendas 409: mesma chave usada por outro vendedor', async () => {
-    usarSimulado({ vendedores: [...VENDEDORES, ANA], pins: { carlos: '1234', ana: '5678' }, sessaoDe: 'carlos' });
+    usarSimulado({ vendedores: [...VENDEDORES, ANA], pins: { carlos: '12345678', ana: '56781234' }, sessaoDe: 'carlos' });
     const corpo = venda();
     expect((await chamar('post', '/vendas', corpo)).status).toBe(201);
-    await chamar('post', '/auth/login', { vendedorId: 'ana', pin: '5678' });
+    await chamar('post', '/auth/login', { vendedorId: 'ana', pin: '56781234' });
     const conflito = await chamar('post', '/vendas', corpo);
     expect(conflito.status).toBe(409);
     expect(validar('/vendas', 'post', conflito).erro.codigo).toBe('chave_em_uso');
@@ -218,13 +244,13 @@ describe('respostas do simulado × contrato OpenAPI', () => {
 
   it('GET /vendas/hoje 401, 200 vazio e 200 com vendas (mais recente primeiro, só do vendedor)', async () => {
     expect(validar('/vendas/hoje', 'get', await chamar('get', '/vendas/hoje')).erro.codigo).toBe('sessao_invalida');
-    usarSimulado({ vendedores: [...VENDEDORES, ANA], pins: { carlos: '1234', ana: '5678' }, sessaoDe: 'carlos' });
+    usarSimulado({ vendedores: [...VENDEDORES, ANA], pins: { carlos: '12345678', ana: '56781234' }, sessaoDe: 'carlos' });
     expect(validar('/vendas/hoje', 'get', await chamar('get', '/vendas/hoje'))).toEqual({ vendas: [], totalDiaCentavos: 0, quantidadePedidos: 0 });
     await chamar('post', '/vendas', venda({ cliente: 'Maria' }));
     await chamar('post', '/vendas', venda({ cliente: 'João', itens: [{ ...linha, qtd: 2 }] }));
-    await chamar('post', '/auth/login', { vendedorId: 'ana', pin: '5678' });
+    await chamar('post', '/auth/login', { vendedorId: 'ana', pin: '56781234' });
     await chamar('post', '/vendas', venda({ cliente: 'Da Ana' }));
-    await chamar('post', '/auth/login', { vendedorId: 'carlos', pin: '1234' });
+    await chamar('post', '/auth/login', { vendedorId: 'carlos', pin: '12345678' });
     const dia = validar('/vendas/hoje', 'get', await chamar('get', '/vendas/hoje'));
     expect(dia.vendas.map((v: { numero: number; cliente: string; pecas: number }) => [v.numero, v.cliente, v.pecas])).toEqual([
       [1043, 'João', 2],
@@ -240,7 +266,7 @@ describe('requisições do front × contrato', () => {
     servidor.events.on('request:start', async ({ request }) => {
       if (request.url.endsWith('/auth/login')) corpos.push(await request.clone().json());
     });
-    await api.login('carlos', '1234');
+    await api.login('carlos', '12345678');
     servidor.events.removeAllListeners();
     expect(corpos).toHaveLength(1);
     validarEntrada(ENTRADA_LOGIN, corpos[0]);

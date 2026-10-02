@@ -25,11 +25,11 @@ describe('api — sucesso', () => {
     servidor.events.on('request:start', async ({ request }) => {
       vistos.push({ url: request.url, metodo: request.method, tipo: request.headers.get('content-type'), corpo: await request.clone().json(), credenciais: request.credentials });
     });
-    const r = await api.login('carlos', '1234');
+    const r = await api.login('carlos', '12345678');
     servidor.events.removeAllListeners();
     expect(r.vendedor).toEqual({ id: 'carlos', nome: 'Carlos', cargo: 'Vendedor · loja' });
     expect(vistos).toEqual([
-      { url: `${window.location.origin}/api/auth/login`, metodo: 'POST', tipo: 'application/json', corpo: { vendedorId: 'carlos', pin: '1234' }, credenciais: 'same-origin' },
+      { url: `${window.location.origin}/api/auth/login`, metodo: 'POST', tipo: 'application/json', corpo: { vendedorId: 'carlos', pin: '12345678' }, credenciais: 'same-origin' },
     ]);
   });
 });
@@ -53,7 +53,7 @@ describe('api — erros', () => {
   it('401 senha_incorreta NÃO chama aoPerderSessao', async () => {
     const perdeu = vi.fn();
     definirAoPerderSessao(perdeu);
-    const e = await erroDe(api.login('carlos', '9999'));
+    const e = await erroDe(api.login('carlos', '99999999'));
     expect(perdeu).not.toHaveBeenCalled();
     expect([e.status, e.codigo, e.message]).toEqual([401, 'senha_incorreta', 'Senha incorreta. Tente de novo.']);
   });

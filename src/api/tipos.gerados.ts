@@ -110,7 +110,7 @@ export interface paths {
                     "application/json": {
                         /** @example carlos */
                         vendedorId: string;
-                        /** @example 1234 */
+                        /** @example 12345678 */
                         pin: string;
                     };
                 };

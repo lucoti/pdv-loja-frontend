@@ -6,8 +6,12 @@ export const CONFIG: ConfigLoja = { loja: { nome: 'FitMoveOn', unidade: 'Unidade
 
 export const VENDEDORES: Vendedor[] = [{ id: 'carlos', nome: 'Carlos', cargo: 'Vendedor · loja' }];
 
-/** PIN de cada vendedor do simulado. Só existe aqui: o front real nunca conhece PINs. */
-export const PINS: Record<string, string> = { carlos: '1234' };
+/**
+ * PIN de cada vendedor do simulado. Só existe aqui: o front real nunca conhece PINs.
+ * ATENÇÃO: precisa ter o tamanho aceito pelo login simulado (8 números, em handlers.ts) e acompanha o
+ * PIN de exemplo do seed do back; com outro tamanho, o simulado responde 400 e ninguém entra.
+ */
+export const PINS: Record<string, string> = { carlos: '12345678' };
 
 /*
  * Catálogo no formato do ERP, igual ao SEED_ERP do back (backend/src/banco/seed.ts): 4 produtos × 3

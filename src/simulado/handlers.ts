@@ -143,10 +143,17 @@ export function criarSimulado(opcoes: OpcoesSimulado = {}) {
 
     http.get('*/api/vendedores', () => HttpResponse.json({ vendedores })),
 
+    // Login simulado: mesmos status e códigos do back (400 entrada_invalida, 401 senha_incorreta), com o
+    // PIN comparado em texto puro porque aqui não há banco nem hash.
+    // ATENÇÃO: simplificações em relação ao back — a mensagem do 400 é outra ("A senha deve ter 8
+    // números." aqui; "Digite a senha de 8 números." no back), campos extras no corpo não são recusados
+    // e não existe vendedor inativo. A tela real nunca chega ao 400, pois só envia com o PIN completo.
+    // O tamanho (8 números) está escrito direto na regra abaixo: precisa acompanhar o TAMANHO_PIN da
+    // tela (Login.tsx) e o contrato do back; o teste de contrato do simulado acusa a divergência.
     http.post('*/api/auth/login', async ({ request }) => {
       const corpo = (await request.json().catch(() => null)) as { vendedorId?: unknown; pin?: unknown } | null;
-      if (typeof corpo?.vendedorId !== 'string' || typeof corpo.pin !== 'string' || !/^\d{4}$/.test(corpo.pin)) {
-        return erro(400, 'entrada_invalida', 'A senha deve ter 4 números.');
+      if (typeof corpo?.vendedorId !== 'string' || typeof corpo.pin !== 'string' || !/^\d{8}$/.test(corpo.pin)) {
+        return erro(400, 'entrada_invalida', 'A senha deve ter 8 números.');
       }
       const vendedor = vendedores.find((v) => v.id === corpo.vendedorId);
       if (!vendedor || pins[vendedor.id] !== corpo.pin) return erro(401, 'senha_incorreta', 'Senha incorreta. Tente de novo.');

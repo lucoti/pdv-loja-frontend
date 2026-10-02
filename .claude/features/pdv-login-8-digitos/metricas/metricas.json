@@ -1,0 +1,210 @@
+{
+  "versao": 1,
+  "feature": "pdv-login-8-digitos",
+  "etapas": [
+    {
+      "fase": "planejamento",
+      "tokens": 190758,
+      "tokens_detalhe": {
+        "input": 4,
+        "output": 1980,
+        "cache_criacao": 3493,
+        "cache_leitura": 185281
+      },
+      "tempo_execucao_min": 0.6,
+      "intervalos": [
+        [
+          1790900355726,
+          1790900371587
+        ],
+        [
+          1790900639747,
+          1790900661813
+        ]
+      ],
+      "subagentes": {},
+      "atualizado_em": "2026-10-02T00:24:21.817Z"
+    },
+    {
+      "fase": "requisitos",
+      "tokens": 206830,
+      "tokens_detalhe": {
+        "input": 4,
+        "output": 4452,
+        "cache_criacao": 11362,
+        "cache_leitura": 191012
+      },
+      "tempo_execucao_min": 0.8,
+      "intervalos": [
+        [
+          1790900661813,
+          1790900680376
+        ],
+        [
+          1790900969316,
+          1790900999111
+        ]
+      ],
+      "subagentes": {},
+      "atualizado_em": "2026-10-02T00:29:59.115Z"
+    },
+    {
+      "fase": "arquitetura",
+      "tokens": 1686638,
+      "tokens_detalhe": {
+        "input": 36,
+        "output": 16363,
+        "cache_criacao": 125653,
+        "cache_leitura": 1544586
+      },
+      "tempo_execucao_min": 4.9,
+      "intervalos": [
+        [
+          1790901012733,
+          1790901237029
+        ],
+        [
+          1790901237116,
+          1790901263886
+        ],
+        [
+          1790901443460,
+          1790901483783
+        ]
+      ],
+      "subagentes": {
+        "fluxo-dev:fluxo-documentador": {
+          "tokens": 1218536,
+          "execucoes": 1
+        }
+      },
+      "atualizado_em": "2026-10-02T00:38:03.784Z"
+    },
+    {
+      "fase": "desenvolvimento",
+      "tokens": 6128080,
+      "tokens_detalhe": {
+        "input": 88,
+        "output": 36235,
+        "cache_criacao": 199865,
+        "cache_leitura": 5891892
+      },
+      "tempo_execucao_min": 16.1,
+      "intervalos": [
+        [
+          1790901498857,
+          1790901935463
+        ],
+        [
+          1790901935550,
+          1790902454922
+        ],
+        [
+          1790902540772,
+          1790902549354
+        ]
+      ],
+      "subagentes": {
+        "fluxo-dev:fluxo-testador": {
+          "tokens": 1705081,
+          "execucoes": 1
+        }
+      },
+      "atualizado_em": "2026-10-02T00:55:49.356Z"
+    },
+    {
+      "fase": "documentacao",
+      "tokens": 1412847,
+      "tokens_detalhe": {
+        "input": 26,
+        "output": 4513,
+        "cache_criacao": 134570,
+        "cache_leitura": 1273738
+      },
+      "tempo_execucao_min": 3.6,
+      "intervalos": [
+        [
+          1790902565132,
+          1790902770371
+        ],
+        [
+          1790902770451,
+          1790902780804
+        ]
+      ],
+      "subagentes": {
+        "fluxo-dev:fluxo-documentador": {
+          "tokens": 983153,
+          "execucoes": 1
+        }
+      },
+      "atualizado_em": "2026-10-02T00:59:40.806Z"
+    },
+    {
+      "fase": "testes",
+      "tokens": 3063718,
+      "tokens_detalhe": {
+        "input": 48,
+        "output": 5574,
+        "cache_criacao": 274630,
+        "cache_leitura": 2783466
+      },
+      "tempo_execucao_min": 22.1,
+      "intervalos": [
+        [
+          1790902803155,
+          1790904037176
+        ],
+        [
+          1790904037262,
+          1790904095208
+        ],
+        [
+          1790904351409,
+          1790904385961
+        ]
+      ],
+      "subagentes": {
+        "fluxo-dev:fluxo-testador": {
+          "tokens": 1930837,
+          "execucoes": 1
+        }
+      },
+      "atualizado_em": "2026-10-02T01:26:25.965Z"
+    },
+    {
+      "fase": "implantacao",
+      "tokens": 480168,
+      "tokens_detalhe": {
+        "input": 4,
+        "output": 5385,
+        "cache_criacao": 8955,
+        "cache_leitura": 465824
+      },
+      "tempo_execucao_min": 0.8,
+      "intervalos": [
+        [
+          1790904385961,
+          1790904411184
+        ],
+        [
+          1790904709346,
+          1790904729903
+        ]
+      ],
+      "subagentes": {},
+      "atualizado_em": "2026-10-02T01:32:09.906Z"
+    }
+  ],
+  "total": {
+    "tokens": 13169039,
+    "tokens_detalhe": {
+      "input": 210,
+      "output": 74502,
+      "cache_criacao": 758528,
+      "cache_leitura": 12335799
+    },
+    "tempo_execucao_min": 48.9
+  },
+  "atualizado_em": "2026-10-02T01:32:09.906Z"
+}

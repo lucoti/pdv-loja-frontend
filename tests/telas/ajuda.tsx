@@ -14,10 +14,45 @@ export async function digitarPin(usuario: UserEvent, pin: string) {
   for (const d of pin) await usuario.click(screen.getByRole('button', { name: d }));
 }
 
-/** Faz login com um único vendedor (etapa de seleção omitida) e espera a tela de venda. */
-export async function entrar(usuario: UserEvent, pin = '1234') {
+/**
+ * Senha de exemplo do simulado (src/simulado/dados.ts) e uma senha errada do mesmo tamanho.
+ * Ponto único dos testes de tela que depende do tamanho da senha: mudou a senha de exemplo, ajuste aqui.
+ */
+export const PIN_CERTO = '12345678';
+export const PIN_ERRADO = [...PIN_CERTO].reverse().join('');
+
+/**
+ * Uma tentativa de login: digita a senha inteira, sem esperar o resultado.
+ * Ponto único dos testes de tela que depende de COMO o login é disparado: o último número da senha
+ * dispara a validação (não há botão).
+ */
+export async function enviarPin(usuario: UserEvent, pin = PIN_CERTO) {
   await digitarPin(usuario, pin);
-  await usuario.click(screen.getByRole('button', { name: 'Entrar no PDV' }));
+}
+
+/**
+ * Repete o gesto que dispara o login enquanto o primeiro pedido ainda não voltou (toque rápido a mais):
+ * mais um toque num número, com o teclado travado pela validação em andamento.
+ */
+export async function toqueRapidoExtra(usuario: UserEvent) {
+  await usuario.click(screen.getByRole('button', { name: PIN_CERTO.slice(-1) }));
+}
+
+/** Espera a etapa da senha (marcadores visíveis) e devolve quantos números já foram digitados. */
+export async function esperarEtapaSenha(): Promise<number> {
+  await screen.findByRole('img', { name: /números digitados/ });
+  return numerosDigitados();
+}
+
+/** Quantos números a tela mostra como digitados (lido do rótulo dos marcadores, sem depender do total). */
+export function numerosDigitados(): number {
+  const rotulo = screen.getByRole('img', { name: /números digitados/ }).getAttribute('aria-label') ?? '';
+  return Number(/^(\d+) de \d+ números digitados$/.exec(rotulo)?.[1] ?? Number.NaN);
+}
+
+/** Faz login com um único vendedor (etapa de seleção omitida) e espera a tela de venda. */
+export async function entrar(usuario: UserEvent, pin = PIN_CERTO) {
+  await enviarPin(usuario, pin);
   await screen.findByText(/pedido novo/);
 }
 

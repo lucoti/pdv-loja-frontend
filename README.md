@@ -10,7 +10,7 @@ Reproduz o design em `../design_handoff_pdv_loja/` e conversa com a API do `../b
 | Comando | O que faz |
 |---|---|
 | `npm install` | Instala as dependências |
-| `npm run dev` | Página em http://localhost:5173 com a **API simulada** no navegador (MSW) — não precisa do back-end. Vendedor Carlos, PIN 1234 |
+| `npm run dev` | Página em http://localhost:5173 com a **API simulada** no navegador (MSW) — não precisa do back-end. Vendedor Carlos, PIN 12345678 |
 | `npm run dev:api` | Página com `/api` indo por proxy para o back real em http://localhost:3001 (`npm run dev` em `../backend`) |
 | `npm run build` | Confere os tipos e gera a página estática em `dist/` |
 | `npm run gerar:tipos` | Regenera `src/api/tipos.gerados.ts` a partir de `../backend/contrato/openapi.yaml` |

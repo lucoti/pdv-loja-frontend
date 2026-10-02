@@ -5,7 +5,11 @@ atualizado a cada entrega; o detalhe de cada aplicação fica na documentação 
 (`<app>/docs/vN/documentacao.md`). O arquivo vive no repositório do front
 (`frontend/docs/contexto-geral.md`); `docs/contexto-geral.md` na pasta do ambiente é um link para ele.
 
-Última atualização: 2026-09-29 (feature integracao-pdv-erp do ERP, pós-desenvolvimento: o PDV passa a
+Última atualização: 2026-10-01 (feature pdv-login-8-digitos, **to-be** pós-desenvolvimento: PIN de
+**8 números** e login disparado pelo 8º número, sem o botão "Entrar no PDV"; pdv-backend docs v6 e
+pdv-frontend docs v5, desenvolvidos e **ainda não publicados**; nenhuma integração nova nem mudança de
+banco). Anterior: 2026-10-01 (mesma feature, retrato **as-is** antes da refatoração: pdv-backend docs
+v5 e pdv-frontend docs v4, sem mudança de comportamento). Anterior: 2026-09-29 (feature integracao-pdv-erp do ERP, pós-desenvolvimento: o PDV passa a
 vender pelo catálogo do ERP e a baixar o estoque do ERP na mesma transação da venda — ADR-017 do ERP,
 que revisa o ADR-A01; pdv-backend v4 e pdv-frontend v3 desenvolvidos, **ainda não publicados**).
 Anteriores: 2026-09-29 (feature erp-move-on: ERP publicado no mesmo banco `pdv-loja`; PDV v3 com
@@ -18,9 +22,9 @@ A visão do ambiente pelo lado do ERP está em `ERP-loja/docs/contexto-geral.md`
 
 | Aplicação | Responsabilidade | Localização | Situação |
 |---|---|---|---|
-| **pdv-backend** | API do PDV: entrada do vendedor por senha, sessão diária, **catálogo lido do ERP** (tipos, produtos, SKUs com preço e saldo), registro de vendas com cálculo e numeração no servidor **e baixa do estoque do ERP na mesma transação** (409 `sem_estoque`), vendas do dia e conteúdo do cupom não fiscal; script `pin:trocar` | `backend/` — repositório `lucoti/pdv-loja-backend`, projeto Vercel `pdv-loja-backend` (docs: `backend/docs/v4/documentacao.md`; contrato: `backend/contrato/openapi.yaml`) | v3 **no ar** (`pdv-loja-backend.vercel.app`, função em iad1); v4 (integração) desenvolvida, **não publicada** |
-| **pdv-frontend** | Página web do vendedor no navegador do celular (React 19 + TypeScript + Vite, página estática; não é PWA): login com PIN, aba Produtos com tipos do ERP e escolha cor → tamanho com preço e saldo, aba Pedido limitada ao estoque, fechamento com idempotência e tratamento do 409, modal "Venda registrada" e aba Dia | `frontend/` — repositório `lucoti/pdv-loja-frontend`, projeto Vercel `pdv-loja-frontend` (docs: `frontend/docs/v3/documentacao.md`; guia técnico: `frontend/README.md`) | v2 **no ar** em https://pdv-loja-frontend.vercel.app (rewrite `/api`); v3 desenvolvida, **não publicada** — publicar junto com o back v4 |
-| **API simulada (MSW)** | Imitação do pdv-backend em memória (vendedor Carlos, PIN 1234, pedidos a partir de 1042), com catálogo de exemplo no formato do ERP igual ao `SEED_ERP` do back e baixa de saldo a cada venda. Usada no `npm run dev` do front e nos testes; fica fora do build de produção | `frontend/src/simulado/` e `frontend/simulado-publico/` | Parte do pdv-frontend |
+| **pdv-backend** | API do PDV: entrada do vendedor por senha (PIN de 8 números desde a v6), sessão diária, **catálogo lido do ERP** (tipos, produtos, SKUs com preço e saldo), registro de vendas com cálculo e numeração no servidor **e baixa do estoque do ERP na mesma transação** (409 `sem_estoque`), vendas do dia e conteúdo do cupom não fiscal; script `pin:trocar` | `backend/` — repositório `lucoti/pdv-loja-backend`, projeto Vercel `pdv-loja-backend` (docs: `backend/docs/v6/documentacao.md`; contrato: `backend/contrato/openapi.yaml`) | v3 **no ar** (`pdv-loja-backend.vercel.app`, função em iad1); v4 (integração) e v6 (PIN de 8 números) desenvolvidas, **não publicadas** |
+| **pdv-frontend** | Página web do vendedor no navegador do celular (React 19 + TypeScript + Vite, página estática; não é PWA): login com PIN de 8 números e entrada automática no 8º número (sem botão), aba Produtos com tipos do ERP e escolha cor → tamanho com preço e saldo, aba Pedido limitada ao estoque, fechamento com idempotência e tratamento do 409, modal "Venda registrada" e aba Dia | `frontend/` — repositório `lucoti/pdv-loja-frontend`, projeto Vercel `pdv-loja-frontend` (docs: `frontend/docs/v5/documentacao.md`; guia técnico: `frontend/README.md`) | v2 **no ar** em https://pdv-loja-frontend.vercel.app (rewrite `/api`); v3 desenvolvida, **não publicada** — publicar junto com o back v4; v5 (login de 8 números) desenvolvida, **não publicada** — publicar junto com o back v6 |
+| **API simulada (MSW)** | Imitação do pdv-backend em memória (vendedor Carlos, PIN 12345678, pedidos a partir de 1042), com catálogo de exemplo no formato do ERP igual ao `SEED_ERP` do back e baixa de saldo a cada venda. Usada no `npm run dev` do front e nos testes; fica fora do build de produção | `frontend/src/simulado/` e `frontend/simulado-publico/` | Parte do pdv-frontend |
 | **Banco Turso `pdv-loja`** (serviço externo) | Banco de dados libSQL em produção, **compartilhado com o ERP** (cada tabela tem um único dono; ver "Tabelas por dono") | Turso, organização `personal`, região `aws-us-east-1` | Em uso pelo PDV e pelo ERP |
 | **erp-backend** (sistema irmão) | API do ERP (NestJS): catálogo, grade de SKUs, preços, estoque, lotes, contagem, etiquetas, IA de estampas e painel de vendas. **Lê** as vendas do PDV; é dono do catálogo e do estoque que o PDV usa; cria o usuário técnico "PDV" (migração 0006) | `ERP-loja/backend/` — repositório `lucoti/erp-loja-backend`, projeto Vercel `erp-loja-backend` (docs: `ERP-loja/docs/v2/documentacao.md`) | v1 **no ar** desde 2026-09-29; v2 (integração) desenvolvida, **não publicada** |
 | **erp-frontend** (sistema irmão) | Página web do ERP (React + Vite) para desktop e celular | `ERP-loja/frontend/` — repositório `lucoti/erp-loja-frontend`, projeto Vercel `erp-loja-frontend` | v1 **no ar** desde 2026-09-29 |
@@ -93,10 +97,10 @@ Node 22.12+ nas duas aplicações (nesta máquina: `export PATH=/usr/local/bin:$
 
 | Cenário | Comandos | Endereço |
 |---|---|---|
-| Só o front, com API simulada | `npm run dev` em `frontend/` | http://localhost:5173 (Carlos, PIN 1234) |
-| Front + back reais | `npm run dev` em `backend/` (porta 3001) e `npm run dev:api` em `frontend/` | http://localhost:5173 (o Vite repassa `/api` para a porta 3001) |
+| Só o front, com API simulada | `npm run dev` em `frontend/` | http://localhost:5173 (Carlos, PIN 12345678) |
+| Front + back reais | `npm run dev` em `backend/` (porta 3001) e `npm run dev:api` em `frontend/` | http://localhost:5173 (o Vite repassa `/api` para a porta 3001). Banco local novo: Carlos, PIN 12345678; banco local criado antes da v6 continua com o PIN antigo (apagar `backend/dados/pdv.db` e rodar `db:seed`, ou usar `pin:trocar`) |
 | Build de produção do front | `npm run build` em `frontend/` | página estática em `frontend/dist/` |
-| Trocar o PIN de um vendedor | `npm run pin:trocar -- <vendedorId>` em `backend/`, num terminal interativo com as variáveis `TURSO_*` do banco-alvo no ambiente | — (PIN digitado sem eco; só o hash bcrypt vai ao banco) |
+| Trocar o PIN de um vendedor | `npm run pin:trocar -- <vendedorId>` em `backend/`, num terminal interativo com as variáveis `TURSO_*` do banco-alvo no ambiente | — (PIN de 8 números, digitado sem eco; só o hash bcrypt vai ao banco; o PIN de exemplo 12345678 é recusado) |
 
 ## Mapa de Integrações
 
@@ -165,6 +169,27 @@ cupom do back existe, mas ainda não é consumida.
   `GET /vendas/hoje`. Não usados na
   v1: `POST /auth/logout` (não há botão "Sair") e `GET /vendas/{n}/cupom` (sem impressão).
   Formato e erros definidos em `backend/contrato/openapi.yaml`.
+- **Autenticação (to-be da feature pdv-login-8-digitos, 2026-10-01; desenvolvida, não publicada):**
+  não há serviço de autenticação central; o próprio pdv-backend autentica. A tela escolhe o vendedor
+  (etapa omitida com um só) e coleta o PIN de **8 números** num teclado próprio. **Não há mais o botão
+  "Entrar no PDV":** o 8º número dispara `POST /auth/login` com `{ vendedorId, pin }` (PIN como texto).
+  Enquanto valida, o teclado e "Trocar vendedor" ficam travados, o que garante um único pedido por
+  tentativa. O back valida o formato (`^\d{8}$`, objeto estrito → 400 `entrada_invalida`), compara com
+  `vendedores.pin_hash` (bcrypt) e responde 200 `{ vendedor, expiraEm }` com o cookie `pdv_sessao`, ou
+  401 `senha_incorreta` idêntico para PIN errado, vendedor inexistente e inativo. No banco fica só o
+  SHA-256 do token (`sessoes`). Na tela, **qualquer erro** (401, falha de rede ou outro) limpa o PIN e
+  mostra a mensagem. Não há limite de tentativas. Formato do corpo, respostas, cookie e banco não
+  mudaram em relação ao as-is (docs v5 do back e v4 do front); só o tamanho do PIN e o disparo.
+- **Tamanho do PIN:** uma constante por repositório — `TAMANHO_PIN` em `backend/src/esquemas.ts` (usada
+  pelo login e pelo `pin:trocar`) e em `frontend/src/telas/Login/Login.tsx` — mais o `pattern` de
+  `backend/contrato/openapi.yaml` e a regra da API simulada (`frontend/src/simulado/handlers.ts`). Os
+  testes de contrato dos dois lados acusam divergência.
+- **Implantação do PIN de 8 números (pendente):** big bang coordenado, com a loja fechada — back v6 →
+  `pin:trocar` de cada vendedor no banco de produção → front v5. Os PINs de 4 números deixam de
+  funcionar (os hashes não são convertíveis). Entre publicar o back e o front, nenhum login novo
+  funciona (sessões abertas seguem até a meia-noite ou até a troca do PIN do vendedor). Rollback:
+  redeploy das versões anteriores dos dois projetos e recadastro de PINs de 4 números com o script
+  antigo. Não há migração de banco.
 
 ### pdv-frontend → API simulada (somente desenvolvimento e testes)
 - **De:** pdv-frontend
@@ -215,7 +240,7 @@ cupom do back existe, mas ainda não é consumida.
 - **Para:** banco Turso `pdv-loja`
 - **Como:** mesmos `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN`, apenas como variáveis de shell durante o
   comando (o `.env` local continua apontando para o arquivo local).
-- **O quê:** carga inicial (`db:seed`), troca de PIN (`pin:trocar`: `UPDATE vendedores.pin_hash` e
+- **O quê:** carga inicial (`db:seed`), troca de PIN (`pin:trocar`, PIN de 8 números: `UPDATE vendedores.pin_hash` e
   `DELETE` das sessões do vendedor, numa transação) e limpeza da venda de teste da verificação.
 
 ### Impressora térmica (fora da v1)
