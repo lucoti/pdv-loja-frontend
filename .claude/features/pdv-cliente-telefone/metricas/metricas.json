@@ -90,14 +90,14 @@
     },
     {
       "fase": "desenvolvimento",
-      "tokens": 1016602,
+      "tokens": 22448214,
       "tokens_detalhe": {
-        "input": 4,
-        "output": 853,
-        "cache_criacao": 1009,
-        "cache_leitura": 1014736
+        "input": 128,
+        "output": 46226,
+        "cache_criacao": 218107,
+        "cache_leitura": 22183753
       },
-      "tempo_execucao_min": 0.1,
+      "tempo_execucao_min": 19.1,
       "intervalos": [
         [
           1791255499081,
@@ -106,21 +106,34 @@
         [
           1791255646146,
           1791255650030
+        ],
+        [
+          1791255668235,
+          1791256246551
+        ],
+        [
+          1791256246636,
+          1791256806564
         ]
       ],
-      "subagentes": {},
-      "atualizado_em": "2026-10-06T03:00:50.032Z"
+      "subagentes": {
+        "fluxo-dev:fluxo-testador": {
+          "tokens": 2890798,
+          "execucoes": 1
+        }
+      },
+      "atualizado_em": "2026-10-06T03:20:06.569Z"
     }
   ],
   "total": {
-    "tokens": 14067101,
+    "tokens": 35498713,
     "tokens_detalhe": {
-      "input": 110,
-      "output": 41807,
-      "cache_criacao": 167463,
-      "cache_leitura": 13857721
+      "input": 234,
+      "output": 87180,
+      "cache_criacao": 384561,
+      "cache_leitura": 35026738
     },
-    "tempo_execucao_min": 12.5
+    "tempo_execucao_min": 31.5
   },
-  "atualizado_em": "2026-10-06T03:00:50.032Z"
+  "atualizado_em": "2026-10-06T03:20:06.569Z"
 }
