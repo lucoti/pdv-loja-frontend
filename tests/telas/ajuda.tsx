@@ -111,3 +111,57 @@ export const botaoFechar = () => screen.getByRole('button', { name: /^(Inclua um
 
 /** Normaliza o espaço não separável do "R$ " para comparar textos. */
 export const sem_nbsp = (s: string | null | undefined) => (s ?? '').replace(/ /g, ' ');
+
+/*
+ * Pontos únicos usados pelos testes de caracterização da refatoração pdv-mobile-refatorado
+ * (tests/telas/pdv.mobile.caracterizacao.test.tsx). Cada helper concentra UM texto ou gesto que o
+ * design novo vai trocar (MI-02, MI-04, MI-07); os testes que os usam conferem comportamento (corpo
+ * enviado, quantidade de pedidos, chave). Nenhum devolve elemento da página: a conferência é feita
+ * dentro de `waitFor` e o elemento é buscado de novo a cada uso (AP-004).
+ */
+
+/** Espera o aviso de venda registrada (hoje o modal `dialog` "Venda registrada"). */
+export const esperarVendaRegistrada = () => waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
+
+/**
+ * Fecha o aviso de venda registrada e começa a venda seguinte. Hoje: botão "Nova venda" do modal
+ * (ADR-004 troca pelo OK do aviso). Confere que o aviso saiu.
+ */
+export async function comecarNovaVenda(usuario: UserEvent) {
+  await esperarVendaRegistrada();
+  await usuario.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Nova venda' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+}
+
+/** "Cancelar pedido" (hoje no fim da aba Pedido; MI-07 leva para o topo). */
+export async function cancelarPedido(usuario: UserEvent) {
+  await usuario.click(screen.getByRole('button', { name: 'Cancelar pedido' }));
+}
+
+/** Informa o nome do cliente (hoje no campo da aba Pedido; MI-02 leva para a etapa Cliente). */
+export async function informarCliente(usuario: UserEvent, nome: string) {
+  await usuario.type(screen.getByRole('textbox', { name: 'Nome do cliente' }), nome);
+}
+
+/** Toca N vezes no "+" do desconto no pedido (passos de R$ 5). */
+export async function aumentarDescontoNoPedido(usuario: UserEvent, vezes: number) {
+  for (let i = 0; i < vezes; i++) await usuario.click(screen.getByRole('button', { name: 'Aumentar desconto no total' }));
+}
+
+/** Escolhe a forma de pagamento pelo nome do catálogo (Pix, Dinheiro, Débito, Crédito). */
+export async function escolherPagamento(usuario: UserEvent, nome: string) {
+  await usuario.click(screen.getByRole('button', { name: nome }));
+}
+
+/** Espera a mensagem de erro do fechamento (caixa `alert`). */
+export const esperarErroAoFechar = () => waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+
+/**
+ * Espera a tela de login: o PDV saiu (sem topo com etapa) e os marcadores da senha estão na tela.
+ * Não depende do texto da instrução.
+ */
+export const esperarTelaDeLogin = () =>
+  waitFor(() => {
+    expect(topoDoPdv()).not.toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /números digitados/ })).toBeInTheDocument();
+  });
