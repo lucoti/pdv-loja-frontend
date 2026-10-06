@@ -1,6 +1,6 @@
 /** Reducer do pedido (RF-F06, RF-F07, ADR-F02, ADR-F06) — linha = SKU do ERP, limitada ao saldo (RF-004). */
 import { describe, expect, it } from 'vitest';
-import { calcularPedido, chaveVariacao, pedidoVazio, podeFechar, qtdNoPedido, reduzirPedido, type AcaoPedido, type NovaVariacao, type Pedido } from '../../src/dominio/carrinho';
+import { calcularPedido, chaveVariacao, pedidoVazio, podeAumentarDescontoTotal, podeFechar, qtdNoPedido, reduzirPedido, type AcaoPedido, type NovaVariacao, type Pedido } from '../../src/dominio/carrinho';
 
 const legging: NovaVariacao = { skuId: 2, modeloNome: 'Calça Legging', tecidoNome: 'Suplex', tamanho: 'M', cor: 'Preto', precoUnitCentavos: 8900 };
 const top: NovaVariacao = { skuId: 21, modeloNome: 'Top Nadador', tecidoNome: 'Suplex', tamanho: 'P', cor: 'Vinho', precoUnitCentavos: 5500 };
@@ -144,6 +144,9 @@ describe('precos (catálogo recarregado)', () => {
   });
 });
 
+/** "+" do desconto no total sem teto prático (limite alto): para os testes que não tratam do teto. */
+const MAIS_TOTAL = { tipo: 'descontoTotalMais', limite: 1_000_000 } as const;
+
 describe('descontos (RN-004)', () => {
   it('desconto por item vale só para a linha indicada', () => {
     const p = aplicar(base(), add(legging), add(top), { tipo: 'desconto', chave: L, descPercent: 10 });
@@ -151,14 +154,33 @@ describe('descontos (RN-004)', () => {
   });
 
   it('desconto no total em passos de 500', () => {
-    const p = aplicar(base(), { tipo: 'descontoTotalMais' }, { tipo: 'descontoTotalMais' }, { tipo: 'descontoTotalMais' });
+    const p = aplicar(base(), MAIS_TOTAL, MAIS_TOTAL, MAIS_TOTAL);
     expect(p.descontoTotalCentavos).toBe(1500);
     expect(aplicar(p, { tipo: 'descontoTotalMenos' }).descontoTotalCentavos).toBe(1000);
   });
 
+  // MI-03 / ADR-005 (pdv-mobile-refatorado): o "+" não passa do bruto e o desconto segue em passos de 500.
+  it('desconto no total para no bruto: o passo só entra se não passar do limite', () => {
+    const limite = 1200; // bruto de R$ 12,00
+    const mais = { tipo: 'descontoTotalMais', limite } as const;
+    expect(aplicar(base(), mais).descontoTotalCentavos).toBe(500);
+    expect(aplicar(base(), mais, mais).descontoTotalCentavos).toBe(1000);
+    expect(aplicar(base(), mais, mais, mais).descontoTotalCentavos).toBe(1000);
+    expect(aplicar(base(), { tipo: 'descontoTotalMais', limite: 1000 }, { tipo: 'descontoTotalMais', limite: 1000 }).descontoTotalCentavos).toBe(1000);
+    expect(aplicar(base(), { tipo: 'descontoTotalMais', limite: 499 }).descontoTotalCentavos).toBe(0);
+  });
+
+  it('podeAumentarDescontoTotal: só quando mais R$ 5 cabem no bruto do pedido', () => {
+    expect(podeAumentarDescontoTotal(base())).toBe(false);
+    const comTop = aplicar(base(), add(top)); // bruto 5500
+    expect(podeAumentarDescontoTotal(comTop)).toBe(true);
+    expect(podeAumentarDescontoTotal({ ...comTop, descontoTotalCentavos: 5000 })).toBe(true);
+    expect(podeAumentarDescontoTotal({ ...comTop, descontoTotalCentavos: 5500 })).toBe(false);
+  });
+
   it('desconto no total nunca abaixo de 0', () => {
     expect(aplicar(base(), { tipo: 'descontoTotalMenos' }).descontoTotalCentavos).toBe(0);
-    expect(aplicar(base(), { tipo: 'descontoTotalMais' }, { tipo: 'descontoTotalMenos' }, { tipo: 'descontoTotalMenos' }).descontoTotalCentavos).toBe(0);
+    expect(aplicar(base(), MAIS_TOTAL, { tipo: 'descontoTotalMenos' }, { tipo: 'descontoTotalMenos' }).descontoTotalCentavos).toBe(0);
   });
 });
 
@@ -169,7 +191,7 @@ describe('cliente, CPF, pagamento e "novo"', () => {
   });
 
   it('"novo" zera tudo e troca a chave de idempotência', () => {
-    const cheio = aplicar(base(), add(legging), { tipo: 'descontoTotalMais' }, { tipo: 'cliente', valor: 'Maria' }, { tipo: 'cpf', valor: '1' }, { tipo: 'pagamento', pagamentoId: 'pix' });
+    const cheio = aplicar(base(), add(legging), MAIS_TOTAL, { tipo: 'cliente', valor: 'Maria' }, { tipo: 'cpf', valor: '1' }, { tipo: 'pagamento', pagamentoId: 'pix' });
     expect(aplicar(cheio, { tipo: 'novo', chaveIdempotencia: 'chave-2' })).toEqual(pedidoVazio('chave-2'));
   });
 
@@ -181,7 +203,7 @@ describe('cliente, CPF, pagamento e "novo"', () => {
       { tipo: 'menos', chave: L },
       { tipo: 'desconto', chave: L, descPercent: 5 },
       { tipo: 'precos', precos: new Map([[2, 1000]]) },
-      { tipo: 'descontoTotalMais' },
+      MAIS_TOTAL,
       { tipo: 'cliente', valor: 'Maria' },
       { tipo: 'pagamento', pagamentoId: 'pix' },
       { tipo: 'remover', chave: L },
@@ -192,14 +214,16 @@ describe('cliente, CPF, pagamento e "novo"', () => {
 
 describe('calcularPedido e podeFechar', () => {
   it('pedido de referência (preços do SKU): 3 peças, bruto 23300, descontos 3280, total 20020', () => {
-    const p = aplicar(base(), add(legging), add(legging), { tipo: 'desconto', chave: L, descPercent: 10 }, add(top), { tipo: 'descontoTotalMais' }, { tipo: 'descontoTotalMais' }, { tipo: 'descontoTotalMais' });
+    const p = aplicar(base(), add(legging), add(legging), { tipo: 'desconto', chave: L, descPercent: 10 }, add(top), MAIS_TOTAL, MAIS_TOTAL, MAIS_TOTAL);
     const { itens, totais } = calcularPedido(p);
     expect(itens.map((i) => i.subtotalCentavos)).toEqual([16020, 5500]);
     expect(totais).toEqual({ pecas: 3, brutoCentavos: 23300, descontoItensCentavos: 1780, descontoTotalCentavos: 1500, descontosCentavos: 3280, totalCentavos: 20020 });
   });
 
   it('total nunca negativo com desconto no total maior que o bruto', () => {
-    const p = aplicar(base(), add(top), ...Array.from({ length: 20 }, () => ({ tipo: 'descontoTotalMais' as const })));
+    // Com o teto (ADR-005) o reducer não chega a isso; um pedido antigo ou uma peça tirada depois do
+    // desconto ainda pode deixar o desconto acima do bruto, e o total continua parando em 0.
+    const p = { ...aplicar(base(), add(top)), descontoTotalCentavos: 10_000 };
     expect(calcularPedido(p).totais.totalCentavos).toBe(0);
   });
 

@@ -25,19 +25,22 @@
 /* Botão de ação principal (CTA), largura total. */
 .cta {
   width: 100%;
-  font-size: 23px;
-  font-weight: 700;
-  padding: 22px;
-  border-radius: 14px;
-  border: none;
+  min-height: 56px;
+  padding: 0 16px;
+  font-size: 18px;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-accent);
   background: var(--color-accent-900);
   color: var(--color-accent-100);
   cursor: pointer;
 }
 
+.cta:active { background: var(--color-accent-700); }
+
+/* Desabilitado como no design: o mesmo botão, apagado. */
 .cta:disabled {
-  background: var(--color-neutral-900);
-  color: var(--color-neutral-500);
+  opacity: 0.45;
   cursor: not-allowed;
 }
 

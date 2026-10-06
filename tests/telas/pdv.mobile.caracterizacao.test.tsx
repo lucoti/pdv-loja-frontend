@@ -231,13 +231,11 @@ describe('INV-011 — chave de idempotência', () => {
 
 describe('INV-013 — sem envio duplo', () => {
   /**
-   * ACHADO DA CARACTERIZAÇÃO (registrado no relatório): hoje a trava de `fechar` lê `enviando` do
-   * estado do React. Dois toques antes do redesenho chamam a mesma função com `enviando` ainda falso e
-   * saem DOIS POST /vendas (com a mesma chave; o servidor grava uma venda só — teste seguinte).
-   * `it.fails` documenta o comportamento atual: o ADR-006 (trava em useRef) deve fazer este teste
-   * passar, e então o `.fails` precisa ser retirado (o Vitest acusa quando um `it.fails` passa).
+   * Achado da caracterização: com a trava lida do estado do React, dois toques antes do redesenho
+   * geravam DOIS POST /vendas (mesma chave; o servidor gravava uma venda só). O ADR-006 passou a trava
+   * para um useRef (etapa 4 da pdv-mobile-refatorado) e este teste deixou de ser `it.fails`.
    */
-  it.fails('dois toques em "Fechar venda" no mesmo instante, sem redesenho entre eles, geram um único POST /vendas', async () => {
+  it('dois toques em "Fechar venda" no mesmo instante, sem redesenho entre eles, geram um único POST /vendas', async () => {
     const req = registrarRequisicoes();
     const { usuario, simulado } = await abrirPdv();
     const { liberar } = prenderVendas();

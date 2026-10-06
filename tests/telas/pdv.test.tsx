@@ -51,8 +51,9 @@ async function montarReferencia(usuario: Awaited<ReturnType<typeof abrirPdv>>['u
   await adicionarPeca(usuario, LEGGING_M_PRETO);
   await adicionarPeca(usuario, LEGGING_M_PRETO);
   await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
-  await usuario.click(within(itensPedido()[0]!).getByRole('button', { name: '10%' }));
-  for (let i = 0; i < 3; i++) await usuario.click(screen.getByRole('button', { name: 'Aumentar desconto no total' }));
+  // MI-03 (pdv-mobile-refatorado): sem desconto por item na tela; o pedido de referência usa só o
+  // desconto no pedido (6 × R$ 5 = R$ 30,00). Antes: 10% na legging + R$ 15,00 (total R$ 200,20).
+  for (let i = 0; i < 6; i++) await usuario.click(screen.getByRole('button', { name: 'Aumentar desconto no total' }));
   await usuario.type(screen.getByRole('textbox', { name: 'Nome do cliente' }), 'Maria');
   await usuario.type(screen.getByRole('textbox', { name: 'CPF (opcional)' }), '529.982.247-25');
   await usuario.click(screen.getByRole('button', { name: 'Pix' }));
@@ -291,7 +292,9 @@ describe('RF-003 — variações: cor → tamanho', () => {
     expect(aba('Adicionar ao pedido')).toBeDisabled();
     await usuario.click(aba('Pedido (1)'));
     expect(itensPedido()).toHaveLength(1);
-    expect(texto(itensPedido()[0]!)).toContain('Suplex · Tam M · Preto · R$ 89,00');
+    // MI-07: o detalhe tem tecido, tamanho e cor; o preço unitário vai para "R$ X cada".
+    expect(texto(within(itensPedido()[0]!).getByText(/^Suplex/))).toBe('Suplex · Tam M · Preto');
+    expect(texto(within(itensPedido()[0]!).getByText(/cada$/))).toBe('R$ 89,00 cada');
   });
 });
 
@@ -338,7 +341,7 @@ describe('RF-F06 — carrinho', () => {
     expect(aba('Pedido')).toBeInTheDocument();
     await usuario.click(aba('Pedido'));
     expect(screen.getByRole('heading', { name: 'Pedido' })).toBeInTheDocument();
-    expect(screen.getByText(/Nenhum item ainda\./)).toHaveTextContent('Nenhum item ainda.Volte em Produtos para incluir peças.');
+    expect(screen.getByText(/^Nenhuma peça ainda\./)).toHaveTextContent('Nenhuma peça ainda. Vá em Produtos para incluir.');
     expect(botaoFechar()).toHaveTextContent('Inclua uma peça');
     expect(botaoFechar()).toBeDisabled();
   });
@@ -354,7 +357,7 @@ describe('RF-F06 — carrinho', () => {
     expect(aba('Pedido (3)')).toBeInTheDocument();
   });
 
-  it('"+" e "−" mudam a quantidade; "−" com qtd 1 remove; "Excluir" remove', async () => {
+  it('"+" e "−" mudam a quantidade; "−" com qtd 1 remove; "Tirar" remove', async () => {
     const { usuario } = await abrirPdv();
     await adicionarPeca(usuario, LEGGING_M_PRETO);
     await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
@@ -367,39 +370,43 @@ describe('RF-F06 — carrinho', () => {
     await usuario.click(within(legging()).getByRole('button', { name: 'Diminuir quantidade' }));
     expect(itensPedido()).toHaveLength(1);
     expect(texto(itensPedido()[0]!)).toContain('Top Nadador');
-    await usuario.click(within(itensPedido()[0]!).getByRole('button', { name: 'Excluir' }));
+    await usuario.click(within(itensPedido()[0]!).getByRole('button', { name: 'Tirar' }));
     expect(itensPedido()).toHaveLength(0);
     expect(aba('Pedido')).toBeInTheDocument();
   });
 
-  it('desconto por item: subtotal com desconto e "−N% aplicado"', async () => {
+  // MI-03 (pdv-mobile-refatorado): o desconto por item saiu da tela; o subtotal é sempre o cheio e o
+  // item vai com descPercent 0 (corpo conferido em "POST /vendas envia só SKU…").
+  it('sem desconto por item: nenhum botão de % na linha; subtotal = preço × quantidade; "R$ X cada"', async () => {
     const { usuario } = await abrirPdv();
     await adicionarPeca(usuario, LEGGING_M_PRETO);
     await adicionarPeca(usuario, LEGGING_M_PRETO);
     const item = itensPedido()[0]!;
-    expect(within(item).getByRole('button', { name: 'sem' })).toHaveAttribute('aria-pressed', 'true');
-    await usuario.click(within(item).getByRole('button', { name: '10%' }));
-    expect(within(item).getByRole('button', { name: '10%' })).toHaveAttribute('aria-pressed', 'true');
-    expect(within(item).getByText('−10% aplicado')).toBeInTheDocument();
-    expect(texto(item)).toContain('R$ 160,20');
-    await usuario.click(within(item).getByRole('button', { name: 'sem' }));
+    for (const nome of ['sem', '5%', '10%', '15%']) expect(within(item).queryByRole('button', { name: nome })).not.toBeInTheDocument();
     expect(within(item).queryByText(/aplicado/)).not.toBeInTheDocument();
+    expect(texto(within(item).getByText(/cada$/))).toBe('R$ 89,00 cada');
     expect(texto(item)).toContain('R$ 178,00');
   });
 
-  it('desconto no total: passos de R$ 5, "sem desconto" e mínimo 0', async () => {
+  it('desconto no pedido: passos de R$ 5, "Sem desconto", mínimo 0 e teto no bruto', async () => {
     const { usuario } = await abrirPdv();
     await adicionarPeca(usuario, LEGGING_M_PRETO);
     const mais = aba('Aumentar desconto no total');
     const menos = aba('Diminuir desconto no total');
-    expect(screen.getByText('sem desconto')).toBeInTheDocument();
+    expect(screen.getByText('Sem desconto')).toBeInTheDocument();
     await usuario.click(menos);
-    expect(screen.getByText('sem desconto')).toBeInTheDocument();
+    expect(screen.getByText('Sem desconto')).toBeInTheDocument();
     for (let i = 0; i < 3; i++) await usuario.click(mais);
     const valor = () => texto(mais.previousElementSibling as HTMLElement);
     expect(valor()).toBe('− R$ 15,00');
     await usuario.click(menos);
     expect(valor()).toBe('− R$ 10,00');
+    // MI-03 / ADR-005: bruto R$ 89,00 → o maior desconto em passos de R$ 5 é R$ 85,00; o "+" desabilita.
+    for (let i = 0; i < 20; i++) if (!(mais as HTMLButtonElement).disabled) await usuario.click(mais);
+    expect(valor()).toBe('− R$ 85,00');
+    expect(mais).toBeDisabled();
+    await usuario.click(menos);
+    expect(mais).toBeEnabled();
   });
 
   it('cliente, CPF numérico e pagamento em grade com as opções do catálogo', async () => {
@@ -414,20 +421,21 @@ describe('RF-F06 — carrinho', () => {
     expect(screen.getByRole('textbox', { name: 'Nome do cliente' })).toHaveValue('Maria');
   });
 
-  it('totais do pedido de referência: 3 peças R$ 233,00, descontos − R$ 32,80, total R$ 200,20', async () => {
+  // MI-07: o resumo tem peças/bruto e desconto; o total fica dentro do botão de fechar.
+  it('totais do pedido de referência: 3 peças R$ 233,00, desconto − R$ 30,00, total R$ 203,00', async () => {
     const { usuario } = await abrirPdv();
     await montarReferencia(usuario);
     const t = screen.getByTestId('totais');
-    expect(texto(t)).toBe('3 peçasR$ 233,00Descontos− R$ 32,80TotalR$ 200,20');
-    expect(texto(botaoFechar())).toBe('Fechar venda · R$ 200,20');
+    expect(texto(t)).toBe('3 peçasR$ 233,00Desconto− R$ 30,00');
+    expect(texto(botaoFechar())).toBe('Fechar vendaR$ 203,00');
   });
 
-  it('total nunca negativo na tela', async () => {
+  it('total nunca negativo na tela: com o teto, o desconto máximo zera o total', async () => {
     const { usuario } = await abrirPdv();
     await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
     for (let i = 0; i < 12; i++) await usuario.click(aba('Aumentar desconto no total'));
-    expect(texto(totais().getByText('Total').nextElementSibling as HTMLElement)).toBe('R$ 0,00');
-    expect(texto(totais().getByText('Descontos').nextElementSibling as HTMLElement)).toBe('− R$ 60,00');
+    expect(texto(botaoFechar().lastElementChild as HTMLElement)).toBe('R$ 0,00');
+    expect(texto(totais().getByText('Desconto').nextElementSibling as HTMLElement)).toBe('− R$ 55,00');
   });
 
   it('"Cancelar pedido" limpa itens, descontos, cliente, CPF e pagamento na hora', async () => {
@@ -435,17 +443,18 @@ describe('RF-F06 — carrinho', () => {
     await montarReferencia(usuario);
     await usuario.click(aba('Cancelar pedido'));
     expect(itensPedido()).toHaveLength(0);
-    expect(screen.getByText('sem desconto')).toBeInTheDocument();
+    expect(screen.getByText('Sem desconto')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Nome do cliente' })).toHaveValue('');
     expect(screen.getByRole('textbox', { name: 'CPF (opcional)' })).toHaveValue('');
     expect(aba('Pix')).toHaveAttribute('aria-pressed', 'false');
     expect(aba('Pedido')).toBeInTheDocument();
-    expect(texto(screen.getByTestId('totais'))).toBe('0 peçasR$ 0,00DescontosR$ 0,00TotalR$ 0,00');
+    expect(texto(screen.getByTestId('totais'))).toBe('0 peçasR$ 0,00DescontoR$ 0,00');
+    expect(texto(botaoFechar())).toBe('Inclua uma peçaR$ 0,00');
   });
 });
 
 describe('RF-F07 — fechar venda', () => {
-  it('rótulos do botão: vazio → "Inclua uma peça"; sem pagamento → "Escolha o pagamento"; pronto → "Fechar venda · R$ X"', async () => {
+  it('rótulos do botão: vazio → "Inclua uma peça"; sem pagamento → "Escolha o pagamento"; pronto → "Fechar venda" com o total ao lado', async () => {
     const { usuario } = await abrirPdv();
     await usuario.click(aba('Pedido'));
     expect(botaoFechar()).toHaveTextContent('Inclua uma peça');
@@ -454,9 +463,10 @@ describe('RF-F07 — fechar venda', () => {
     expect(botaoFechar()).toHaveTextContent('Escolha o pagamento');
     expect(botaoFechar()).toBeDisabled();
     await usuario.click(aba('Pix'));
-    expect(texto(botaoFechar())).toBe('Fechar venda · R$ 55,00');
+    expect(texto(botaoFechar().firstElementChild as HTMLElement)).toBe('Fechar venda');
+    expect(texto(botaoFechar().lastElementChild as HTMLElement)).toBe('R$ 55,00');
     expect(botaoFechar()).toBeEnabled();
-    await usuario.click(within(itensPedido()[0]!).getByRole('button', { name: 'Excluir' }));
+    await usuario.click(within(itensPedido()[0]!).getByRole('button', { name: 'Tirar' }));
     expect(botaoFechar()).toHaveTextContent('Inclua uma peça');
     expect(botaoFechar()).toBeDisabled();
   });
@@ -474,10 +484,10 @@ describe('RF-F07 — fechar venda', () => {
     expect({ ...corpo, chaveIdempotencia: 'x' }).toEqual({
       chaveIdempotencia: 'x',
       itens: [
-        { skuId: skuId(1, 1, 2), qtd: 2, descPercent: 10 },
+        { skuId: skuId(1, 1, 2), qtd: 2, descPercent: 0 },
         { skuId: skuId(2, 3, 1), qtd: 1, descPercent: 0 },
       ],
-      descontoTotalCentavos: 1500,
+      descontoTotalCentavos: 3000,
       cliente: 'Maria',
       cpf: '529.982.247-25',
       pagamentoId: 'pix',
@@ -590,7 +600,7 @@ describe('RF-F08 — venda registrada', () => {
     await usuario.click(botaoFechar());
     const modal = await screen.findByRole('dialog');
     expect(within(modal).getByRole('heading', { name: 'Venda registrada' })).toBeInTheDocument();
-    expect(texto(within(modal).getByText(/^Pedido #/))).toBe('Pedido #1042 · 3 peça(s) · R$ 200,20 em Pix · Maria');
+    expect(texto(within(modal).getByText(/^Pedido #/))).toBe('Pedido #1042 · 3 peça(s) · R$ 203,00 em Pix · Maria');
     await usuario.click(within(modal).getByRole('button', { name: 'Nova venda' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(aba('Produtos')).toHaveAttribute('aria-current', 'page');
@@ -661,9 +671,9 @@ describe('RF-F09 — aba Dia', () => {
     const linhas = await screen.findAllByTestId('venda-dia');
     const hora = simulado.estado.vendas[1]!.hora;
     // MI-08: "#N · cliente" e "hora · N peças · pagamento", como no design.
-    expect(linhas.map(texto)).toEqual([`#1043${hora} · 1 peça · DinheiroR$ 55,00`, `#1042 · Maria${simulado.estado.vendas[0]!.hora} · 3 peças · PixR$ 200,20`]);
+    expect(linhas.map(texto)).toEqual([`#1043${hora} · 1 peça · DinheiroR$ 55,00`, `#1042 · Maria${simulado.estado.vendas[0]!.hora} · 3 peças · PixR$ 203,00`]);
     expect(hora).toMatch(/^\d{2}:\d{2}$/);
-    expect(texto(screen.getByText('Total do dia').parentElement!)).toBe('Total do diaR$ 255,20');
+    expect(texto(screen.getByText('Total do dia').parentElement!)).toBe('Total do diaR$ 258,00');
     expect(texto(screen.getByText('Pedidos').parentElement!)).toBe('Pedidos2');
   });
 
@@ -891,8 +901,8 @@ describe('RF-006 — recarga silenciosa do catálogo (depois da venda, 409 e ite
     sku.precoCentavos = 9900;
     await usuario.click(botaoFechar());
     await screen.findByRole('alert');
-    await waitFor(() => expect(texto(itensPedido()[0]!)).toContain('Suplex · Tam M · Preto · R$ 99,00'));
-    expect(texto(totais().getByText('Total').nextElementSibling as HTMLElement)).toBe('R$ 198,00');
+    await waitFor(() => expect(texto(within(itensPedido()[0]!).getByText(/cada$/))).toBe('R$ 99,00 cada'));
+    expect(texto(botaoFechar().lastElementChild as HTMLElement)).toBe('R$ 198,00');
     expect(screen.getByRole('alert')).toHaveTextContent('em estoque');
   });
 

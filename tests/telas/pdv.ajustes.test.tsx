@@ -238,3 +238,33 @@ describe('MI-08 — cartões do dia em grade que encolhe', () => {
     expect(regra['grid-template-columns']).toBe('minmax(0, 1.6fr) minmax(0, 1fr)');
   });
 });
+
+// MI-07 (pdv-mobile-refatorado): pagamento em 2 colunas dentro do cartão e "Tirar" só com o ícone
+// abaixo de 360px (AP-003: a regra é lida do CSS da classe em uso).
+describe('MI-07 — layout do Pedido em celular estreito', () => {
+  it('formas de pagamento numa grade de 2 colunas minmax(0, 1fr), mesmo dentro do corpo do cartão (flex)', async () => {
+    const { usuario } = await abrirPdv();
+    await usuario.click(botao(/^Pedido/));
+    const pix = botao('Pix');
+    const grade = pix.parentElement!;
+    expect(grade.children).toHaveLength(4);
+    const classes = [...grade.classList];
+    expect(classes).toHaveLength(2);
+    // As duas classes juntas: a regra combinada `.cartaoCorpo.grade2` precisa devolver o display de grade.
+    const css = readFileSync(resolve(import.meta.dirname, '../../src/telas/Pdv/Pdv.module.css'), 'utf8');
+    expect(css).toMatch(new RegExp(`\\.${classes[0]}\\.${classes[1]}\\s*\\{\\s*display:\\s*grid;`));
+    expect(declaracoesDe(classes[1]!)['grid-template-columns']).toBe('repeat(2, minmax(0, 1fr))');
+  });
+
+  it('"Tirar" tem o texto num span que some abaixo de 360px; o nome acessível continua "Tirar"', async () => {
+    const { usuario } = await abrirPdv();
+    await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
+    const tirar = within(screen.getByTestId('item-pedido')).getByRole('button', { name: 'Tirar' });
+    const span = tirar.querySelector('span')!;
+    expect(span).toHaveTextContent('Tirar');
+    const css = readFileSync(resolve(import.meta.dirname, '../../src/telas/Pdv/Pdv.module.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const media = /@media \(max-width: 359px\)\s*\{([\s\S]*?\})\s*\}/.exec(css)?.[1] ?? '';
+    expect(media).toContain(`.${span.classList[0]}`);
+    expect(media).toMatch(/clip: rect\(0 0 0 0\)/);
+  });
+});

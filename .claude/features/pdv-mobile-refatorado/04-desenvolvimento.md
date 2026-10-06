@@ -22,6 +22,9 @@
 | `src/estilos/global.css`, `src/telas/comum.module.css`, `src/telas/Login/Login.module.css`, `src/telas/Pdv/Pdv.module.css` | Estilo | Alterados — só troca de tokens/cores fixas (etapa 1) |
 | `src/main.tsx`, `index.html`, `package.json`/`package-lock.json` | Config/entrada | Alterados — Inter + Phosphor no lugar de Libre Franklin; `theme-color` #161826 (etapa 1) |
 | `src/telas/Pdv/Variacoes.tsx` | Front | Alterado — cor inline de amostra sem hex para token (etapa 1) |
+| `src/telas/Pdv/Pedido.tsx`, `Pdv.tsx`, `Pdv.module.css`, `comum.module.css` (`.cta`) | Front | Alterados — Pedido em cartões, resumo + botão com total, trava em ref (etapa 4) |
+| `src/dominio/carrinho.ts` | Domínio | Alterado — `descontoTotalMais` com `limite` e `podeAumentarDescontoTotal` (ADR-005, etapa 4) |
+| `tests/dominio/carrinho.test.ts`, `tests/telas/pdv.test.tsx`, `pdv.caracterizacao.test.tsx`, `pdv.mobile.caracterizacao.test.tsx`, `pdv.ajustes.test.tsx` | Teste | Alterados — inventário AP-004 da etapa 4, teto do desconto, `it.fails` retirado, guardas AP-003 do Pedido |
 | `src/telas/Pdv/Produtos.tsx`, `Variacoes.tsx`, `Dia.tsx`, `Pdv.tsx`, `Pdv.module.css`, `comum.module.css` | Front | Alterados — layout novo de Produtos, Cor e tamanho e Dia; adicionar fica em cor/tamanho (etapa 3) |
 | `tests/telas/ajuda.tsx`, `pdv.test.tsx`, `pdv.caracterizacao.test.tsx`, `pdv.ajustes.test.tsx` | Teste | Alterados — inventário AP-004 da etapa 3 + guardas AP-003 (grade de tipos, cartões do dia, saldo que quebra) |
 | `src/telas/Pdv/Cabecalho.tsx` | Front | Alterado — topo por tela (título h1, apoio, voltar, complemento); etapa no `aria-label` (etapa 2) |
@@ -33,6 +36,11 @@
 ## Log de decisões não previstas na arquitetura
 | Data | Decisão | Motivo | Impacto |
 |---|---|---|---|
+| 2026-10-05 | Teto do desconto: o "+" só soma se o novo valor (múltiplo de R$ 5) não passar do bruto; não arredonda para o bruto exato | O back recusa desconto que não seja múltiplo de R$ 5 (`esquemaVenda`) | Com bruto R$ 89,00 o máximo é R$ 85,00 |
+| 2026-10-05 | O cartão 1 Cliente mantém, até a etapa 5, os campos de nome e CPF | A tela Cliente e o celular chegam na etapa 5 | Visual provisório do cartão 1 |
+| 2026-10-05 | Preço unitário sai do detalhe do item e vai para "R$ X cada" | Design 1d | Testes ajustados |
+| 2026-10-05 | Abaixo de 360px o "Tirar" mostra só o ícone (texto fica para leitores de tela) | A 320px sobram ~37px para "R$ 89,00 cada" (precisa de ~64px) | Guarda em pdv.ajustes "MI-07" |
+| 2026-10-05 | Pedido e Dia com margem lateral de 12px (`.conteudoCartoes`) | Design 1d/1e | A 375px "R$ 89,00 cada" ainda quebra em 2 linhas (100px úteis), sem passar da borda — aceito |
 | 2026-10-05 | Linha do produto mostra o nome sem o prefixo do tipo (`nomeNaLista`) | O design mostra só o tecido; no ERP o nome é "tipo + tecido". Mostrar só `tecidoNome` deixaria iguais dois produtos do mesmo tipo e tecido (ex.: no simulado, Bermuda Ciclista e Short Curto são Suplex) | Nome que não começa pelo tipo aparece inteiro |
 | 2026-10-05 | Título do grupo de tipo não fica preso ao rolar | No design há um único grupo (o do tipo escolhido) e a página rola inteira, com o topo preso; prender o título exigiria compensar a altura do topo | Visual igual ao design com a lista curta |
 | 2026-10-05 | Tamanhos continuam aparecendo só depois da cor (o design mostra "—" desabilitado antes) | Preserva INV-012 da feature anterior ("sem cor não há bloco TAMANHO") e o comportamento atual | Nenhum |
@@ -81,6 +89,25 @@ Busca por `a partir de`, `sem estoque`, `botaoTamanho`/regex `R\$` dos tamanhos,
 
 Nenhuma asserção removida sem equivalente. Mudanças de comportamento: MI-05, MI-06, MI-08, MI-11. A decisão da pdv-ajustes-tela-variacoes de manter "sem estoque" no card e na cor foi revertida por decisão do Lucas (MI-05/MI-06).
 
+## Inventário AP-004 — etapa 4 (Pedido)
+Busca por `Excluir`, `sem desconto`, botões `sem/5%/10%/15%`, `% aplicado`, `Descontos`, `Total`, `Fechar venda ·`, `texto(botaoFechar())`/`texto(fechar())`, `montarReferencia`, `200,20`/`255,20`, `descontoTotalMais` antes da troca.
+
+| Teste | O que o sinal antigo conferia | Asserção equivalente |
+|---|---|---|
+| pdv.test `montarReferencia` (6 usos) e os testes de totais, corpo, modal e Dia | Pedido de referência com 10% na legging + R$ 15 (total R$ 200,20) | **MI-03:** referência só com desconto no pedido, 6 × R$ 5 (total R$ 203,00); corpo com `descPercent` 0 nos dois itens e `descontoTotalCentavos` 3000; modal "R$ 203,00"; Dia "R$ 258,00" |
+| pdv.test "desconto por item" | Botões de %, subtotal com desconto, "−N% aplicado" | **MI-03:** nenhum botão de % na linha, subtotal cheio, "R$ 89,00 cada" |
+| pdv.test "desconto no total" | Passos de R$ 5, "sem desconto", mínimo 0 | Mesmo + "Sem desconto" (design) + **teto no bruto** (R$ 85,00 com bruto R$ 89,00) e "+" desabilitado/reabilitado |
+| pdv.test "total nunca negativo" | 12 × R$ 5 com bruto R$ 55 → total R$ 0,00 e descontos R$ 60,00 | Com o teto: desconto R$ 55,00 e total R$ 0,00 (no botão) |
+| pdv.test/caracterização rótulos do fechar | Texto exato do botão ("Fechar venda · R$ X") | Rótulo = primeiro texto do botão, total = último (`firstElementChild`/`lastElementChild`) |
+| pdv.test "Excluir" (2) | Remove a linha | Botão "Tirar" (nome acessível igual em qualquer largura) |
+| pdv.test totais `Descontos`/`Total` | Linhas do resumo | "Desconto" no resumo; total no botão |
+| pdv.test vazio | "Nenhum item ainda…" | "Nenhuma peça ainda. Vá em Produtos para incluir." (design) |
+| pdv.test detalhe do item com preço | Preço unitário no detalhe | Detalhe "Suplex · Tam M · Preto" + "R$ X cada" (inclusive depois da recarga de preço) |
+| carrinho.test `descontoTotalMais` (6 usos) | Passo de R$ 5 | Ação com `limite` alto (`MAIS_TOTAL`) + testes novos do teto e de `podeAumentarDescontoTotal`; "total nunca negativo" montado direto no estado |
+| pdv.mobile.caracterizacao INV-013 (a) | `it.fails`: 2 POST com dois toques sem redesenho | **ADR-006:** `it` normal, 1 POST. Mutações "ler do estado" e "sem trava" derrubam o teste |
+
+Nenhuma asserção removida sem equivalente. Invariante alterado intencionalmente: o total do pedido de referência (consequência do MI-03), registrado no `02-requisitos.md` ao fechar a fase.
+
 ## Mudanças de escopo
 Nenhuma.
 
@@ -93,6 +120,7 @@ Nenhuma.
 | Etapa da migração | Resultado | Observação |
 |---|---|---|
 | 0 — caracterização sobre o código atual | verde (223 + 1 expected fail) | `it.fails` do INV-013 (a) até a etapa do ADR-006 |
+| 4 — Pedido em cartões, teto do desconto, trava em ref | verde (230, sem expected fail); `typecheck` ok | Navegador a 320px: largura 320, pagamento em 2 colunas (125px cada), "R$ 89,00 cada" com 74px e "Tirar" só ícone; a 375px tudo numa linha exceto "R$ 89,00 cada" (2 linhas, sem estourar). AP-001: mutações na trava derrubam o teste |
 | 3 — Produtos, Cor e tamanho e Dia | verde (225 + 1 expected fail); `typecheck` ok | 20 testes ajustados pelo inventário; 2 guardas novas (AP-003). Mutações "tirar o minmax" em `.gradeTipos` e `.gradeTamanhos` derrubam os testes. Navegador a 320px: largura do conteúdo = 320 (sem rolagem lateral) na lista e em cor/tamanho; 4 tamanhos de 68px em 16–304px; "estoque 12" e "estoque 123" quebram dentro do botão sem passar da borda. Caso de referência: Top Nadador com 4 tamanhos (simulado) e saldos de 2–3 dígitos forçados na página |
 | 2 — topo por tela e abas com ícone | verde (223 + 1 expected fail); `typecheck` ok | 7 testes ajustados pelo inventário acima; conferido no navegador a 375px (cor/tamanho com voltar, abas com ícone e marca) |
 | 1 — tema Nocturne | verde (223 + 1 expected fail); `typecheck` ok | Conferido no navegador a 375px (Login e Produtos no tema escuro); nenhuma cor fixa fora de `tokens.css` |
@@ -108,4 +136,4 @@ Nenhuma.
 Nenhuma.
 
 ## Pronto para documentação e testes
-não — etapas 1 a 3 concluídas; próxima: etapa 4 (Pedido).
+não — etapas 1 a 4 concluídas; próxima: etapa 5 (Cliente e aviso de venda).

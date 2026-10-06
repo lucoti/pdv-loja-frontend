@@ -45,6 +45,9 @@
   gap: 18px;
 }
 
+/* Pedido e Dia (design 1d/1e): margem lateral de 12px, um pouco menor, para os cartões. */
+.conteudoCartoes { padding: 14px 12px 18px; }
+
 .coluna14 { display: flex; flex-direction: column; gap: 14px; }
 .coluna18 { display: flex; flex-direction: column; gap: 18px; }
 
@@ -182,138 +185,144 @@ img.circulo { object-fit: cover; }
 
 .grade2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 
-/* 2c — pedido */
+/* 1d — Pedido: cartões numerados (MI-07). */
 .cartao {
   display: flex;
   flex-direction: column;
-  border-radius: 16px;
-  border: 2px solid var(--color-neutral-800);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-neutral-800);
   background: var(--color-surface);
+  overflow: hidden;
 }
 
-.cartaoCliente { gap: 10px; padding: 16px; }
-.cartaoItem { gap: 14px; padding: 16px; }
-.cartaoDesconto { gap: 14px; padding: 18px 16px; }
-.cartaoPagamento { gap: 12px; padding: 18px 16px; }
+.cartaoTopo { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--color-divider); }
+
+.cartaoNumero {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 600;
+  background: var(--color-accent-900);
+  border: 1px solid var(--color-accent-700);
+  color: var(--color-accent-200);
+}
+
+.cartaoTitulo { flex: 1; min-width: 0; margin: 0; font-size: 18px; font-weight: 500; }
+.cartaoComplemento { flex: none; font-size: 15px; color: var(--color-neutral-400); }
+.cartaoIcone { flex: none; color: var(--color-neutral-400); }
+.cartaoCorpo { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 8px; }
 
 .campo {
-  font-size: 21px;
-  padding: 16px;
-  border-radius: 12px;
-  border: 2px solid var(--color-neutral-800);
-  background: var(--color-bg);
+  height: 54px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-neutral-700);
+  background: var(--color-surface);
   color: var(--color-text);
+  font-size: 18px;
   width: 100%;
+  outline: none;
 }
 
-.vazio {
-  padding: 44px 16px;
-  text-align: center;
-  color: var(--color-neutral-400);
-  font-size: 20px;
-  line-height: 1.5;
-}
+.campo:focus { border-color: var(--color-accent); }
 
-.itemTopo { display: flex; align-items: flex-start; gap: 12px; }
+.vazio { padding: 16px 14px; font-size: 16px; line-height: 1.4; color: var(--color-neutral-300); }
+
+.item { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.item + .item { border-top: 1px solid var(--color-divider); }
+.itemTopo { display: flex; align-items: flex-start; gap: 10px; }
 .itemTexto { flex: 1; min-width: 0; }
-.itemNome { font-size: 21px; font-weight: 700; line-height: 1.2; }
-.itemDetalhe { font-size: 17px; color: var(--color-neutral-400); margin-top: 4px; }
+.itemNome { font-size: 17px; font-weight: 500; line-height: 1.25; }
+.itemDetalhe { font-size: 15px; color: var(--color-neutral-400); line-height: 1.35; }
+.itemSubtotal { flex: none; font-size: 17px; font-weight: 600; white-space: nowrap; }
 
-.excluir {
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--color-danger);
-  background: transparent;
-  border: none;
-  padding: 8px;
-  cursor: pointer;
-  text-decoration: underline;
-}
-
-.linha { display: flex; align-items: center; gap: 12px; }
+.linha { display: flex; align-items: center; gap: 6px; }
+.cartaoCorpo.linha { flex-direction: row; gap: 8px; }
+/* Pagamento: a grade de 2 colunas vale também dentro do corpo do cartão (que é flex por padrão). */
+.cartaoCorpo.grade2 { display: grid; }
 
 .menos,
 .mais {
-  width: 58px;
-  height: 58px;
-  flex-shrink: 0;
-  font-size: 28px;
-  font-weight: 700;
-  border-radius: 14px;
-  border: 2px solid var(--color-neutral-600);
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-neutral-700);
   background: transparent;
   color: var(--color-text);
   cursor: pointer;
 }
 
-.mais { background: var(--color-surface); color: var(--color-text); }
+.mais { background: var(--color-accent-900); border-color: var(--color-accent); color: var(--color-accent-100); }
+.menos:disabled,
+.mais:disabled { opacity: 0.4; cursor: not-allowed; }
+.cartaoCorpo .menos,
+.cartaoCorpo .mais { width: 48px; height: 48px; }
 
-.qtd { min-width: 44px; text-align: center; font-size: 24px; font-weight: 700; }
-.subtotal { margin-left: auto; text-align: right; }
-.subtotalValor { font-size: 22px; font-weight: 700; }
-.descAplicado { font-size: 16px; color: var(--color-danger); }
+.qtd { width: 36px; text-align: center; font-size: 19px; font-weight: 600; }
+.unitario { flex: 1; min-width: 0; font-size: 14px; color: var(--color-neutral-400); padding-left: 4px; }
 
-/* Em telas estreitas (< ~400px de conteúdo) os 4 botões 62×54 não cabem ao lado do rótulo:
-   passam para a linha de baixo, alinhados à direita, sem encolher nem rolar na horizontal. */
-.linhaDesconto { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-.rotuloDesconto { letter-spacing: 0.06em; }
-.descontos { margin-left: auto; display: flex; gap: 8px; }
-
-.desconto {
-  font-size: 18px;
-  font-weight: 700;
-  width: 62px;
-  height: 54px;
-  border-radius: 12px;
-  border: 2px solid var(--color-neutral-800);
-  background: var(--color-bg);
-  color: var(--color-neutral-400);
+.tirar {
+  flex: none;
+  height: 44px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--color-neutral-300);
+  font-size: 15px;
   cursor: pointer;
 }
 
-.desconto[aria-pressed='true'] {
-  border-color: var(--color-danger-line);
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
+.limite { font-size: 15px; font-weight: 600; color: var(--color-danger); }
+
+/* Abaixo de 360px a linha da peça não comporta "R$ 89,00 cada" e o "Tirar" lado a lado (a 320px sobram
+   ~37px para o preço, que precisa de ~64px): o texto "Tirar" fica só para leitores de tela e o botão
+   mostra o ícone da lixeira. */
+@media (max-width: 359px) {
+  .tirarTexto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
 }
 
-.valorDescontoTotal { flex: 1; text-align: center; font-size: 24px; font-weight: 700; }
+.valorDescontoTotal { flex: 1; text-align: center; font-size: 18px; font-weight: 500; }
 
 .pagamento {
-  font-size: 20px;
-  font-weight: 600;
-  padding: 22px 12px;
-  border-radius: 14px;
-  border: 2px solid var(--color-neutral-800);
-  background: var(--color-bg);
+  height: 52px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-neutral-800);
+  background: transparent;
   color: var(--color-text);
+  font-size: 17px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   cursor: pointer;
 }
 
-.totais {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 18px 16px;
-  border-radius: 16px;
-  background: var(--color-surface);
-  color: var(--color-text);
-}
-
-.totalLinha { display: flex; justify-content: space-between; font-size: 19px; }
-.totalDescontos { color: var(--color-accent-300); }
-
-.totalFinal {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-top: 6px;
-  padding-top: 12px;
-  border-top: 1px solid var(--color-divider);
-}
-
-.totalRotulo { font-size: 23px; font-weight: 700; }
-.totalValor { font-size: 36px; font-weight: 700; line-height: 1; }
+/* Resumo acima do botão de fechar e o próprio botão: rótulo à esquerda, total à direita. */
+.resumoPedido { display: flex; flex-direction: column; gap: 2px; font-size: 15px; color: var(--color-neutral-300); }
+.totalLinha { display: flex; justify-content: space-between; }
+.fechar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.fecharRotulo { font-size: 18px; font-weight: 500; }
+.fecharTotal { font-size: 20px; font-weight: 600; white-space: nowrap; }
 
 .cancelar {
   background: transparent;
@@ -442,9 +451,3 @@ img.circulo { object-fit: cover; }
   color: var(--color-accent-100);
   cursor: pointer;
 }
-
-/* Integração PDV-ERP: estoque por SKU */
-.limite { font-size: 16px; font-weight: 600; color: var(--color-danger); }
-.mais:disabled { background: var(--color-neutral-900); color: var(--color-neutral-500); cursor: not-allowed; }
-.tamanho[aria-pressed='true'] .tamanhoSaldo { color: inherit; opacity: 0.85; }
-.mais:disabled { border-color: var(--color-neutral-900); }

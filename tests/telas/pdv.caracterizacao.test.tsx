@@ -305,7 +305,8 @@ describe('INV-016 — abas de baixo, contador "Pedido (N)" e botões principais'
     expect(fechar()).toBeNull();
     await usuario.click(botao('Pedido'));
     expect(adicionar()).toBeNull();
-    expect(texto(fechar())).toBe('Inclua uma peça');
+    // MI-07: o botão traz o rótulo e o total; o rótulo é o primeiro texto.
+    expect(texto(fechar()!.firstElementChild)).toBe('Inclua uma peça');
     await usuario.click(botao('Dia'));
     expect([adicionar(), fechar()]).toEqual([null, null]);
     // O produto aberto continua aberto ao voltar para Produtos.
@@ -316,10 +317,11 @@ describe('INV-016 — abas de baixo, contador "Pedido (N)" e botões principais'
     // MI-11: adicionar fica em cor/tamanho; o botão de fechar só existe na aba Pedido.
     expect(fechar()).toBeNull();
     await usuario.click(botao(/^Pedido/));
-    expect(texto(fechar())).toBe('Escolha o pagamento');
+    expect(texto(fechar()!.firstElementChild)).toBe('Escolha o pagamento');
     expect(fechar()).toBeDisabled();
     await usuario.click(botao('Pix'));
-    expect(texto(fechar())).toBe('Fechar venda · R$ 59,00');
+    expect(texto(fechar()!.firstElementChild)).toBe('Fechar venda');
+    expect(texto(fechar()!.lastElementChild)).toBe('R$ 59,00');
     expect(fechar()).toBeEnabled();
   });
 });

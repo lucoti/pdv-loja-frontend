@@ -46,7 +46,8 @@ export type AcaoPedido =
   | { tipo: 'menos'; chave: string }
   | { tipo: 'remover'; chave: string }
   | { tipo: 'desconto'; chave: string; descPercent: DescontoItem }
-  | { tipo: 'descontoTotalMais' }
+  // "limite" = valor bruto atual do pedido: o desconto no total não passa dele (ADR-005).
+  | { tipo: 'descontoTotalMais'; limite: number }
   | { tipo: 'descontoTotalMenos' }
   | { tipo: 'cliente'; valor: string }
   | { tipo: 'cpf'; valor: string }
@@ -102,10 +103,12 @@ export function reduzirPedido(p: Pedido, acao: AcaoPedido): Pedido {
       return alterarItem(p, acao.chave, () => null);
     case 'desconto':
       return alterarItem(p, acao.chave, (i) => ({ ...i, descPercent: acao.descPercent }));
-    case 'descontoTotalMais':
-      // ATENÇÃO: sem teto. O desconto pode passar do valor das peças; quem segura o total em R$ 0,00
-      // é calcularTotais (e o servidor). O vendedor precisa tocar "−" várias vezes para desfazer.
-      return { ...p, descontoTotalCentavos: p.descontoTotalCentavos + PASSO_DESCONTO_TOTAL_CENTAVOS };
+    case 'descontoTotalMais': {
+      // Teto no bruto (MI-03, ADR-005): o passo de R$ 5 só entra se o desconto novo não passar do valor
+      // das peças. O desconto continua múltiplo de R$ 5, como o servidor exige.
+      const novo = p.descontoTotalCentavos + PASSO_DESCONTO_TOTAL_CENTAVOS;
+      return novo <= acao.limite ? { ...p, descontoTotalCentavos: novo } : p;
+    }
     case 'descontoTotalMenos':
       // Regra 4: mínimo 0.
       return { ...p, descontoTotalCentavos: Math.max(0, p.descontoTotalCentavos - PASSO_DESCONTO_TOTAL_CENTAVOS) };
@@ -131,6 +134,11 @@ export function reduzirPedido(p: Pedido, acao: AcaoPedido): Pedido {
 export function calcularPedido(p: Pedido): { itens: Array<ItemCarrinho & ItemCalculado>; totais: TotaisVenda } {
   const itens = p.itens.map((i) => ({ ...i, ...calcularItem(i.precoUnitCentavos, i.qtd, i.descPercent) }));
   return { itens, totais: calcularTotais(itens, p.descontoTotalCentavos) };
+}
+
+/** O "+" do desconto no pedido só vale se mais R$ 5 não passarem do valor bruto (ADR-005). */
+export function podeAumentarDescontoTotal(p: Pedido): boolean {
+  return p.descontoTotalCentavos + PASSO_DESCONTO_TOTAL_CENTAVOS <= calcularPedido(p).totais.brutoCentavos;
 }
 
 /** Regra 7: fechar a venda exige ao menos um item e a forma de pagamento. */

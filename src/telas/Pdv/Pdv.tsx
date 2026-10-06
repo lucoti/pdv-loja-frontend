@@ -1,5 +1,5 @@
 import { User } from '@phosphor-icons/react';
-import { useCallback, useEffect, useReducer, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { api, ErroApi, MENSAGEM_GENERICA, type Catalogo, type Venda } from '../../api/cliente';
 import { calcularPedido, pedidoVazio, podeFechar, qtdNoPedido, reduzirPedido, type AcaoPedido, type Pedido as PedidoEstado } from '../../dominio/carrinho';
 import { skuDe } from '../../dominio/catalogo';
@@ -12,7 +12,7 @@ import { BarraInferior, type Aba } from './BarraInferior';
 import { Cabecalho, nomeEtapa } from './Cabecalho';
 import { Dia } from './Dia';
 import { ModalSucesso } from './ModalSucesso';
-import { Pedido } from './Pedido';
+import { Pedido, ResumoPedido } from './Pedido';
 import { Produtos } from './Produtos';
 import s from './Pdv.module.css';
 import { precoDaEscolha, resumoEscolha, Variacoes, type Escolha } from './Variacoes';
@@ -94,6 +94,9 @@ function Venda(props: {
   const [produtoId, setProdutoId] = useState<number | null>(null);
   const [escolha, setEscolha] = useState<Escolha>(SEM_ESCOLHA);
   const [enviando, setEnviando] = useState(false);
+  // Trava contra envio duplo (ADR-006, AP-001): lida e escrita no ref, que muda na hora; o estado
+  // `enviando` serve só para desenhar o botão. Dois toques antes do redesenho não passam os dois.
+  const enviandoRef = useRef(false);
   const [erro, setErro] = useState('');
   const [sucesso, setSucesso] = useState<Venda | null>(null);
 
@@ -152,12 +155,11 @@ function Venda(props: {
   };
 
   // Fechamento da venda (INV-013, INV-014): uma tentativa por vez, erro na tela com o pedido intacto.
-  // ATENÇÃO: a trava contra envio duplo lê `enviando` do estado do React. Dois toques antes do
-  // redesenho (botão ainda habilitado) passariam os dois pela checagem; na prática o `disabled` do
-  // botão e a chave de idempotência (o servidor grava uma vez só) cobrem o caso. Se o envio passar a
-  // ser disparado sem botão, ver AP-001 (valor e trava em useRef).
+  // A trava é o ref (ADR-006): o estado do React só muda no próximo desenho, e um segundo toque antes
+  // dele ainda veria "não enviando". O corpo vem do pedido da closure, igual nos dois toques.
   const fechar = async () => {
-    if (!podeFechar(pedido) || enviando) return;
+    if (!podeFechar(pedido) || enviandoRef.current) return;
+    enviandoRef.current = true;
     setEnviando(true);
     setErro('');
     try {
@@ -185,6 +187,7 @@ function Venda(props: {
       // pedido mostrar os saldos atuais; o vendedor ajusta e tenta de novo (RF-006).
       if (e instanceof ErroApi && (e.codigo === 'sem_estoque' || e.codigo === 'item_invalido')) props.atualizarCatalogo();
     } finally {
+      enviandoRef.current = false;
       setEnviando(false);
     }
   };
@@ -208,8 +211,7 @@ function Venda(props: {
   const { totais } = calcularPedido(pedido);
   // O rótulo diz o que falta para fechar (INV-013). Os três textos são procurados literalmente pelos
   // testes de tela; mudar a redação exige ajustar os testes (AP-004).
-  const rotuloFechar =
-    pedido.itens.length === 0 ? 'Inclua uma peça' : pedido.pagamentoId === null ? 'Escolha o pagamento' : `Fechar venda · ${formatarReais(totais.totalCentavos)}`;
+  const rotuloFechar = pedido.itens.length === 0 ? 'Inclua uma peça' : pedido.pagamentoId === null ? 'Escolha o pagamento' : 'Fechar venda';
 
   // O botão grande da barra inferior muda conforme a tela: adicionar (variações) ou fechar (pedido).
   let acao = null;
@@ -228,9 +230,12 @@ function Venda(props: {
   } else if (aba === 'pedido') {
     acao = (
       <div className={s.acao}>
+        <ResumoPedido pedido={pedido} />
         {erro && <CaixaErro mensagem={erro} />}
-        <button type="button" className={c.cta} disabled={!podeFechar(pedido) || enviando} aria-busy={enviando} onClick={fechar}>
-          {rotuloFechar}
+        {/* Design 1d: o que falta (ou "Fechar venda") à esquerda e o total à direita, no mesmo botão. */}
+        <button type="button" className={`${c.cta} ${s.fechar}`} disabled={!podeFechar(pedido) || enviando} aria-busy={enviando} onClick={fechar}>
+          <span className={s.fecharRotulo}>{rotuloFechar}</span>
+          <span className={`${s.fecharTotal} ${c.tabular}`}>{formatarReais(totais.totalCentavos)}</span>
         </button>
       </div>
     );
@@ -273,7 +278,7 @@ function Venda(props: {
   return (
     <>
       {topo}
-      <main className={s.conteudo}>
+      <main className={aba === 'pedido' || aba === 'dia' ? `${s.conteudo} ${s.conteudoCartoes}` : s.conteudo}>
         {aba === 'produtos' && !produto && (
           <Produtos
             catalogo={catalogo}

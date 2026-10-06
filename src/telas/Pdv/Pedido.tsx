@@ -1,9 +1,9 @@
-import type { Dispatch } from 'react';
+import { CreditCard, Minus, Money, Percent, Plus, QrCode, Trash, TShirt, User, Wallet, type Icon } from '@phosphor-icons/react';
+import type { Dispatch, ReactNode } from 'react';
 import type { Catalogo } from '../../api/cliente';
-import { calcularPedido, type AcaoPedido, type Pedido as PedidoEstado } from '../../dominio/carrinho';
+import { calcularPedido, podeAumentarDescontoTotal, type AcaoPedido, type Pedido as PedidoEstado } from '../../dominio/carrinho';
 import { saldosPorSku } from '../../dominio/catalogo';
 import { formatarReais, textoPecas } from '../../dominio/formatos';
-import { DESCONTOS_ITEM } from '../../dominio/precos';
 import c from '../comum.module.css';
 import s from './Pdv.module.css';
 
@@ -13,165 +13,172 @@ function avisoLimite(qtd: number, saldo: number): string {
   return qtd > saldo ? `Só ${saldo} em estoque — diminua a quantidade` : `Só ${saldo} em estoque`;
 }
 
-/** Aba Pedido — carrinho e revisão (handoff §2c, RF-F06). */
+/** Ícone de cada forma de pagamento do ERP; forma desconhecida usa a carteira genérica. */
+const ICONE_PAGAMENTO: Record<string, Icon> = { dinheiro: Money, pix: QrCode, debito: CreditCard, credito: CreditCard };
+
+/** Cartão numerado do Pedido (design 1d): número, título, complemento e ícone no cabeçalho. */
+function Cartao(props: { numero: number; titulo: string; Icone: Icon; complemento?: string; children: ReactNode }) {
+  const { Icone } = props;
+  return (
+    <section className={s.cartao} aria-label={props.titulo}>
+      <div className={s.cartaoTopo}>
+        <span className={s.cartaoNumero} aria-hidden="true">
+          {props.numero}
+        </span>
+        <h2 className={s.cartaoTitulo}>{props.titulo}</h2>
+        {props.complemento && <span className={s.cartaoComplemento}>{props.complemento}</span>}
+        <Icone size={22} className={s.cartaoIcone} aria-hidden="true" />
+      </div>
+      {props.children}
+    </section>
+  );
+}
+
+/**
+ * Aba Pedido (design 1d, MI-03 e MI-07): cartões 1 Cliente, 2 Peças, 3 Desconto no pedido e 4 Pagamento.
+ * O desconto por item (%) saiu da tela; o pedido inteiro tem um desconto só, em R$ 5 por toque, que não
+ * passa do valor bruto. O resumo de valores e o botão de fechar ficam na barra de baixo (Pdv.tsx).
+ */
 export function Pedido({ pedido, catalogo, despachar }: { pedido: PedidoEstado; catalogo: Catalogo; despachar: Dispatch<AcaoPedido> }) {
   const { itens, totais } = calcularPedido(pedido);
   // Saldo atual de cada SKU: limita o "+" e avisa quando o pedido passou do estoque (catálogo recarregado).
   const saldos = saldosPorSku(catalogo);
 
   return (
-    <div className={s.coluna18}>
-      <div className={`${s.cartao} ${s.cartaoCliente}`}>
-        <div className={c.rotulo}>CLIENTE</div>
-        <input
-          className={s.campo}
-          value={pedido.cliente}
-          onChange={(e) => despachar({ tipo: 'cliente', valor: e.target.value })}
-          placeholder="Nome do cliente"
-          aria-label="Nome do cliente"
-          maxLength={120}
-          autoComplete="off"
-        />
-        {/* O CPF é validado só pelo servidor; a mensagem de erro dele aparece acima do botão de fechar. */}
-        {/* ATENÇÃO: o campo não tem máscara nem conferência no front (aceita até 20 caracteres de
-            qualquer tipo). O rótulo "CPF (opcional)" é o seletor de vários testes de tela
-            (pdv.test.tsx), inclusive o de RNF-F08 (CPF só em memória); tirar o campo exige inventário
-            desses testes (AP-004). Nome e CPF ficam no pedido, não no componente: "Cancelar pedido" e
-            "Nova venda" os apagam junto com os itens. */}
-        <input
-          className={s.campo}
-          value={pedido.cpf}
-          onChange={(e) => despachar({ tipo: 'cpf', valor: e.target.value })}
-          placeholder="CPF (opcional)"
-          aria-label="CPF (opcional)"
-          inputMode="numeric"
-          maxLength={20}
-          autoComplete="off"
-        />
-      </div>
-
-      {itens.length === 0 && (
-        <div className={s.vazio}>
-          Nenhum item ainda.
-          <br />
-          Volte em Produtos para incluir peças.
+    <div className={s.coluna14}>
+      <Cartao numero={1} titulo="Cliente" Icone={User}>
+        <div className={s.cartaoCorpo}>
+          <input
+            className={s.campo}
+            value={pedido.cliente}
+            onChange={(e) => despachar({ tipo: 'cliente', valor: e.target.value })}
+            placeholder="Nome do cliente"
+            aria-label="Nome do cliente"
+            maxLength={120}
+            autoComplete="off"
+          />
+          {/* O CPF é validado só pelo servidor; a mensagem de erro dele aparece acima do botão de fechar.
+              ATENÇÃO: campo provisório até a etapa 5 (tela Cliente com celular, MI-02); o rótulo
+              "CPF (opcional)" é seletor de vários testes de tela. */}
+          <input
+            className={s.campo}
+            value={pedido.cpf}
+            onChange={(e) => despachar({ tipo: 'cpf', valor: e.target.value })}
+            placeholder="CPF (opcional)"
+            aria-label="CPF (opcional)"
+            inputMode="numeric"
+            maxLength={20}
+            autoComplete="off"
+          />
         </div>
-      )}
+      </Cartao>
 
-      {itens.map((item) => {
-        // SKU que sumiu do catálogo recarregado (inativado no ERP) conta como saldo 0: o item pede exclusão.
-        const saldo = saldos.get(item.skuId) ?? 0;
-        return (
-        <div key={item.chave} className={`${s.cartao} ${s.cartaoItem}`} data-testid="item-pedido">
-          <div className={s.itemTopo}>
-            <div className={s.itemTexto}>
-              <div className={s.itemNome}>{item.modeloNome}</div>
-              <div className={s.itemDetalhe}>
-                {item.tecidoNome} · Tam {item.tamanho} · {item.cor} · {formatarReais(item.precoUnitCentavos)}
+      <Cartao numero={2} titulo="Peças" Icone={TShirt} complemento={textoPecas(totais.pecas)}>
+        {itens.length === 0 && <div className={s.vazio}>Nenhuma peça ainda. Vá em Produtos para incluir.</div>}
+        {itens.map((item) => {
+          // SKU que sumiu do catálogo recarregado (inativado no ERP) conta como saldo 0: o item pede exclusão.
+          const saldo = saldos.get(item.skuId) ?? 0;
+          return (
+            <div key={item.chave} className={s.item} data-testid="item-pedido">
+              <div className={s.itemTopo}>
+                <div className={s.itemTexto}>
+                  <div className={s.itemNome}>{item.modeloNome}</div>
+                  <div className={s.itemDetalhe}>
+                    {item.tecidoNome} · Tam {item.tamanho} · {item.cor}
+                  </div>
+                </div>
+                <div className={`${s.itemSubtotal} ${c.tabular}`}>{formatarReais(item.subtotalCentavos)}</div>
               </div>
-            </div>
-            <button type="button" className={s.excluir} onClick={() => despachar({ tipo: 'remover', chave: item.chave })}>
-              Excluir
-            </button>
-          </div>
 
-          <div className={s.linha}>
-            <button type="button" className={s.menos} aria-label="Diminuir quantidade" onClick={() => despachar({ tipo: 'menos', chave: item.chave })}>
-              −
-            </button>
-            <div className={`${s.qtd} ${c.tabular}`} aria-label="Quantidade">
-              {item.qtd}
-            </div>
-            <button
-              type="button"
-              className={s.mais}
-              aria-label="Aumentar quantidade"
-              disabled={item.qtd >= saldo}
-              onClick={() => despachar({ tipo: 'mais', chave: item.chave, limite: saldo })}
-            >
-              +
-            </button>
-            <div className={s.subtotal}>
-              <div className={`${s.subtotalValor} ${c.tabular}`}>{formatarReais(item.subtotalCentavos)}</div>
-              <div className={s.descAplicado}>{item.descPercent ? `−${item.descPercent}% aplicado` : ''}</div>
-            </div>
-          </div>
-
-          {item.qtd >= saldo && <div className={s.limite}>{avisoLimite(item.qtd, saldo)}</div>}
-
-          {/* Desconto por peça: um botão por percentual permitido (RN-004), o marcado com aria-pressed.
-              A lista vem de DESCONTOS_ITEM, que precisa ser igual à do back (valor fora dela volta 400). */}
-          <div className={s.linhaDesconto}>
-            <div className={`${c.rotulo} ${s.rotuloDesconto}`}>DESCONTO</div>
-            <div className={s.descontos}>
-              {DESCONTOS_ITEM.map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  className={s.desconto}
-                  aria-pressed={item.descPercent === d}
-                  onClick={() => despachar({ tipo: 'desconto', chave: item.chave, descPercent: d })}
-                >
-                  {d === 0 ? 'sem' : `${d}%`}
+              <div className={s.linha}>
+                <button type="button" className={s.menos} aria-label="Diminuir quantidade" onClick={() => despachar({ tipo: 'menos', chave: item.chave })}>
+                  <Minus size={20} aria-hidden="true" />
                 </button>
-              ))}
-            </div>
-          </div>
-        </div>
-        );
-      })}
+                <div className={`${s.qtd} ${c.tabular}`} aria-label="Quantidade">
+                  {item.qtd}
+                </div>
+                <button
+                  type="button"
+                  className={s.mais}
+                  aria-label="Aumentar quantidade"
+                  disabled={item.qtd >= saldo}
+                  onClick={() => despachar({ tipo: 'mais', chave: item.chave, limite: saldo })}
+                >
+                  <Plus size={20} aria-hidden="true" />
+                </button>
+                <span className={s.unitario}>{formatarReais(item.precoUnitCentavos)} cada</span>
+                <button type="button" className={s.tirar} onClick={() => despachar({ tipo: 'remover', chave: item.chave })}>
+                  <Trash size={20} aria-hidden="true" />
+                  <span className={s.tirarTexto}>Tirar</span>
+                </button>
+              </div>
 
-      {/* Desconto no pedido inteiro, em passos de R$ 5 (PASSO_DESCONTO_TOTAL_CENTAVOS), somado aos
-          descontos das peças. ATENÇÃO: o "+" não tem teto — nem aqui nem no reducer. Passando do
-          valor das peças, o total exibido para em R$ 0,00 (calcularTotais) e o servidor faz o mesmo. */}
-      <div className={`${s.cartao} ${s.cartaoDesconto}`}>
-        <div className={c.rotulo}>DESCONTO NO TOTAL</div>
-        <div className={s.linha}>
+              {item.qtd >= saldo && <div className={s.limite}>{avisoLimite(item.qtd, saldo)}</div>}
+            </div>
+          );
+        })}
+      </Cartao>
+
+      <Cartao numero={3} titulo="Desconto no pedido" Icone={Percent}>
+        <div className={`${s.cartaoCorpo} ${s.linha}`}>
           <button type="button" className={s.menos} aria-label="Diminuir desconto no total" onClick={() => despachar({ tipo: 'descontoTotalMenos' })}>
-            −
+            <Minus size={20} aria-hidden="true" />
           </button>
           <div className={`${s.valorDescontoTotal} ${c.tabular}`}>
-            {pedido.descontoTotalCentavos ? `− ${formatarReais(pedido.descontoTotalCentavos)}` : 'sem desconto'}
+            {pedido.descontoTotalCentavos ? `− ${formatarReais(pedido.descontoTotalCentavos)}` : 'Sem desconto'}
           </div>
-          <button type="button" className={s.mais} aria-label="Aumentar desconto no total" onClick={() => despachar({ tipo: 'descontoTotalMais' })}>
-            +
+          {/* O "+" para no bruto (MI-03, ADR-005): o próximo passo de R$ 5 não pode passar do valor das peças. */}
+          <button
+            type="button"
+            className={s.mais}
+            aria-label="Aumentar desconto no total"
+            disabled={!podeAumentarDescontoTotal(pedido)}
+            onClick={() => despachar({ tipo: 'descontoTotalMais', limite: totais.brutoCentavos })}
+          >
+            <Plus size={20} aria-hidden="true" />
           </button>
         </div>
-      </div>
+      </Cartao>
 
-      <div className={`${s.cartao} ${s.cartaoPagamento}`}>
-        <div className={c.rotulo}>FORMA DE PAGAMENTO</div>
-        <div className={s.grade2}>
-          {catalogo.pagamentos.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className={s.pagamento}
-              aria-pressed={pedido.pagamentoId === p.id}
-              onClick={() => despachar({ tipo: 'pagamento', pagamentoId: p.id })}
-            >
-              {p.nome}
-            </button>
-          ))}
+      <Cartao numero={4} titulo="Pagamento" Icone={Wallet}>
+        <div className={`${s.cartaoCorpo} ${s.grade2}`}>
+          {catalogo.pagamentos.map((p) => {
+            const IconePag = ICONE_PAGAMENTO[p.id] ?? Wallet;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                className={s.pagamento}
+                aria-pressed={pedido.pagamentoId === p.id}
+                onClick={() => despachar({ tipo: 'pagamento', pagamentoId: p.id })}
+              >
+                <IconePag size={20} aria-hidden="true" />
+                {p.nome}
+              </button>
+            );
+          })}
         </div>
-      </div>
+      </Cartao>
+    </div>
+  );
+}
 
-      {/* Totais só para exibição (mesma conta do servidor, ADR-F05); o valor oficial é o devolvido na venda. */}
-      <div className={s.totais} data-testid="totais">
-        <div className={s.totalLinha}>
-          <span>{textoPecas(totais.pecas)}</span>
-          <span className={c.tabular}>{formatarReais(totais.brutoCentavos)}</span>
-        </div>
-        <div className={`${s.totalLinha} ${s.totalDescontos}`}>
-          <span>Descontos</span>
-          <span className={c.tabular}>{totais.descontosCentavos ? `− ${formatarReais(totais.descontosCentavos)}` : formatarReais(0)}</span>
-        </div>
-        <div className={s.totalFinal}>
-          <span className={s.totalRotulo}>Total</span>
-          <span className={`${s.totalValor} ${c.tabular}`}>{formatarReais(totais.totalCentavos)}</span>
-        </div>
+/**
+ * Resumo acima do botão de fechar (design 1d): peças e valor bruto, e o desconto. O total fica dentro
+ * do próprio botão. Valores só para exibição (mesma conta do servidor, ADR-F05).
+ */
+export function ResumoPedido({ pedido }: { pedido: PedidoEstado }) {
+  const { totais } = calcularPedido(pedido);
+  return (
+    <div className={`${s.resumoPedido} ${c.tabular}`} data-testid="totais">
+      <div className={s.totalLinha}>
+        <span>{textoPecas(totais.pecas)}</span>
+        <span>{formatarReais(totais.brutoCentavos)}</span>
       </div>
-
+      <div className={s.totalLinha}>
+        <span>Desconto</span>
+        <span>{totais.descontosCentavos ? `− ${formatarReais(totais.descontosCentavos)}` : formatarReais(0)}</span>
+      </div>
     </div>
   );
 }
