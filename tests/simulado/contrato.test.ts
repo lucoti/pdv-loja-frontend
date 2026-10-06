@@ -146,14 +146,14 @@ describe('respostas do simulado × contrato OpenAPI', () => {
       ],
       descontoTotalCentavos: 1500,
       cliente: 'Maria',
-      cpf: '529.982.247-25',
+      telefone: '(31) 98765-4321',
       pagamentoId: 'pix',
     };
     validarEntrada(ENTRADA_VENDA, ref);
     const criada = await chamar('post', '/vendas', ref);
     expect(criada.status).toBe(201);
     const v = validar('/vendas', 'post', criada).venda;
-    expect([v.numero, v.pecas, v.brutoCentavos, v.descontosCentavos, v.totalCentavos, v.cpf]).toEqual([1042, 3, 23300, 3280, 20020, '52998224725']);
+    expect([v.numero, v.pecas, v.brutoCentavos, v.descontosCentavos, v.totalCentavos, v.telefone]).toEqual([1042, 3, 23300, 3280, 20020, '31987654321']);
     expect(v.itens.map((i: { subtotalCentavos: number }) => i.subtotalCentavos)).toEqual([16020, 5500]);
     expect(v.itens[0]).toMatchObject({ modeloId: 'produto:1', modeloNome: 'Calça Legging', tecidoNome: 'Suplex', tamanho: 'M', cor: 'Preto', precoUnitCentavos: 8900 });
     // Baixa de saldo no catálogo do simulado (5 → 3 e 5 → 4); o reenvio abaixo não baixa de novo.
@@ -167,7 +167,7 @@ describe('respostas do simulado × contrato OpenAPI', () => {
     expect(saldoDe(skuId(1, 1, 2))).toBe(3);
 
     const segunda = validar('/vendas', 'post', await chamar('post', '/vendas', venda({ descontoTotalCentavos: 99500 }))).venda;
-    expect([segunda.numero, segunda.totalCentavos, segunda.cliente, segunda.cpf]).toEqual([1043, 0, '', '']);
+    expect([segunda.numero, segunda.totalCentavos, segunda.cliente, segunda.telefone]).toEqual([1043, 0, '', '']);
   });
 
   it('POST /vendas 400 — todos os códigos que o simulado produz', async () => {
@@ -179,10 +179,12 @@ describe('respostas do simulado × contrato OpenAPI', () => {
       [venda({ itens: [] }), 'sem_itens'],
       [venda({ pagamentoId: undefined }), 'sem_pagamento'],
       [venda({ pagamentoId: 'cheque' }), 'sem_pagamento'],
-      [venda({ cpf: '123.456.789-00' }), 'cpf_invalido'],
-      [venda({ cpf: '111.111.111-11' }), 'cpf_invalido'],
-      [venda({ cpf: '5299822472' }), 'cpf_invalido'],
-      [venda({ cpf: '529a982.247-25' }), 'cpf_invalido'],
+      [venda({ cpf: '' }), 'entrada_invalida'], // campo antigo: o back recusa com objeto estrito
+      [venda({ telefone: '(31) 3234-5678' }), 'telefone_invalido'], // fixo de 10 dígitos
+      [venda({ telefone: '319876543210' }), 'telefone_invalido'], // 12 dígitos
+      [venda({ telefone: '+55 31 98765-4321' }), 'telefone_invalido'],
+      [venda({ telefone: '31.98765.4321' }), 'telefone_invalido'],
+      [venda({ telefone: '3198765432a' }), 'telefone_invalido'],
       [venda({ itens: [{ ...linha, skuId: 9999 }] }), 'item_invalido'],
       [venda({ itens: [{ ...linha, skuId: skuId(3, 3, 4) }] }), 'item_invalido'], // SKU inativo (fora do catálogo)
       [venda({ itens: [{ ...linha, qtd: 0 }] }), 'entrada_invalida'],
@@ -201,10 +203,25 @@ describe('respostas do simulado × contrato OpenAPI', () => {
     expect(codigos).toEqual(casos.map(([, c]) => c));
   });
 
-  it('POST /vendas aceita CPF válido sem pontuação e grava só dígitos', async () => {
+  it('POST /vendas aceita celular de 11 dígitos sem máscara e grava só dígitos', async () => {
     usarSimulado({ sessaoDe: 'carlos' });
-    const v = validar('/vendas', 'post', await chamar('post', '/vendas', venda({ cpf: '52998224725' }))).venda;
-    expect(v.cpf).toBe('52998224725');
+    const v = validar('/vendas', 'post', await chamar('post', '/vendas', venda({ telefone: '31987654321' }))).venda;
+    expect(v.telefone).toBe('31987654321');
+  });
+
+  it('POST /vendas: telefone vazio vale; recusas na ordem do back (sem_itens e sem_pagamento antes do telefone; telefone antes do item)', async () => {
+    usarSimulado({ sessaoDe: 'carlos' });
+    expect(validar('/vendas', 'post', await chamar('post', '/vendas', venda({ telefone: '' }))).venda.telefone).toBe('');
+    const ruim = { telefone: '123' };
+    const codigo = async (extra: Record<string, unknown>) => validar('/vendas', 'post', await chamar('post', '/vendas', venda({ ...ruim, ...extra }))).erro.codigo;
+    expect(await codigo({ itens: [] })).toBe('sem_itens');
+    expect(await codigo({ pagamentoId: 'cheque' })).toBe('sem_pagamento');
+    expect(await codigo({ itens: [{ ...linha, skuId: 9999 }] })).toBe('telefone_invalido');
+    // Como o back: o corpo com `cpf` é recusado antes da idempotência, mesmo com a chave de uma venda gravada.
+    const corpo = venda();
+    expect((await chamar('post', '/vendas', corpo)).status).toBe(201);
+    const reenvio = await chamar('post', '/vendas', { ...corpo, cpf: '' });
+    expect([reenvio.status, validar('/vendas', 'post', reenvio).erro.mensagem]).toEqual([400, 'Campo não permitido: cpf.']);
   });
 
   it('POST /vendas 401 sem sessão', async () => {

@@ -8,7 +8,7 @@ import s from './Pdv.module.css';
 /** Aba Dia — vendas de hoje do vendedor logado, buscadas na API a cada abertura (handoff §2d, RF-F09). */
 export function Dia() {
   // Busca de novo toda vez que a aba é montada (sem cache): a lista inclui a venda que acabou de fechar.
-  // O cliente aparece só pelo nome; o CPF devolvido pela API não é mostrado nesta tela.
+  // O cliente aparece só pelo nome.
   const [carga, tentarDeNovo] = useCarregar(api.vendasHoje);
 
   return (

@@ -38,6 +38,11 @@
 | `src/telas/Pdv/Pdv.tsx`, `Pedido.tsx`, `Dia.tsx`, `Variacoes.tsx` | Front | Alterados — títulos, voltar e "Cancelar pedido" passam para o topo (etapa 2) |
 | `tests/telas/ajuda.tsx`, `pdv.test.tsx`, `pdv.ajustes.test.tsx`, `pdv.caracterizacao.test.tsx` | Teste | Alterados — sinal do topo (inventário AP-004 da etapa 2) |
 | `src/telas/Pdv/*.tsx`, `src/dominio/carrinho.ts`, `src/dominio/precos.ts`, `src/api/cliente.ts` | Front | Alterados — só comentários (D1 as-is, Fase 3) |
+| `src/api/tipos.gerados.ts` | Contrato | Regerado (`npm run gerar:tipos`) do openapi da pdv-cliente-telefone (backend 2e78243): `telefone`, `telefone_invalido`, `telefoneCliente` (etapa 6) |
+| `src/telas/Pdv/Pdv.tsx`, `src/dominio/formatos.ts` | Front / domínio | Corpo do `POST /vendas` com `telefone` (só dígitos) no lugar de `cpf: ''`; `celularValido` exige exatamente 11 dígitos (etapa 6) |
+| `src/simulado/handlers.ts` | Simulado | Espelha o back: `telefoneValido` (máscara + 11 dígitos), `telefone_invalido` na mesma ordem das recusas, corpo com `cpf` → 400 "Campo não permitido: cpf." antes da idempotência; venda devolve `telefone` (etapa 6) |
+| `src/api/cliente.ts`, `src/dominio/carrinho.ts`, `src/telas/Pdv/Dia.tsx` | Front | Só comentários sem CPF (etapa 6) |
+| `tests/api/cliente.test.ts`, `tests/dominio/formatos.test.ts`, `tests/simulado/contrato.test.ts`, `tests/telas/pdv.caracterizacao.test.tsx`, `pdv.cliente.test.tsx`, `pdv.mobile.caracterizacao.test.tsx`, `pdv.test.tsx` | Teste | Inventário AP-004 da etapa 6; 1 teste novo no contrato do simulado |
 
 ## Log de decisões não previstas na arquitetura
 | Data | Decisão | Motivo | Impacto |
@@ -141,6 +146,25 @@ Busca por `esperarCatalogo`, `esperarPdv`, `Nova venda`, `Venda registrada`, `di
 
 Nenhuma asserção removida sem equivalente; mudanças de comportamento: MI-02 e MI-04.
 
+## Inventário AP-004 — etapa 6 (contrato `cpf` → `telefone`)
+| Teste | O que conferia | Asserção equivalente agora |
+|---|---|---|
+| pdv.mobile.caracterizacao INV-001 (`CAMPOS_VENDA`, `corpo.cpf === ''`) | Campos exatos do corpo, `cpf` vazio | Campos exatos com `telefone` no lugar de `cpf`; `corpo.telefone === ''` (cliente sem celular) |
+| pdv.mobile.caracterizacao INV-014 (`400 cpf_invalido`) | Erro 400 sem recarga do catálogo | Mesmo caso com `telefone_invalido` |
+| pdv.mobile.caracterizacao INV-018 e api/cliente.test (`cpf: ''` no corpo direto) | Corpo válido no tipo | `telefone: ''` (o tipo gerado não aceita mais `cpf`) |
+| pdv.caracterizacao (corpo da venda) | Corpo exato com `cpf: ''` | Corpo exato com `telefone: ''` |
+| pdv.test "POST /vendas envia só SKU…" | Corpo exato com `cpf: ''` | Corpo exato com `telefone: '31987654321'` |
+| pdv.test "cliente vai sem espaços…; CPF vai vazio" | `cliente` aparado e `cpf: ''` | `cliente` aparado, `telefone` só dígitos e corpo sem `cpf` |
+| pdv.test "resposta 200 (reenvio)" (venda simulada) | Venda com `cpf: ''` | Venda com `telefone: ''` |
+| pdv.cliente "o celular ainda não vai (contrato atual)" | `cpf: ''` e sem `telefone` | `telefone: '31987654321'` e sem `cpf` |
+| pdv.cliente "máscara… incompleto desabilita" | 7 dígitos desabilita, 11 habilita | Idem + 10 dígitos "(31) 9876-5432" também desabilita |
+| pdv.cliente "Alterar…" (fixo de 10 dígitos) | Salvar com "(31) 3234-5678" | Salvar com "(11) 91234-5678" (10 dígitos não salva mais) |
+| formatos.test `celularValido` | 10 ou 11 válidos | 10 inválido; 11 e vazio válidos |
+| simulado/contrato.test (venda de referência, 4 casos `cpf_invalido`, "aceita CPF válido") | CPF gravado só com dígitos; 4 recusas | Telefone mascarado gravado só com dígitos; `cpf` → `entrada_invalida`; 5 casos `telefone_invalido` (10 e 12 dígitos, "+55", ponto, letra); "aceita celular sem máscara" |
+| simulado/contrato.test (novo) | — | Telefone vazio vale; ordem `sem_itens` → `sem_pagamento` → `telefone_invalido` → `item_invalido`; reenvio com a mesma chave e `cpf` → 400 "Campo não permitido: cpf." |
+
+Nenhuma asserção removida sem equivalente; mudança de comportamento: contrato da pdv-cliente-telefone (MI-01 a MI-03 de lá) e celular com 11 dígitos.
+
 ## Mudanças de escopo
 Nenhuma.
 
@@ -153,6 +177,7 @@ Nenhuma.
 | Etapa da migração | Resultado | Observação |
 |---|---|---|
 | 0 — caracterização sobre o código atual | verde (223 + 1 expected fail) | `it.fails` do INV-013 (a) até a etapa do ADR-006 |
+| 6 — contrato `cpf` → `telefone` e celular com 11 dígitos | verde (243); `tsc` ok; build ok; cobertura dentro da meta (total 99,45 / 97,48 / 99,47 / 100) | Inventário acima; mutações: celular fora do corpo (3 falhas), corpo com máscara (3), `celularValido` com 10 (2), simulado aceitando `cpf` (2), simulado com ≥10 dígitos (1), simulado gravando máscara (1) — todas detectadas |
 | 5 — etapa Cliente, "Alterar" e aviso com OK | verde (242); `typecheck` ok | 8 testes novos (pdv.cliente) + inventário; navegador a 375px: etapa Cliente igual ao design, largura 375 |
 | 4 — Pedido em cartões, teto do desconto, trava em ref | verde (230, sem expected fail); `typecheck` ok | Navegador a 320px: largura 320, pagamento em 2 colunas (125px cada), "R$ 89,00 cada" com 74px e "Tirar" só ícone; a 375px tudo numa linha exceto "R$ 89,00 cada" (2 linhas, sem estourar). AP-001: mutações na trava derrubam o teste |
 | 3 — Produtos, Cor e tamanho e Dia | verde (225 + 1 expected fail); `typecheck` ok | 20 testes ajustados pelo inventário; 2 guardas novas (AP-003). Mutações "tirar o minmax" em `.gradeTipos` e `.gradeTamanhos` derrubam os testes. Navegador a 320px: largura do conteúdo = 320 (sem rolagem lateral) na lista e em cor/tamanho; 4 tamanhos de 68px em 16–304px; "estoque 12" e "estoque 123" quebram dentro do botão sem passar da borda. Caso de referência: Top Nadador com 4 tamanhos (simulado) e saldos de 2–3 dígitos forçados na página |
@@ -170,4 +195,4 @@ Nenhuma.
 Nenhuma.
 
 ## Pronto para documentação e testes
-não — etapas 1 a 5 concluídas; a etapa 6 (contrato `cpf` → `telefone`) depende do contrato novo da feature pdv-cliente-telefone.
+sim — etapas 1 a 6 concluídas em 2026-10-06 (branch `pdv-mobile-refatorado`, commits sem push). Este front só funciona com o back da pdv-cliente-telefone publicado (deploy coordenado A → B → C → D). Próximo: Documentação (to-be).

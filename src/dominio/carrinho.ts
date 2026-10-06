@@ -23,8 +23,7 @@ export interface ItemCarrinho {
   descPercent: DescontoItem;
 }
 
-// Cliente e CPF são texto livre, como o vendedor digitou (sem máscara nem validação aqui): o corte
-// de espaços é feito no envio (Pdv.tsx) e a conferência do CPF, só no servidor.
+// O nome é texto livre, como o vendedor digitou: o corte de espaços é feito no envio (Pdv.tsx).
 // Cliente da venda (MI-02): nome e celular, os dois opcionais, informados na etapa Cliente. O celular
 // fica só com os dígitos; a máscara é coisa da tela. O CPF saiu do PDV (pdv-mobile-refatorado).
 export interface Pedido {

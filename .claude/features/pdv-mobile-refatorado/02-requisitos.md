@@ -64,7 +64,8 @@ Achado do levantamento: o desconto em R$ no pedido inteiro já existe no domíni
 
 | ID | Mudança | Motivo | Aprovado por | Data |
 |---|---|---|---|---|
-| | | | | |
+| INV-001 | Corpo do `POST /vendas` com `telefone` (só dígitos, ou '') no lugar de `cpf`; testes de caracterização `CAMPOS_VENDA` e corpo exato atualizados | Contrato novo da pdv-cliente-telefone (mudança prevista no próprio INV-001) | Lucas (Requisitos e Testes da pdv-cliente-telefone) | 2026-10-06 |
+| INV-014 | Caso de erro 400 da caracterização passa de `cpf_invalido` para `telefone_invalido` (mesmo comportamento: pedido intacto, sem recarga) | O código `cpf_invalido` deixou de existir no back | Lucas | 2026-10-06 |
 
 ## Aprendizados aplicados
 - AP-004: a troca de textos/elementos usados como sinal pelos testes (ex.: "Produtos" no `banner` em `esperarPdv`, "Venda registrada", "Nova venda", "CPF (opcional)") exige inventário por teste antes da troca.

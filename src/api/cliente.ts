@@ -10,10 +10,10 @@ export type Vendedor = Esquemas['Vendedor'];
 export type Catalogo = Esquemas['Catalogo'];
 export type Venda = Esquemas['Venda'];
 // Corpo do POST /vendas (INV-001): chaveIdempotencia, itens {skuId, qtd, descPercent},
-// descontoTotalCentavos, cliente, cpf e pagamentoId — nenhum preço. No tipo gerado, `cpf` e `cliente`
-// são obrigatórios (vão como '' quando vazios).
-// ATENÇÃO: o tipo vem do openapi.yaml do back (`npm run gerar:tipos`). A troca de `cpf` por `telefone`
-// (feature pdv-cliente-telefone) começa no contrato do back; o front só acompanha regerando os tipos.
+// descontoTotalCentavos, cliente, telefone e pagamentoId — nenhum preço. No tipo gerado, `telefone` e
+// `cliente` são obrigatórios (vão como '' quando vazios).
+// ATENÇÃO: o tipo vem do openapi.yaml do back (`npm run gerar:tipos`). O `cpf` saiu do contrato na
+// feature pdv-cliente-telefone: o back recusa corpo com `cpf` (400).
 export type VendaEntrada = Esquemas['VendaEntrada'];
 export type ItemVendaEntrada = Esquemas['ItemVendaEntrada'];
 export type VendasDoDia = Esquemas['VendasDoDia'];
@@ -74,7 +74,7 @@ export const api = {
   sessao: () => requisitar<RespostaVendedor>('GET', '/auth/sessao'),
   catalogo: () => requisitar<Catalogo>('GET', '/catalogo'),
   // Reenviar o mesmo corpo com a mesma chave não duplica a venda: o servidor devolve a já registrada.
-  // Erros de negócio (409 sem_estoque, 400 item_invalido / cpf_invalido…) chegam como ErroApi com `codigo`.
+  // Erros de negócio (409 sem_estoque, 400 item_invalido / telefone_invalido…) chegam como ErroApi com `codigo`.
   registrarVenda: (venda: VendaEntrada) => requisitar<{ venda: Venda }>('POST', '/vendas', venda),
   vendasHoje: () => requisitar<VendasDoDia>('GET', '/vendas/hoje'),
 };

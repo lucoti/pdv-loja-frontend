@@ -106,10 +106,10 @@ async function montarUmaPeca(usuario: Awaited<ReturnType<typeof abrirPdv>>['usua
 }
 
 /**
- * Campos do corpo do POST /vendas hoje. Ponto único que muda com a feature pdv-cliente-telefone
- * (`cpf` → `telefone`, registrada em "Invariantes alterados intencionalmente" quando executada).
+ * Campos do corpo do POST /vendas. Mudou com a feature pdv-cliente-telefone (`cpf` → `telefone`,
+ * etapa 6; registrada em "Invariantes alterados intencionalmente" do 02-requisitos).
  */
-const CAMPOS_VENDA = ['chaveIdempotencia', 'cliente', 'cpf', 'descontoTotalCentavos', 'itens', 'pagamentoId'];
+const CAMPOS_VENDA = ['chaveIdempotencia', 'cliente', 'descontoTotalCentavos', 'itens', 'pagamentoId', 'telefone'];
 const CAMPOS_ITEM = ['descPercent', 'qtd', 'skuId'];
 
 describe('INV-001 — corpo do POST /vendas', () => {
@@ -138,7 +138,7 @@ describe('INV-001 — corpo do POST /vendas', () => {
     expect(corpo.chaveIdempotencia).toMatch(UUID);
     expect(corpo.descontoTotalCentavos).toBe(1000);
     expect(corpo.cliente).toBe('Ana');
-    expect(corpo.cpf).toBe('');
+    expect(corpo.telefone).toBe('');
     expect(corpo.pagamentoId).toBe('dinheiro');
     // Sem preço: nenhum número do corpo é preço unitário, bruto ou total do pedido (89,00 / 55,00 / 233,00 / 223,00).
     const numeros = JSON.stringify(corpo).match(/\d+/g)!.map(Number);
@@ -298,7 +298,7 @@ describe('INV-014 — erro do servidor: pedido intacto e recarga do catálogo s�
   it.each([
     { caso: '409 sem_estoque', status: 409, codigo: 'sem_estoque', recarrega: true },
     { caso: '400 item_invalido', status: 400, codigo: 'item_invalido', recarrega: true },
-    { caso: '400 cpf_invalido', status: 400, codigo: 'cpf_invalido', recarrega: false },
+    { caso: '400 telefone_invalido', status: 400, codigo: 'telefone_invalido', recarrega: false },
     { caso: '409 chave_em_uso', status: 409, codigo: 'chave_em_uso', recarrega: false },
     { caso: '500 erro_interno', status: 500, codigo: 'erro_interno', recarrega: false },
   ])('$caso: a nova tentativa reenvia o mesmo pedido; recarrega o catálogo = $recarrega', async ({ status, codigo, recarrega }) => {
@@ -339,7 +339,7 @@ describe('INV-014 — erro do servidor: pedido intacto e recarga do catálogo s�
 describe('INV-018 — aba Dia independe do catálogo', () => {
   /** Uma venda já registrada no servidor antes de a página abrir. */
   async function vendaJaRegistrada() {
-    await api.registrarVenda({ chaveIdempotencia: crypto.randomUUID(), itens: [{ skuId: sku('Top Nadador', 'Vinho', 'P').id, qtd: 1, descPercent: 0 }], descontoTotalCentavos: 0, cliente: '', cpf: '', pagamentoId: 'pix' });
+    await api.registrarVenda({ chaveIdempotencia: crypto.randomUUID(), itens: [{ skuId: sku('Top Nadador', 'Vinho', 'P').id, qtd: 1, descPercent: 0 }], descontoTotalCentavos: 0, cliente: '', telefone: '', pagamentoId: 'pix' });
   }
 
   it('catálogo carregando: a aba Dia busca as vendas de hoje e mostra a venda do servidor', async () => {

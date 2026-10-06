@@ -171,16 +171,15 @@ function Venda(props: {
     try {
       // O front não envia preços: o servidor recalcula tudo (RF-F07). A chave é a mesma em toda tentativa.
       // ATENÇÃO: este é o único ponto em que o pedido sai do aparelho, e o corpo é o contrato INV-001.
-      // O nome vai com espaços das pontas cortados. ATENÇÃO (provisório até a etapa 6): o CPF saiu do
-      // PDV e o contrato atual ainda exige o campo, então vai `cpf: ''`; o celular (`pedido.telefone`)
-      // só entra no corpo quando a feature irmã pdv-cliente-telefone publicar o contrato novo. O back
-      // valida com objeto estrito: mandar `telefone` antes disso faz toda venda voltar 400.
+      // O nome vai com espaços das pontas cortados e o celular só com os dígitos (ou '' sem celular).
+      // ATENÇÃO: contrato da feature pdv-cliente-telefone — o back valida com objeto estrito e recusa
+      // `cpf`; este front só funciona com o back novo publicado (deploy coordenado, sem janela).
       const { venda } = await api.registrarVenda({
         chaveIdempotencia: pedido.chaveIdempotencia,
         itens: pedido.itens.map((i) => ({ skuId: i.skuId, qtd: i.qtd, descPercent: i.descPercent })),
         descontoTotalCentavos: pedido.descontoTotalCentavos,
         cliente: pedido.cliente.trim(),
-        cpf: '',
+        telefone: pedido.telefone,
         pagamentoId: pedido.pagamentoId ?? '',
       });
       setSucesso(venda);

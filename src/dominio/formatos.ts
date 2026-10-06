@@ -22,7 +22,7 @@ export function somenteDigitos(texto: string): string {
 
 /**
  * Máscara do celular enquanto o vendedor digita, como no design: até 11 dígitos, "(31) 98765-4321".
- * Com 10 dígitos (fixo ou celular antigo) fica "(31) 9876-5432"; incompleto mostra só o que já dá.
+ * Com 10 dígitos (ainda incompleto para `celularValido`) fica "(31) 9876-5432"; com menos, só o que já dá.
  */
 export function mascararCelular(texto: string): string {
   const d = somenteDigitos(texto).slice(0, 11);
@@ -32,8 +32,8 @@ export function mascararCelular(texto: string): string {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 }
 
-/** Celular opcional: vazio vale; preenchido precisa de DDD + número (10 ou 11 dígitos). */
+/** Celular opcional: vazio vale; preenchido precisa de DDD + celular, exatamente 11 dígitos (mesma regra do back). */
 export function celularValido(texto: string): boolean {
   const n = somenteDigitos(texto).length;
-  return n === 0 || n === 10 || n === 11;
+  return n === 0 || n === 11;
 }

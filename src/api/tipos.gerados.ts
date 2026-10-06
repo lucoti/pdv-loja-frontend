@@ -298,7 +298,7 @@ export interface paths {
                 };
                 /**
                  * @description `entrada_invalida` (formato), `sem_itens`, `sem_pagamento`, `item_invalido`
-                 *     (SKU inexistente ou inativo), `item_repetido` (mesmo SKU em duas linhas), `cpf_invalido`.
+                 *     (SKU inexistente ou inativo), `item_repetido` (mesmo SKU em duas linhas), `telefone_invalido` (celular sem 11 dígitos).
                  */
                 400: {
                     headers: {
@@ -432,7 +432,7 @@ export interface components {
         Erro: {
             erro: {
                 /** @enum {string} */
-                codigo: "entrada_invalida" | "senha_incorreta" | "sessao_invalida" | "sem_itens" | "sem_pagamento" | "item_invalido" | "item_repetido" | "cpf_invalido" | "chave_em_uso" | "sem_estoque" | "venda_nao_encontrada" | "rota_nao_encontrada" | "erro_interno";
+                codigo: "entrada_invalida" | "senha_incorreta" | "sessao_invalida" | "sem_itens" | "sem_pagamento" | "item_invalido" | "item_repetido" | "telefone_invalido" | "chave_em_uso" | "sem_estoque" | "venda_nao_encontrada" | "rota_nao_encontrada" | "erro_interno";
                 mensagem: string;
             };
         };
@@ -547,11 +547,11 @@ export interface components {
              */
             cliente: string;
             /**
-             * @description Opcional. Com ou sem pontuação; se informado, precisa ter dígitos verificadores válidos.
+             * @description Opcional. Celular do cliente com DDD: dígitos, espaços, parênteses e hífen; depois de tirar a máscara precisa ter exatamente 11 dígitos (senão 400 telefone_invalido). Gravado só com os dígitos. O campo cpf deixou de existir (corpo com cpf → 400 entrada_invalida).
              * @default
-             * @example 529.982.247-25
+             * @example (31) 98765-4321
              */
-            cpf: string;
+            telefone: string;
             /** @example pix */
             pagamentoId?: string;
         };
@@ -590,10 +590,10 @@ export interface components {
             };
             cliente: string;
             /**
-             * @description Só dígitos
-             * @example 52998224725
+             * @description Celular só com dígitos (11)
+             * @example 31987654321
              */
-            cpf: string;
+            telefone: string;
             pagamento: {
                 id: string;
                 nome: string;
@@ -663,8 +663,11 @@ export interface components {
                 hora: string;
                 vendedor: string;
                 cliente: string;
-                /** @example ***.982.247-** */
-                cpfMascarado: string;
+                /**
+                 * @description Celular do cliente formatado, ou vazio. Não é o telefone da loja (loja.telefone).
+                 * @example (31) 98765-4321
+                 */
+                telefoneCliente: string;
                 itens: {
                     modelo: string;
                     /** @example Suplex Light · Tam M · Preto */

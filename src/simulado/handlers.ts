@@ -14,7 +14,7 @@ const FUSO_LOJA = 'America/Sao_Paulo';
 const horaLocal = new Intl.DateTimeFormat('pt-BR', { timeZone: FUSO_LOJA, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-type Codigo = 'entrada_invalida' | 'senha_incorreta' | 'sessao_invalida' | 'sem_itens' | 'sem_pagamento' | 'item_invalido' | 'item_repetido' | 'cpf_invalido' | 'chave_em_uso' | 'sem_estoque';
+type Codigo = 'entrada_invalida' | 'senha_incorreta' | 'sessao_invalida' | 'sem_itens' | 'sem_pagamento' | 'item_invalido' | 'item_repetido' | 'telefone_invalido' | 'chave_em_uso' | 'sem_estoque';
 
 function erro(status: number, codigo: Codigo, mensagem: string) {
   return HttpResponse.json({ erro: { codigo, mensagem } }, { status });
@@ -22,17 +22,9 @@ function erro(status: number, codigo: Codigo, mensagem: string) {
 
 const semSessao = () => erro(401, 'sessao_invalida', 'Sessão expirada. Entre de novo.');
 
-/** Mesmo cálculo oficial (módulo 11) do back; sequências repetidas não são CPFs reais. */
-function cpfValido(valor: string): boolean {
-  const cpf = valor.replace(/\D/g, '');
-  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
-  const digito = (tamanho: number) => {
-    let soma = 0;
-    for (let i = 0; i < tamanho; i++) soma += Number(cpf[i]) * (tamanho + 1 - i);
-    const resto = (soma * 10) % 11;
-    return resto === 10 ? 0 : resto;
-  };
-  return digito(9) === Number(cpf[9]) && digito(10) === Number(cpf[10]);
+/** Mesma regra do back (dominio/telefone.ts): só a máscara da tela e exatamente 11 dígitos (DDD + celular). */
+function telefoneValido(valor: string): boolean {
+  return /^[\d\s()-]+$/.test(valor) && valor.replace(/\D/g, '').length === 11;
 }
 
 const diaLocal = new Intl.DateTimeFormat('en-CA', { timeZone: FUSO_LOJA });
@@ -77,8 +69,9 @@ export function criarSimulado(opcoes: OpcoesSimulado = {}) {
     if (e.itens.length === 0) return erro(400, 'sem_itens', 'Inclua uma peça');
     const pagamento = estado.catalogo.pagamentos.find((p) => p.id === e.pagamentoId);
     if (!pagamento) return erro(400, 'sem_pagamento', 'Escolha o pagamento');
-    const cpfInformado = e.cpf ?? '';
-    if (cpfInformado && (!/^[\d.\-\s]+$/.test(cpfInformado) || !cpfValido(cpfInformado))) return erro(400, 'cpf_invalido', 'CPF inválido');
+    // Mesma ordem do back: sem_itens → sem_pagamento → telefone_invalido → item_invalido/item_repetido → sem_estoque.
+    const telefoneInformado = (e.telefone ?? '').trim();
+    if (telefoneInformado && !telefoneValido(telefoneInformado)) return erro(400, 'telefone_invalido', 'Celular inválido');
 
     const vistos = new Set<number>();
     const itens: Venda['itens'] = [];
@@ -127,7 +120,7 @@ export function criarSimulado(opcoes: OpcoesSimulado = {}) {
       hora: horaLocal.format(agora),
       vendedor: { id: vendedor.id, nome: vendedor.nome },
       cliente: e.cliente ?? '',
-      cpf: cpfInformado.replace(/\D/g, ''),
+      telefone: telefoneInformado.replace(/\D/g, ''),
       pagamento: { id: pagamento.id, nome: pagamento.nome },
       itens,
       ...totais,
@@ -180,6 +173,8 @@ export function criarSimulado(opcoes: OpcoesSimulado = {}) {
       if (!e || typeof e.chaveIdempotencia !== 'string' || !UUID.test(e.chaveIdempotencia) || !Array.isArray(e.itens)) {
         return erro(400, 'entrada_invalida', 'Dados inválidos.');
       }
+      // O back valida o corpo com objeto estrito: o campo antigo `cpf` é recusado antes da idempotência.
+      if ('cpf' in e) return erro(400, 'entrada_invalida', 'Campo não permitido: cpf.');
       // Idempotência: a mesma chave devolve a venda original (200); de outro vendedor, 409.
       const anterior = estado.vendas.find((v) => v.chave === e.chaveIdempotencia);
       if (anterior) {

@@ -75,7 +75,7 @@ describe('api — erros', () => {
 
   it('erro 400 no formato do contrato → código e mensagem da API', async () => {
     usarSimulado({ sessaoDe: 'carlos' });
-    const e = await erroDe(api.registrarVenda({ chaveIdempotencia: crypto.randomUUID(), itens: [], descontoTotalCentavos: 0, cliente: '', cpf: '', pagamentoId: 'pix' }));
+    const e = await erroDe(api.registrarVenda({ chaveIdempotencia: crypto.randomUUID(), itens: [], descontoTotalCentavos: 0, cliente: '', telefone: '', pagamentoId: 'pix' }));
     expect([e.status, e.codigo, e.message]).toEqual([400, 'sem_itens', 'Inclua uma peça']);
   });
 

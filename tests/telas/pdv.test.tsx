@@ -504,17 +504,16 @@ describe('RF-F07 — fechar venda', () => {
       ],
       descontoTotalCentavos: 3000,
       cliente: 'Maria',
-      // MI-02: CPF vazio até o contrato novo (etapa 6); o celular ainda não vai no corpo.
-      cpf: '',
+      // MI-02 + etapa 6: o celular vai só com os dígitos; o `cpf` saiu do contrato.
+      telefone: '31987654321',
       pagamentoId: 'pix',
     });
     expect(JSON.stringify(corpo)).not.toMatch(/precoUnit|subtotal|brutoCentavos|totalCentavos|modeloNome|tecidoNome|modeloId|tecidoId/);
     validarEntrada(ENTRADA_VENDA, corpo);
   });
 
-  // MI-02: o CPF saiu do PDV; até a etapa 6 (contrato da pdv-cliente-telefone) o corpo leva `cpf: ''`
-  // e o celular fica só no pedido em memória.
-  it('cliente vai sem espaços nas pontas; CPF vai vazio', async () => {
+  // MI-02 + etapa 6 (contrato da pdv-cliente-telefone): o celular vai como `telefone`, só com os dígitos.
+  it('cliente vai sem espaços nas pontas; celular vai só com os dígitos; sem `cpf`', async () => {
     const corpos = capturarVendas();
     const { usuario } = await abrirPdv();
     await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
@@ -523,7 +522,8 @@ describe('RF-F07 — fechar venda', () => {
     await usuario.click(botaoFechar());
     await screen.findByRole('dialog');
     servidor.events.removeAllListeners();
-    expect([corpos[0].cliente, corpos[0].cpf]).toEqual(['João', '']);
+    expect([corpos[0].cliente, corpos[0].telefone]).toEqual(['João', '31987654321']);
+    expect(corpos[0]).not.toHaveProperty('cpf');
     validarEntrada(ENTRADA_VENDA, corpos[0]);
   });
 
@@ -655,7 +655,7 @@ describe('RF-F08 — venda registrada', () => {
         HttpResponse.json(
           {
             venda: {
-              numero: 1042, dataHora: '2026-09-27T14:00:00.000Z', hora: '11:00', vendedor: { id: 'carlos', nome: 'Carlos' }, cliente: 'Ana', cpf: '',
+              numero: 1042, dataHora: '2026-09-27T14:00:00.000Z', hora: '11:00', vendedor: { id: 'carlos', nome: 'Carlos' }, cliente: 'Ana', telefone: '',
               pagamento: { id: 'pix', nome: 'Pix' }, itens: [], pecas: 1, brutoCentavos: 5500, descontoItensCentavos: 0, descontoTotalCentavos: 0, descontosCentavos: 0, totalCentavos: 5500,
             },
           },

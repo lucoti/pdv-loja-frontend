@@ -41,9 +41,9 @@ describe('celular', () => {
     expect(mascararCelular('(31) 98765-43219999')).toBe('(31) 98765-4321');
   });
 
-  it('celularValido: vazio, 10 ou 11 dígitos; incompleto não vale', () => {
+  it('celularValido: vazio ou exatamente 11 dígitos (DDD + celular); fixo de 10 e incompleto não valem', () => {
     expect(celularValido('')).toBe(true);
-    expect(celularValido('(31) 3234-5678')).toBe(true);
+    expect(celularValido('(31) 3234-5678')).toBe(false);
     expect(celularValido('(31) 98765-4321')).toBe(true);
     expect(celularValido('(31) 9876')).toBe(false);
     expect(celularValido('319876543')).toBe(false);

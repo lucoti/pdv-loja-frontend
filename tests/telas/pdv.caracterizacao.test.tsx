@@ -107,7 +107,8 @@ describe('INV-001 — chamadas à API', () => {
       itens: [{ skuId: 21, qtd: 1, descPercent: 0 }],
       descontoTotalCentavos: 0,
       cliente: '',
-      cpf: '',
+      // pdv-cliente-telefone (MI-01): `cpf` → `telefone`, vazio sem celular.
+      telefone: '',
       pagamentoId: 'pix',
     });
     validarEntrada(ENTRADA_VENDA, venda);
