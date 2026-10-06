@@ -69,9 +69,11 @@ Nenhuma.
 | 5 — remoção do CPF | verde (431; −18 testes do `cpf.test.ts`) | `tsc` ok; cobertura total 100/98,03/100/100, todos os arquivos ≥ meta |
 
 ## Documentação (D1-D3)
-- [ ] D1 — código-fonte comentado
-- [ ] D2 — documentação executiva em `docs/vN/documentacao.md` (versão <N>)
-- [ ] D3 — `docs/contexto-geral.md` atualizado
+- [x] D1 — código-fonte comentado (8 linhas de comentário em `telefone.ts`, `migrar.ts`, `repositorios/vendas.ts`, `vendas.service.ts`; ATENÇÃO nova em `telefoneValido`: só formato e 11 dígitos, sem conferir DDD nem o 9)
+- [x] D2 — documentação executiva em `backend/docs/v8/documentacao.md` (versão 8, to-be)
+- [x] D3 — `docs/contexto-geral.md` atualizado (front ainda envia `cpf` até a etapa 6 da pdv-mobile-refatorado; deploy coordenado com "depende de:")
+
+Pontos em aberto registrados (decisão do Lucas pendente, fora do escopo): regra do celular mais rígida (DDD/9) exigiria mudar back e front juntos; cupom com telefone completo visível a qualquer vendedor logado (MI-04).
 
 (As-is feito na Fase 3: `backend/docs/v7`. O to-be roda depois do Desenvolvimento.)
 

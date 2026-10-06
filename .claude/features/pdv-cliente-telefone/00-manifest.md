@@ -2,11 +2,11 @@
 
 Slug: pdv-cliente-telefone
 Modo: refatoracao
-Fase atual: desenvolvimento
+Fase atual: testes
 Status: em_andamento
 Incidente atual: nenhum
 Criado em: 2026-10-05 23:31
-Última atualização: 2026-10-05 23:58
+Última atualização: 2026-10-06 00:50
 
 <!--
 NÃO altere o nome nem o formato das linhas acima. Os hooks de métricas leem "Fase atual:" literalmente.
@@ -23,9 +23,9 @@ Valores válidos de "Incidente atual": número do incidente aberto na Fase 7 (ex
 | Planejamento | aprovada | Lucas | 2026-10-05 23:34 | 01-planejamento.md |
 | Requisitos | aprovada | Lucas | 2026-10-05 23:43 | 02-requisitos.md |
 | Arquitetura | aprovada | Lucas | 2026-10-05 23:58 | 03-arquitetura.md |
-| Desenvolvimento | em_andamento | | | 04-desenvolvimento.md |
-| Documentação | pendente | | | docs/vN/documentacao.md |
-| Testes | pendente | | | 05-testes.md |
+| Desenvolvimento | aprovada | Lucas | 2026-10-06 00:40 | 04-desenvolvimento.md |
+| Documentação | aprovada | Lucas | 2026-10-06 00:50 | backend/docs/v8/documentacao.md |
+| Testes | em_andamento | | | 05-testes.md |
 | Implantação | pendente | | | 06-implantacao.md |
 | Aprendizado (só refatoração) | pendente | | | .claude/aprendizados.md |
 
