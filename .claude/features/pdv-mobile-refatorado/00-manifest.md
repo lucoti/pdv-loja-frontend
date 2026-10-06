@@ -6,7 +6,7 @@ Fase atual: desenvolvimento
 Status: em_andamento
 Incidente atual: nenhum
 Criado em: 2026-10-05 22:30
-Última atualização: 2026-10-05 22:49
+Última atualização: 2026-10-06 01:10
 
 <!--
 NÃO altere o nome nem o formato das linhas acima. Os hooks de métricas leem "Fase atual:" literalmente.
@@ -35,7 +35,8 @@ Valores válidos de "Incidente atual": número do incidente aberto na Fase 7 (ex
 
 | Data/hora | Fase | Exceção | Risco assumido | Aprovado por |
 |---|---|---|---|---|
-| | | | | |
+| 2026-10-05 23:31 | Desenvolvimento | Feature pausada depois da etapa 5, antes da etapa 6 (contrato `cpf` → `telefone`) | Etapa 6, Documentação e Testes esperam a feature pdv-cliente-telefone | Lucas ("pode pausar e começar o back") |
+| 2026-10-06 01:10 | Desenvolvimento | Retomada na etapa 6 com o back pdv-cliente-telefone pronto (testes aprovados, sem deploy); decisão: celular com exatamente 11 dígitos, igual ao back | Implantação conjunta A → B → C → D (ver 05-testes da pdv-cliente-telefone) | Lucas ("pode gravar e retornar ao front") |
 
 ## Incidentes de manutenção
 
