@@ -367,6 +367,7 @@ img.circulo { object-fit: cover; }
   text-decoration: underline;
   cursor: pointer;
 }
+.cancelar:disabled { opacity: 0.4; cursor: default; }
 
 /* 1e — Dia: cartões do dia e lista das vendas (MI-08). */
 .caixasDia { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 8px; }

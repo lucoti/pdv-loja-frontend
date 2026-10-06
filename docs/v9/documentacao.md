@@ -153,6 +153,7 @@ servidor.
 **4. Cancelar pedido**
 - "Cancelar pedido", no topo da aba Pedido, limpa tudo na hora (peças, desconto, pagamento, nome e
   celular), sem pedir confirmação, gera um código de pedido novo e volta para a etapa Cliente.
+- Enquanto a venda está sendo enviada, "Cancelar pedido" fica desligado.
 
 **5. Consulta do dia**
 - A aba Dia busca no servidor as vendas de hoje sempre que é aberta.
@@ -238,9 +239,10 @@ no servidor.
 - **O OK do aviso é o que gera o código do pedido seguinte.** Enquanto o aviso está aberto, o pedido já
   registrado continua na memória com o código antigo. Qualquer mudança futura no aviso precisa manter a
   troca do código no fechamento dele.
-- **"Cancelar pedido" durante o envio.** O link não fica travado enquanto a venda está sendo enviada.
-  Se o vendedor tocar nele nesse instante, a tela é limpa, mas o envio continua: se o servidor registrar
-  a venda, o aviso aparece mesmo assim e a venda vale.
+- **"Cancelar pedido" desligado durante o envio** (decisão do Lucas, 2026-10-06). Enquanto a venda está
+  sendo enviada o link fica apagado e não responde, inclusive a um toque no mesmo instante do "Fechar
+  venda". Se o envio falhar, ele volta a valer com o pedido intacto. Antes, limpar a tela não cancelava o
+  envio e a venda podia ser registrada com a tela já limpa.
 - **Duplo toque em "Fechar venda" resolvido.** A trava contra envio duplicado passou a valer na hora do
   toque (antes dependia do redesenho da tela, e dois toques muito rápidos geravam dois envios, que o
   servidor juntava numa venda só).

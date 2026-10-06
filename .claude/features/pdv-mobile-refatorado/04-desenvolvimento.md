@@ -68,6 +68,7 @@
 | 2026-10-05 | Inter também no peso 700 | O CSS atual usa 700 em vários textos; o design usa até 600, e os pesos são revistos nas etapas 2-5 | Um arquivo de fonte a mais |
 | 2026-10-05 | `.claude/launch.json` local usa `/usr/local/bin/npm` (Node 22) | Node 20 do PATH padrão não sobe o Vite/rolldown | Só ambiente local |
 | 2026-10-05 | Testes de caracterização em arquivo novo (`pdv.mobile.caracterizacao.test.tsx`) | `pdv.caracterizacao.test.tsx` já usa IDs INV-0xx da feature anterior com outro significado | Nenhum |
+| 2026-10-06 | "Cancelar pedido" desligado durante o envio (`disabled={enviando}` + trava lida de `enviandoRef`) | Ponto ATENÇÃO da Documentação: zerar a tela não cancelava a requisição e a venda podia ser registrada com a tela limpa; decisão do Lucas ("desligar o cancelar durante o envio") | `Pdv.tsx`, `Pdv.module.css` (`.cancelar:disabled`); 2 testes novos em `pdv.test.tsx` (desligado no envio e de volta após falha; toque no mesmo `act` do "Fechar venda", AP-001) |
 
 ## Inventário AP-004 — etapa 2 (sinal do topo)
 Busca por `banner`, `topoDoPdv`, `nomeEtapa`, `'Novo pedido'`, `heading` nos testes antes da troca. Testes em que o sinal carregava informação além de "o PDV abriu" e a asserção equivalente adotada:
@@ -177,6 +178,7 @@ Nenhuma.
 | Etapa da migração | Resultado | Observação |
 |---|---|---|
 | 0 — caracterização sobre o código atual | verde (223 + 1 expected fail) | `it.fails` do INV-013 (a) até a etapa do ADR-006 |
+| 7 — "Cancelar pedido" desligado no envio (pós-documentação) | verde (245); `tsc` ok | Mutações: sem `disabled` (1 falha), sem a trava da ref (1), sem nenhuma (2) — detectadas |
 | 6 — contrato `cpf` → `telefone` e celular com 11 dígitos | verde (243); `tsc` ok; build ok; cobertura dentro da meta (total 99,45 / 97,48 / 99,47 / 100) | Inventário acima; mutações: celular fora do corpo (3 falhas), corpo com máscara (3), `celularValido` com 10 (2), simulado aceitando `cpf` (2), simulado com ≥10 dígitos (1), simulado gravando máscara (1) — todas detectadas |
 | 5 — etapa Cliente, "Alterar" e aviso com OK | verde (242); `typecheck` ok | 8 testes novos (pdv.cliente) + inventário; navegador a 375px: etapa Cliente igual ao design, largura 375 |
 | 4 — Pedido em cartões, teto do desconto, trava em ref | verde (230, sem expected fail); `typecheck` ok | Navegador a 320px: largura 320, pagamento em 2 colunas (125px cada), "R$ 89,00 cada" com 74px e "Tirar" só ícone; a 375px tudo numa linha exceto "R$ 89,00 cada" (2 linhas, sem estourar). AP-001: mutações na trava derrubam o teste |
@@ -195,4 +197,4 @@ Nenhuma.
 Nenhuma.
 
 ## Pronto para documentação e testes
-sim — etapas 1 a 6 concluídas em 2026-10-06 (branch `pdv-mobile-refatorado`, commits sem push). Este front só funciona com o back da pdv-cliente-telefone publicado (deploy coordenado A → B → C → D). Próximo: Documentação (to-be).
+sim — etapas 1 a 6 concluídas em 2026-10-06, mais o "Cancelar pedido" desligado no envio (pedido do Lucas na Documentação) (branch `pdv-mobile-refatorado`, commits sem push). Este front só funciona com o back da pdv-cliente-telefone publicado (deploy coordenado A → B → C → D). Próximo: Documentação (to-be).

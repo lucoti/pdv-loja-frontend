@@ -1,5 +1,5 @@
 /** Tela de venda (RF-F04..RF-F10) pela página inteira, contra o simulado. */
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { getResponse, http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { api } from '../../src/api/cliente';
@@ -549,6 +549,47 @@ describe('RF-F07 — fechar venda', () => {
     servidor.events.removeAllListeners();
     expect(corpos).toHaveLength(1);
     expect(simulado.estado.vendas).toHaveLength(1);
+  });
+
+  it('"Cancelar pedido" fica desligado durante o envio e volta a valer se o envio falhar', async () => {
+    let liberar!: () => void;
+    const segura = new Promise<void>((r) => (liberar = r));
+    const { usuario } = await abrirPdv();
+    servidor.use(
+      http.post('*/api/vendas', async () => {
+        await segura;
+        return new Response(null, { status: 500 });
+      }),
+    );
+    await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
+    await usuario.click(aba('Pix'));
+    const cancelar = screen.getByRole('button', { name: 'Cancelar pedido' });
+    expect(cancelar).toBeEnabled();
+    await usuario.click(botaoFechar());
+    await waitFor(() => expect(cancelar).toBeDisabled());
+    await usuario.click(cancelar);
+    expect(itensPedido()).toHaveLength(1);
+    liberar();
+    await screen.findByRole('alert');
+    expect(cancelar).toBeEnabled();
+    expect(itensPedido()).toHaveLength(1);
+  });
+
+  it('toque em "Cancelar pedido" no mesmo instante do "Fechar venda" (sem redesenho) não zera o pedido', async () => {
+    const { usuario, simulado } = await abrirPdv();
+    await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
+    await usuario.click(aba('Pix'));
+    const fecharBotao = botaoFechar();
+    const cancelar = screen.getByRole('button', { name: 'Cancelar pedido' });
+    // AP-001: os dois toques no mesmo `act`; userEvent redesenharia entre eles e esconderia a trava da ref.
+    act(() => {
+      fecharBotao.click();
+      cancelar.click();
+    });
+    const aviso = await screen.findByRole('dialog');
+    expect(within(aviso).getByText(/^Pedido #/)).toHaveTextContent('Pedido #1042 · 1 peça');
+    expect(simulado.estado.vendas).toHaveLength(1);
+    expect(screen.getByRole('banner')).toHaveAttribute('aria-label', 'Pedido');
   });
 
   it('falha de rede depois de o servidor gravar: reenvio usa a MESMA chave e não duplica a venda', async () => {

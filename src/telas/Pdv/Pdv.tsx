@@ -309,14 +309,14 @@ function Venda(props: {
     );
   } else if (aba === 'pedido') {
     // Sem confirmação, como antes: zera o pedido e o cliente, troca a chave e volta para a etapa Cliente.
-    // ATENÇÃO: o botão não fica desabilitado durante o envio. Um toque em "Cancelar pedido" com o
-    // fechamento em andamento zera a tela, mas não cancela a requisição: se o servidor registrar a venda,
-    // o aviso aparece mesmo assim (a venda vale) e o OK recomeça de novo.
+    // Desligado enquanto a venda é enviada: zerar a tela não cancelaria a requisição, e a venda poderia
+    // ser registrada com a tela já limpa. A trava também é lida da ref, para um toque em "Cancelar" no
+    // mesmo instante do "Fechar venda", antes do redesenho, não passar (AP-001).
     topo = (
       <Cabecalho
         etapa={etapa}
         lateral={
-          <button type="button" className={s.cancelar} onClick={recomecar}>
+          <button type="button" className={s.cancelar} disabled={enviando} onClick={() => !enviandoRef.current && recomecar()}>
             Cancelar pedido
           </button>
         }
