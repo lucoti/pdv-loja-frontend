@@ -31,6 +31,8 @@ export function Produtos(props: {
           <button key={p.id} type="button" className={s.modelo} onClick={() => props.aoEscolherProduto(p)}>
             <span className={s.modeloTexto}>
               <span className={s.modeloNome}>{p.nome}</span>
+              {/* ATENÇÃO: o nome acessível do cartão junta nome, tecido, "a partir de", "sem estoque" e a
+                  seta; testes de pdv.test.tsx conferem esse texto inteiro e procuram /a partir de/. */}
               <span className={s.modeloPreco}>
                 {p.tecidoNome} · a partir de {formatarReais(precoMinimo(p))}
               </span>

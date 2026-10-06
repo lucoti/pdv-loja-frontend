@@ -144,12 +144,22 @@ function Venda(props: {
     setAba('pedido');
   };
 
+  // Fechamento da venda (INV-013, INV-014): uma tentativa por vez, erro na tela com o pedido intacto.
+  // ATENÇÃO: a trava contra envio duplo lê `enviando` do estado do React. Dois toques antes do
+  // redesenho (botão ainda habilitado) passariam os dois pela checagem; na prática o `disabled` do
+  // botão e a chave de idempotência (o servidor grava uma vez só) cobrem o caso. Se o envio passar a
+  // ser disparado sem botão, ver AP-001 (valor e trava em useRef).
   const fechar = async () => {
     if (!podeFechar(pedido) || enviando) return;
     setEnviando(true);
     setErro('');
     try {
       // O front não envia preços: o servidor recalcula tudo (RF-F07). A chave é a mesma em toda tentativa.
+      // ATENÇÃO: este é o único ponto em que o pedido sai do aparelho, e o corpo é o contrato INV-001.
+      // O CPF circula só por aqui: campo da aba Pedido → ação 'cpf' do reducer → `pedido.cpf` → este
+      // corpo. Nome e CPF vão com espaços das pontas cortados; vazio vai como '' (o tipo gerado exige
+      // o campo). O back valida com objeto estrito: trocar `cpf` por `telefone` (feature irmã
+      // pdv-cliente-telefone) só funciona com o back novo no ar, senão toda venda volta 400.
       const { venda } = await api.registrarVenda({
         chaveIdempotencia: pedido.chaveIdempotencia,
         itens: pedido.itens.map((i) => ({ skuId: i.skuId, qtd: i.qtd, descPercent: i.descPercent })),
@@ -173,6 +183,9 @@ function Venda(props: {
   };
 
   // Só aqui e em "Cancelar pedido" a chave de idempotência muda (ADR-F06).
+  // ATENÇÃO: só o botão "Nova venda" do modal chama esta função. Enquanto o modal está aberto, o
+  // pedido já registrado continua no estado com a chave antiga; se a troca de chave deixar de depender
+  // do modal, um reenvio do mesmo pedido seria tratado pelo servidor como a mesma venda (INV-011).
   const novaVenda = () => {
     setSucesso(null);
     despachar({ tipo: 'novo', chaveIdempotencia: crypto.randomUUID() });
@@ -186,6 +199,8 @@ function Venda(props: {
   // volta sozinha para a lista, embora `produtoId` continue guardado.
   const naVariacao = aba === 'produtos' && !!produto;
   const { totais } = calcularPedido(pedido);
+  // O rótulo diz o que falta para fechar (INV-013). Os três textos são procurados literalmente pelos
+  // testes de tela; mudar a redação exige ajustar os testes (AP-004).
   const rotuloFechar =
     pedido.itens.length === 0 ? 'Inclua uma peça' : pedido.pagamentoId === null ? 'Escolha o pagamento' : `Fechar venda · ${formatarReais(totais.totalCentavos)}`;
 

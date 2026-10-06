@@ -23,6 +23,10 @@ export interface ItemCarrinho {
   descPercent: DescontoItem;
 }
 
+// Cliente e CPF são texto livre, como o vendedor digitou (sem máscara nem validação aqui): o corte
+// de espaços é feito no envio (Pdv.tsx) e a conferência do CPF, só no servidor.
+// ATENÇÃO: `cpf` é o único lugar do estado em que o CPF fica guardado; trocá-lo por telefone mexe no
+// tipo, na ação 'cpf', em `pedidoVazio` e nos testes de domínio que comparam o pedido vazio inteiro.
 export interface Pedido {
   itens: ItemCarrinho[];
   descontoTotalCentavos: number;
@@ -99,6 +103,8 @@ export function reduzirPedido(p: Pedido, acao: AcaoPedido): Pedido {
     case 'desconto':
       return alterarItem(p, acao.chave, (i) => ({ ...i, descPercent: acao.descPercent }));
     case 'descontoTotalMais':
+      // ATENÇÃO: sem teto. O desconto pode passar do valor das peças; quem segura o total em R$ 0,00
+      // é calcularTotais (e o servidor). O vendedor precisa tocar "−" várias vezes para desfazer.
       return { ...p, descontoTotalCentavos: p.descontoTotalCentavos + PASSO_DESCONTO_TOTAL_CENTAVOS };
     case 'descontoTotalMenos':
       // Regra 4: mínimo 0.

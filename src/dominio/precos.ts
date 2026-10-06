@@ -5,6 +5,8 @@
  */
 
 // RN-004: descontos permitidos por item (%) e passo do desconto no total (R$ 5 = 500 centavos).
+// ATENÇÃO: os dois valores precisam ser iguais aos de backend/src/dominio/precos.ts: o back recusa com
+// 400 um percentual fora da lista ou um desconto no total que não seja múltiplo do passo.
 export const DESCONTOS_ITEM = [0, 5, 10, 15] as const;
 export type DescontoItem = (typeof DESCONTOS_ITEM)[number];
 export const PASSO_DESCONTO_TOTAL_CENTAVOS = 500;

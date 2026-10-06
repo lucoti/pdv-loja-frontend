@@ -35,6 +35,11 @@ export function Pedido({ pedido, catalogo, despachar }: { pedido: PedidoEstado; 
           autoComplete="off"
         />
         {/* O CPF é validado só pelo servidor; a mensagem de erro dele aparece acima do botão de fechar. */}
+        {/* ATENÇÃO: o campo não tem máscara nem conferência no front (aceita até 20 caracteres de
+            qualquer tipo). O rótulo "CPF (opcional)" é o seletor de vários testes de tela
+            (pdv.test.tsx), inclusive o de RNF-F08 (CPF só em memória); tirar o campo exige inventário
+            desses testes (AP-004). Nome e CPF ficam no pedido, não no componente: "Cancelar pedido" e
+            "Nova venda" os apagam junto com os itens. */}
         <input
           className={s.campo}
           value={pedido.cpf}
@@ -96,6 +101,8 @@ export function Pedido({ pedido, catalogo, despachar }: { pedido: PedidoEstado; 
 
           {item.qtd >= saldo && <div className={s.limite}>{avisoLimite(item.qtd, saldo)}</div>}
 
+          {/* Desconto por peça: um botão por percentual permitido (RN-004), o marcado com aria-pressed.
+              A lista vem de DESCONTOS_ITEM, que precisa ser igual à do back (valor fora dela volta 400). */}
           <div className={s.linhaDesconto}>
             <div className={`${c.rotulo} ${s.rotuloDesconto}`}>DESCONTO</div>
             <div className={s.descontos}>
@@ -116,6 +123,9 @@ export function Pedido({ pedido, catalogo, despachar }: { pedido: PedidoEstado; 
         );
       })}
 
+      {/* Desconto no pedido inteiro, em passos de R$ 5 (PASSO_DESCONTO_TOTAL_CENTAVOS), somado aos
+          descontos das peças. ATENÇÃO: o "+" não tem teto — nem aqui nem no reducer. Passando do
+          valor das peças, o total exibido para em R$ 0,00 (calcularTotais) e o servidor faz o mesmo. */}
       <div className={`${s.cartao} ${s.cartaoDesconto}`}>
         <div className={c.rotulo}>DESCONTO NO TOTAL</div>
         <div className={s.linha}>
@@ -148,6 +158,7 @@ export function Pedido({ pedido, catalogo, despachar }: { pedido: PedidoEstado; 
         </div>
       </div>
 
+      {/* Totais só para exibição (mesma conta do servidor, ADR-F05); o valor oficial é o devolvido na venda. */}
       <div className={s.totais} data-testid="totais">
         <div className={s.totalLinha}>
           <span>{textoPecas(totais.pecas)}</span>
