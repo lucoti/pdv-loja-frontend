@@ -5,7 +5,13 @@ atualizado a cada entrega; o detalhe de cada aplicação fica na documentação 
 (`<app>/docs/vN/documentacao.md`). O arquivo vive no repositório do front
 (`frontend/docs/contexto-geral.md`); `docs/contexto-geral.md` na pasta do ambiente é um link para ele.
 
-Última atualização: 2026-10-05 (feature **pdv-mobile-refatorado**, retrato **as-is** antes da
+Última atualização: 2026-10-05 (feature **pdv-cliente-telefone**, Fase 3, retrato **as-is** antes da
+refatoração: pdv-backend docs v7, que descreve o back como está no ar — cliente e CPF opcionais no
+`POST /vendas`, CPF validado pelos dígitos, gravado só com números em `vendas.cpf` e mascarado no cupom;
+só comentários no código, **nenhuma mudança de comportamento, nenhuma integração nova** nem mudança de
+banco. Decidido para o to-be: troca **sem janela de compatibilidade** — corpo com `cpf` passa a ser
+recusado (400) — e **coluna nova `vendas.telefone`**; deploy coordenado back → front; ver "Mudanças
+planejadas"). Anterior: 2026-10-05 (feature **pdv-mobile-refatorado**, retrato **as-is** antes da
 refatoração: pdv-frontend docs v8, que descreve a tela de venda como está no ar — tema claro, cliente e
 CPF opcionais na aba Pedido, desconto por peça e desconto no total, modal "Venda registrada"; só
 comentários no código, **nenhuma mudança de comportamento, nenhuma integração nova** nem mudança de
@@ -37,7 +43,7 @@ A visão do ambiente pelo lado do ERP está em `ERP-loja/docs/contexto-geral.md`
 
 | Aplicação | Responsabilidade | Localização | Situação |
 |---|---|---|---|
-| **pdv-backend** | API do PDV: entrada do vendedor por senha (PIN de 8 números desde a v6), sessão diária, **catálogo lido do ERP** (tipos, produtos, SKUs com preço e saldo), registro de vendas com cálculo e numeração no servidor **e baixa do estoque do ERP na mesma transação** (409 `sem_estoque`), vendas do dia e conteúdo do cupom não fiscal; script `pin:trocar` | `backend/` — repositório `lucoti/pdv-loja-backend`, projeto Vercel `pdv-loja-backend` (docs: `backend/docs/v6/documentacao.md`; contrato: `backend/contrato/openapi.yaml`) | v6 (PIN de 8 números) **no ar** desde 2026-10-01 (`pdv-loja-backend.vercel.app`, função em iad1), sobre a v4 (integração com o ERP), já publicada. Planejada: feature **pdv-cliente-telefone** (refatoração) — o telefone do cliente substitui o CPF por completo no `POST /vendas` |
+| **pdv-backend** | API do PDV: entrada do vendedor por senha (PIN de 8 números desde a v6), sessão diária, **catálogo lido do ERP** (tipos, produtos, SKUs com preço e saldo), registro de vendas com cálculo e numeração no servidor **e baixa do estoque do ERP na mesma transação** (409 `sem_estoque`), vendas do dia e conteúdo do cupom não fiscal; script `pin:trocar` | `backend/` — repositório `lucoti/pdv-loja-backend`, projeto Vercel `pdv-loja-backend` (docs: `backend/docs/v7/documentacao.md`, retrato as-is antes da refatoração pdv-cliente-telefone; contrato: `backend/contrato/openapi.yaml`) | v6 (PIN de 8 números) **no ar** desde 2026-10-01 (`pdv-loja-backend.vercel.app`, função em iad1), sobre a v4 (integração com o ERP), já publicada. Docs v7 (2026-10-05) é o retrato as-is da feature **pdv-cliente-telefone** (refatoração em andamento, **Fase 3**): o celular do cliente (11 dígitos) substitui o CPF por completo no `POST /vendas`, sem janela de compatibilidade, com coluna nova `vendas.telefone` |
 | **pdv-frontend** | Página web do vendedor no navegador do celular (React 19 + TypeScript + Vite, página estática; não é PWA): login com PIN de 8 números e entrada automática no 8º número (sem botão), topo do PDV com a etapa da venda ("Produtos", "Cor e tamanho", "Pedido" ou "Dia"; desde a v7, sem vendedor e data), aba Produtos com tipos do ERP e escolha cor → tamanho com preço e saldo ("estoque N", grade de 3 colunas desde a v7), aba Pedido limitada ao estoque, fechamento com idempotência e tratamento do 409, modal "Venda registrada" e aba Dia. Página única, sem layout de tablet | `frontend/` — repositório `lucoti/pdv-loja-frontend`, projeto Vercel `pdv-loja-frontend` (docs: `frontend/docs/v8/documentacao.md`, retrato as-is antes da refatoração pdv-mobile-refatorado; guia técnico: `frontend/README.md`) | v7 (ajustes da tela de cor/tamanho e do topo) **no ar** desde 2026-10-01 em https://pdv-loja-frontend.vercel.app (rewrite `/api`), sobre a v5 (login de 8 números) e a v3 (catálogo do ERP). Docs v8 (2026-10-05) é o retrato as-is da feature **pdv-mobile-refatorado** (refatoração em andamento, Fase 3: tema escuro Nocturne, etapa Cliente com nome e celular, desconto único no pedido em R$); a publicação do front refatorado **depende** do back com a feature pdv-cliente-telefone no ar |
 | **API simulada (MSW)** | Imitação do pdv-backend em memória (vendedor Carlos, PIN 12345678, pedidos a partir de 1042), com catálogo de exemplo no formato do ERP igual ao `SEED_ERP` do back e baixa de saldo a cada venda. Usada no `npm run dev` do front e nos testes; fica fora do build de produção | `frontend/src/simulado/` e `frontend/simulado-publico/` | Parte do pdv-frontend |
 | **Banco Turso `pdv-loja`** (serviço externo) | Banco de dados libSQL em produção, **compartilhado com o ERP** (cada tabela tem um único dono; ver "Tabelas por dono") | Turso, organização `personal`, região `aws-us-east-1` | Em uso pelo PDV e pelo ERP |
@@ -47,7 +53,9 @@ A visão do ambiente pelo lado do ERP está em `ERP-loja/docs/contexto-geral.md`
 
 ### Tabelas por dono no banco `pdv-loja`
 - **PDV:** `vendedores`, `sessoes`, `categorias`, `modelos`, `pdv_tecidos`, `pdv_cores`, `pagamentos`,
-  `config`, `vendas`, `itens_venda` (DDL em `backend/db/esquema.sql`). Até o ajuste de 2026-09-29 as
+  `config`, `vendas`, `itens_venda` (DDL em `backend/db/esquema.sql`). Planejado na pdv-cliente-telefone:
+  `vendas.telefone TEXT NOT NULL DEFAULT ''` (ALTER condicional no `db:migrar` do PDV); `vendas.cpf`
+  continua na tabela, sem novos valores. Até o ajuste de 2026-09-29 as
   tabelas `pdv_tecidos`/`pdv_cores` se chamavam `tecidos`/`cores`; esses nomes passaram a ser do ERP.
   Desde a integração, `categorias`/`modelos`/`pdv_tecidos`/`pdv_cores` não são usadas na venda (ficam
   pelas vendas antigas) e `itens_venda` ganhou `sku_id`/`sku_codigo` (NULL nas vendas antigas).
@@ -211,14 +219,24 @@ cupom do back existe, mas ainda não é consumida.
   enviados com as pontas cortadas. O front não valida o CPF; o back confere os dígitos e responde 400
   `cpf_invalido` (a API simulada repete a regra). O esquema do back é objeto estrito: campo desconhecido
   volta 400 `entrada_invalida`.
-- **Mudanças planejadas (2026-10-05):** a feature **pdv-cliente-telefone** (back, refatoração) troca
-  `cpf` por `telefone` no corpo do `POST /vendas`, no contrato `openapi.yaml` e na coluna de `vendas`
-  (mudança de coluna em `vendas` precisa ser combinada com o ERP, que lê essa tabela). A feature
+- **Mudanças planejadas (2026-10-05):** a feature **pdv-cliente-telefone** (back, refatoração; Fase 3,
+  docs v7 do back = as-is) troca `cpf` por `telefone` no corpo do `POST /vendas`, na venda devolvida, no
+  cupom e no contrato `openapi.yaml`. Decisões do Lucas: `telefone` opcional, aceita máscara e grava só
+  os dígitos, **exatamente 11 dígitos** (senão 400 `telefone_invalido`; `cpf_invalido` deixa de
+  existir); cupom com o telefone completo ("Tel: (31) 98765-4321"); **sem janela de compatibilidade** —
+  como o esquema é objeto estrito, corpo com `cpf` volta 400 `entrada_invalida`, inclusive o reenvio de
+  venda já gravada (o parse vem antes da idempotência). Banco: **coluna nova `vendas.telefone`**; `cpf`
+  fica no banco com as vendas antigas. Mudança de coluna em `vendas` precisa ser combinada com o ERP:
+  o ERP **não lê** `cpf` (busca em `ERP-loja/backend/src` e `frontend/src`, 2026-10-05) e a coluna nova
+  não muda nada do que ele lê; único ponto sensível é o `semear-dev.ts` do ERP (só desenvolvimento), que
+  faz `INSERT INTO vendas VALUES (...)` posicional sobre a cópia `db/pdv-esquema-teste.sql`. A feature
   **pdv-mobile-refatorado** (front) passa a coletar nome e celular numa etapa "Cliente" no início da
   venda e envia só o desconto no total (`descPercent` sempre 0); rotas e demais campos não mudam.
-  Ordem obrigatória: back com telefone no ar → tipos do front regerados (`npm run gerar:tipos`) → front
-  publicado. Front novo com back antigo recusa toda venda; back novo com front antigo depende de o back
-  ainda aceitar `cpf` (a definir na arquitetura da pdv-cliente-telefone).
+  Ordem obrigatória (deploy coordenado, em horário sem venda): `db:migrar` do PDV (coluna `telefone`)
+  → back com telefone no ar → tipos do front regerados (`npm run gerar:tipos`) → front publicado. Front
+  novo com back antigo recusa toda venda (`telefone` é campo desconhecido no back antigo); back novo com
+  front antigo também recusa toda venda que leve `cpf` (sem janela de compatibilidade, decisão do
+  Lucas). Os passos e dependências vão para o checklist de implantação das duas features.
 
 ### pdv-frontend → API simulada (somente desenvolvimento e testes)
 - **De:** pdv-frontend
@@ -262,6 +280,7 @@ cupom do back existe, mas ainda não é consumida.
 - **O quê:** `vendas` (pedidos, `total_centavos`, `pecas`, `data_local`), `itens_venda` (modelo,
   tecido, cor, tamanho, quantidade e, nas vendas novas, `sku_id`), peças por tipo (tipo do ERP via
   `sku_id` nas vendas novas; `modelos`/`categorias` nas antigas) e `pdv_cores` (cor dos "mais vendidos").
+  Não lê `vendas.cpf` nem `cliente`; a coluna planejada `vendas.telefone` também não entra no painel.
   O ERP escreve só nas tabelas dele. Detalhes em `ERP-loja/docs/contexto-geral.md`.
 
 ### Máquina local → Turso (operação)

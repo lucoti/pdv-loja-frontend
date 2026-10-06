@@ -1,0 +1,126 @@
+{
+  "versao": 1,
+  "feature": "pdv-cliente-telefone",
+  "etapas": [
+    {
+      "fase": "planejamento",
+      "tokens": 2827992,
+      "tokens_detalhe": {
+        "input": 12,
+        "output": 5480,
+        "cache_criacao": 13495,
+        "cache_leitura": 2809005
+      },
+      "tempo_execucao_min": 2.3,
+      "intervalos": [
+        [
+          1791253897561,
+          1791254014842
+        ],
+        [
+          1791254073935,
+          1791254093160
+        ]
+      ],
+      "subagentes": {},
+      "atualizado_em": "2026-10-06T02:34:53.162Z"
+    },
+    {
+      "fase": "requisitos",
+      "tokens": 2418242,
+      "tokens_detalhe": {
+        "input": 10,
+        "output": 6974,
+        "cache_criacao": 8329,
+        "cache_leitura": 2402929
+      },
+      "tempo_execucao_min": 0.8,
+      "intervalos": [
+        [
+          1791254093160,
+          1791254101753
+        ],
+        [
+          1791254489941,
+          1791254525693
+        ],
+        [
+          1791254590290,
+          1791254594892
+        ]
+      ],
+      "subagentes": {},
+      "atualizado_em": "2026-10-06T02:43:14.894Z"
+    },
+    {
+      "fase": "arquitetura",
+      "tokens": 7804265,
+      "tokens_detalhe": {
+        "input": 84,
+        "output": 28500,
+        "cache_criacao": 144630,
+        "cache_leitura": 7631051
+      },
+      "tempo_execucao_min": 9.3,
+      "intervalos": [
+        [
+          1791254594892,
+          1791254598505
+        ],
+        [
+          1791254810076,
+          1791255125948
+        ],
+        [
+          1791255126026,
+          1791255361875
+        ],
+        [
+          1791255493816,
+          1791255499081
+        ]
+      ],
+      "subagentes": {
+        "fluxo-dev:fluxo-documentador": {
+          "tokens": 2340093,
+          "execucoes": 1
+        }
+      },
+      "atualizado_em": "2026-10-06T02:58:19.082Z"
+    },
+    {
+      "fase": "desenvolvimento",
+      "tokens": 1016602,
+      "tokens_detalhe": {
+        "input": 4,
+        "output": 853,
+        "cache_criacao": 1009,
+        "cache_leitura": 1014736
+      },
+      "tempo_execucao_min": 0.1,
+      "intervalos": [
+        [
+          1791255499081,
+          1791255503523
+        ],
+        [
+          1791255646146,
+          1791255650030
+        ]
+      ],
+      "subagentes": {},
+      "atualizado_em": "2026-10-06T03:00:50.032Z"
+    }
+  ],
+  "total": {
+    "tokens": 14067101,
+    "tokens_detalhe": {
+      "input": 110,
+      "output": 41807,
+      "cache_criacao": 167463,
+      "cache_leitura": 13857721
+    },
+    "tempo_execucao_min": 12.5
+  },
+  "atualizado_em": "2026-10-06T03:00:50.032Z"
+}
