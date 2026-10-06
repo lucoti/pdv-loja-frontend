@@ -10,9 +10,11 @@ export interface Escolha {
 }
 
 /** Amostra da cor: bolinha com o hex; estampa sem hex mostra a miniatura da foto. */
+// ATENÇÃO: cor sem hex e sem foto usa o token `--color-neutral-800` (src/estilos/tokens.css) direto no
+// estilo em linha: é a única referência a token de tema fora dos arquivos CSS. Trocar o tema exige olhar aqui.
 function Amostra({ cor }: { cor: CorSku }) {
   if (!cor.hex && cor.fotoUrl) return <img className={s.circulo} src={cor.fotoUrl} alt="" aria-hidden="true" />;
-  return <span className={s.circulo} style={{ background: cor.hex ?? 'var(--line)' }} aria-hidden="true" />;
+  return <span className={s.circulo} style={{ background: cor.hex ?? 'var(--color-neutral-800)' }} aria-hidden="true" />;
 }
 
 /** Painel de variações — cor e depois tamanho, com preço e estoque de cada SKU (handoff §2b, RF-003). */

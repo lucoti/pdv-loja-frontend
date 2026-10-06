@@ -6,7 +6,7 @@
   min-height: 100dvh;
   display: flex;
   justify-content: center;
-  background: var(--desk);
+  background: var(--color-bg);
 }
 
 .folha {
@@ -14,12 +14,12 @@
   max-width: 460px;
   min-height: 100vh;
   min-height: 100dvh;
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--color-bg);
+  color: var(--color-text);
   display: flex;
   flex-direction: column;
   position: relative;
-  box-shadow: 0 0 0 1px rgba(34, 32, 28, 0.08);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Botão de ação principal (CTA), largura total. */
@@ -30,14 +30,14 @@
   padding: 22px;
   border-radius: 14px;
   border: none;
-  background: var(--green);
-  color: #ffffff;
+  background: var(--color-accent-900);
+  color: var(--color-accent-100);
   cursor: pointer;
 }
 
 .cta:disabled {
-  background: var(--disabled-bg);
-  color: var(--disabled-fg);
+  background: var(--color-neutral-900);
+  color: var(--color-neutral-500);
   cursor: not-allowed;
 }
 
@@ -49,9 +49,9 @@
   font-size: 26px;
   font-weight: 700;
   border-radius: 14px;
-  border: 2px solid var(--ink);
+  border: 2px solid var(--color-neutral-600);
   background: transparent;
-  color: var(--ink);
+  color: var(--color-text);
   cursor: pointer;
 }
 
@@ -59,9 +59,9 @@
 .erro {
   padding: 16px 18px;
   border-radius: 14px;
-  background: var(--danger-bg);
-  border: 2px solid var(--danger-line);
-  color: var(--danger-deep);
+  background: var(--color-danger-bg);
+  border: 2px solid var(--color-danger-line);
+  color: var(--color-danger);
   font-size: 19px;
   font-weight: 600;
   text-align: center;
@@ -79,16 +79,16 @@
   font-weight: 700;
   padding: 18px;
   border-radius: 14px;
-  border: 2px solid var(--ink);
+  border: 2px solid var(--color-neutral-600);
   background: transparent;
-  color: var(--ink);
+  color: var(--color-text);
   cursor: pointer;
 }
 
 .carregando {
   padding: 40px 16px;
   text-align: center;
-  color: var(--ink-soft);
+  color: var(--color-neutral-400);
   font-size: 20px;
 }
 
@@ -97,7 +97,7 @@
   font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.07em;
-  color: var(--ink-soft);
+  color: var(--color-neutral-400);
 }
 
 .tabular { font-variant-numeric: tabular-nums; }

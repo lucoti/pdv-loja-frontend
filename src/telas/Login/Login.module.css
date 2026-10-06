@@ -1,6 +1,6 @@
 .cabecalho {
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--color-surface);
+  color: var(--color-text);
   padding: 40px 24px 34px;
   display: flex;
   flex-direction: column;
@@ -28,9 +28,9 @@
 
 .rodape {
   padding: 18px 20px 26px;
-  border-top: 2px solid var(--line);
+  border-top: 2px solid var(--color-neutral-800);
   font-size: 17px;
-  color: var(--ink-soft);
+  color: var(--color-neutral-400);
   text-align: center;
   line-height: 1.5;
 }
@@ -63,16 +63,16 @@
   min-height: 88px;
   padding: 18px 20px;
   border-radius: 16px;
-  border: 2px solid var(--line);
-  background: var(--paper-2);
-  color: var(--ink);
+  border: 2px solid var(--color-neutral-800);
+  background: var(--color-surface);
+  color: var(--color-text);
   text-align: left;
   cursor: pointer;
 }
 
 .vendedor:active {
-  border-color: var(--green);
-  background: var(--green-soft);
+  border-color: var(--color-accent);
+  background: var(--color-accent-900);
 }
 
 .inicial {
@@ -80,9 +80,9 @@
   height: 56px;
   flex-shrink: 0;
   border-radius: 999px;
-  background: var(--green-soft);
-  border: 2px solid var(--green);
-  color: var(--green);
+  background: var(--color-accent-900);
+  border: 2px solid var(--color-accent);
+  color: var(--color-accent);
   font-size: 23px;
   font-weight: 700;
   display: flex;
@@ -106,12 +106,12 @@
 
 .cargo {
   font-size: 17px;
-  color: var(--ink-soft);
+  color: var(--color-neutral-400);
 }
 
 .seta {
   font-size: 30px;
-  color: var(--green);
+  color: var(--color-accent);
   font-weight: 700;
 }
 
@@ -141,7 +141,7 @@
 
 .instrucao {
   font-size: 17px;
-  color: var(--ink-soft);
+  color: var(--color-neutral-400);
   margin-top: 3px;
 }
 
@@ -159,12 +159,12 @@
   border-radius: 999px;
   display: block;
   background: transparent;
-  border: 2px solid var(--line-2);
+  border: 2px solid var(--color-neutral-700);
 }
 
 .preenchido {
-  background: var(--green);
-  border-color: var(--green);
+  background: var(--color-accent-900);
+  border-color: var(--color-accent);
 }
 
 /* Teclado próprio (sem <input>) */
@@ -179,16 +179,16 @@
   font-size: 28px;
   font-weight: 700;
   border-radius: 14px;
-  border: 2px solid var(--line);
-  background: var(--paper-2);
-  color: var(--ink);
+  border: 2px solid var(--color-neutral-800);
+  background: var(--color-surface);
+  color: var(--color-text);
   cursor: pointer;
 }
 
 .apagar {
   font-size: 19px;
-  background: var(--desk);
-  color: var(--ink-soft);
+  background: var(--color-bg);
+  color: var(--color-neutral-400);
 }
 
 .vazia {

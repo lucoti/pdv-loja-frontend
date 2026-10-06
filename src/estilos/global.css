@@ -12,15 +12,15 @@
 html,
 body {
   margin: 0;
-  background: var(--desk);
-  color: var(--ink);
-  font-family: var(--fonte);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
 }
 
-a { color: var(--green); }
-a:hover { color: var(--green-hover); }
+a { color: var(--color-accent); }
+a:hover { color: var(--color-accent-800); }
 
 button,
 input {
@@ -30,4 +30,4 @@ input {
 
 button { touch-action: manipulation; }
 
-input::placeholder { color: var(--disabled-fg); }
+input::placeholder { color: var(--color-neutral-500); }

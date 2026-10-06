@@ -1,22 +1,52 @@
-/* Design tokens do handoff (design_handoff_pdv_loja/README.md — "Design Tokens"). */
+/*
+ * Tokens do tema Nocturne (escuro), copiados do design system do handoff "PDV Mobile Refatorado"
+ * (_ds/nocturne-…/styles.css). Valem para o app inteiro, Login incluído (ADR-001, MI-10).
+ * Nenhuma cor fixa deve aparecer fora deste arquivo: CSS modules e componentes usam só estes nomes.
+ */
 :root {
-  --ink: #22201c;
-  --ink-soft: #5c574e;
-  --paper: #f6f4f0;
-  --paper-2: #ffffff;
-  --desk: #e7e4de;
-  --line: #dad5cb;
-  --line-2: #bfb9ad;
-  --green: #1d5b3f;
-  --green-soft: #e6efe9;
-  --green-hover: #16452f;
-  --disabled-bg: #d5d0c6;
-  --disabled-fg: #8a857c;
-  --danger: #8a3a28;
-  --danger-deep: #7a2e1c;
-  --danger-bg: #f6e4de;
-  --danger-line: #c98b76;
-  --accent-warm: #e9b39f;
+  --color-bg: #161826;
+  --color-surface: #232532;
+  --color-text: #e9e9ed;
+  --color-accent: #9184d9;
+  --color-divider: color-mix(in srgb, #e9e9ed 16%, transparent);
 
-  --fonte: 'Libre Franklin', Helvetica, Arial, sans-serif;
+  /* Rampas tonais do Nocturne: o mesmo passo de cada rampa tem o mesmo peso visual. */
+  --color-neutral-100: #f3f5fe;
+  --color-neutral-200: #e4e7f5;
+  --color-neutral-300: #cfd3e5;
+  --color-neutral-400: #b2b6ca;
+  --color-neutral-500: #9397ab;
+  --color-neutral-600: #75798c;
+  --color-neutral-700: #595d6c;
+  --color-neutral-800: #3f424d;
+  --color-neutral-900: #292b31;
+
+  --color-accent-100: #f5f4ff;
+  --color-accent-200: #e7e5fe;
+  --color-accent-300: #d2cefd;
+  --color-accent-400: #b5abfc;
+  --color-accent-500: #968ae0;
+  --color-accent-600: #796cbf;
+  --color-accent-700: #5d5294;
+  --color-accent-800: #423a6a;
+  --color-accent-900: #2b2741;
+
+  /*
+   * Extensões do PDV (não existem no Nocturne): erro/alerta e o véu atrás de janelas. Tons escolhidos
+   * para o fundo escuro: texto claro o bastante para ler sobre --color-bg e --color-surface.
+   */
+  --color-danger: #f2a493;
+  --color-danger-bg: #3a2126;
+  --color-danger-line: #8c4a45;
+  --color-veu: rgba(8, 9, 15, 0.72);
+
+  --font-heading: 'Inter', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+
+  --shadow-sm: 0 0 0 1px #3f424d;
+  --shadow-lg: 0 0 0 1px #9397ab, 0 16px 40px rgba(0, 0, 0, 0.65);
 }
