@@ -22,6 +22,8 @@ import {
   TOP_NADADOR_P_VINHO,
   topoDoPdv,
   totais,
+  informarCliente,
+  pularCliente,
 } from './ajuda';
 
 /** Abre o PDV já logado (sessão válida) com o catálogo carregado. */
@@ -54,8 +56,8 @@ async function montarReferencia(usuario: Awaited<ReturnType<typeof abrirPdv>>['u
   // MI-03 (pdv-mobile-refatorado): sem desconto por item na tela; o pedido de referência usa só o
   // desconto no pedido (6 × R$ 5 = R$ 30,00). Antes: 10% na legging + R$ 15,00 (total R$ 200,20).
   for (let i = 0; i < 6; i++) await usuario.click(screen.getByRole('button', { name: 'Aumentar desconto no total' }));
-  await usuario.type(screen.getByRole('textbox', { name: 'Nome do cliente' }), 'Maria');
-  await usuario.type(screen.getByRole('textbox', { name: 'CPF (opcional)' }), '529.982.247-25');
+  // MI-02: nome e celular pela etapa Cliente ("Alterar" no Pedido); o CPF saiu do PDV.
+  await informarCliente(usuario, 'Maria', '31987654321');
   await usuario.click(screen.getByRole('button', { name: 'Pix' }));
 }
 
@@ -152,9 +154,10 @@ describe('RF-002 — aba Produtos com os tipos do ERP', () => {
     expect(aba('Adicionar ao pedido')).toBeDisabled();
   });
 
-  it('catálogo do ERP vazio: aviso "Nenhum produto cadastrado no ERP."', async () => {
+  it('catálogo do ERP vazio: aviso "Nenhum produto cadastrado no ERP." (depois da etapa Cliente)', async () => {
     usarSimulado({ sessaoDe: 'carlos', catalogo: { tipos: [], produtos: [], pagamentos: CATALOGO.pagamentos } });
     abrirApp();
+    await pularCliente();
     expect(await screen.findByText('Nenhum produto cadastrado no ERP.')).toBeInTheDocument();
   });
 });
@@ -409,16 +412,24 @@ describe('RF-F06 — carrinho', () => {
     expect(mais).toBeEnabled();
   });
 
-  it('cliente, CPF numérico e pagamento em grade com as opções do catálogo', async () => {
+  // MI-02: o cliente vem da etapa Cliente (nome + celular com teclado de telefone); o cartão 1 do
+  // Pedido mostra o que foi informado e "Alterar". O CPF saiu do PDV.
+  it('cartão Cliente com "Alterar"; celular com teclado de telefone; pagamento em grade com as opções do catálogo', async () => {
     const { usuario } = await abrirPdv();
     await usuario.click(aba('Pedido'));
-    expect(screen.getByRole('textbox', { name: 'CPF (opcional)' })).toHaveAttribute('inputmode', 'numeric');
-    expect(screen.getByPlaceholderText('Nome do cliente')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'CPF (opcional)' })).not.toBeInTheDocument();
+    const cartao = within(screen.getByRole('region', { name: 'Cliente' }));
+    expect(texto(cartao.getByRole('button'))).toBe('Cliente não identificadoSem celularAlterar');
     for (const p of ['Dinheiro', 'Pix', 'Débito', 'Crédito']) expect(aba(p)).toHaveAttribute('aria-pressed', 'false');
     await usuario.click(aba('Débito'));
     expect(aba('Débito')).toHaveAttribute('aria-pressed', 'true');
-    await usuario.type(screen.getByRole('textbox', { name: 'Nome do cliente' }), 'Maria');
-    expect(screen.getByRole('textbox', { name: 'Nome do cliente' })).toHaveValue('Maria');
+    await usuario.click(cartao.getByText('Alterar'));
+    expect(screen.getByRole('textbox', { name: 'Celular' })).toHaveAttribute('inputmode', 'tel');
+    expect(screen.getByPlaceholderText('Ex.: Maria da Silva')).toBeInTheDocument();
+    await usuario.click(aba('Salvar cliente'));
+    await informarCliente(usuario, 'Maria', '31987654321');
+    expect(texto(within(screen.getByRole('region', { name: 'Cliente' })).getByRole('button'))).toBe('Maria(31) 98765-4321Alterar');
+    expect(aba('Débito')).toHaveAttribute('aria-pressed', 'true');
   });
 
   // MI-07: o resumo tem peças/bruto e desconto; o total fica dentro do botão de fechar.
@@ -438,14 +449,18 @@ describe('RF-F06 — carrinho', () => {
     expect(texto(totais().getByText('Desconto').nextElementSibling as HTMLElement)).toBe('− R$ 55,00');
   });
 
-  it('"Cancelar pedido" limpa itens, descontos, cliente, CPF e pagamento na hora', async () => {
+  // MI-04: "Cancelar pedido" também volta para a etapa Cliente, com os campos vazios.
+  it('"Cancelar pedido" limpa itens, desconto, cliente, celular e pagamento na hora e volta para a etapa Cliente', async () => {
     const { usuario } = await abrirPdv();
     await montarReferencia(usuario);
     await usuario.click(aba('Cancelar pedido'));
+    expect(screen.getByRole('banner')).toHaveAttribute('aria-label', 'Cliente');
+    expect(screen.getByRole('textbox', { name: 'Nome' })).toHaveValue('');
+    expect(screen.getByRole('textbox', { name: 'Celular' })).toHaveValue('');
+    await usuario.click(aba('Pedido'));
     expect(itensPedido()).toHaveLength(0);
     expect(screen.getByText('Sem desconto')).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Nome do cliente' })).toHaveValue('');
-    expect(screen.getByRole('textbox', { name: 'CPF (opcional)' })).toHaveValue('');
+    expect(texto(within(screen.getByRole('region', { name: 'Cliente' })).getByRole('button'))).toBe('Cliente não identificadoSem celularAlterar');
     expect(aba('Pix')).toHaveAttribute('aria-pressed', 'false');
     expect(aba('Pedido')).toBeInTheDocument();
     expect(texto(screen.getByTestId('totais'))).toBe('0 peçasR$ 0,00DescontoR$ 0,00');
@@ -489,24 +504,26 @@ describe('RF-F07 — fechar venda', () => {
       ],
       descontoTotalCentavos: 3000,
       cliente: 'Maria',
-      cpf: '529.982.247-25',
+      // MI-02: CPF vazio até o contrato novo (etapa 6); o celular ainda não vai no corpo.
+      cpf: '',
       pagamentoId: 'pix',
     });
     expect(JSON.stringify(corpo)).not.toMatch(/precoUnit|subtotal|brutoCentavos|totalCentavos|modeloNome|tecidoNome|modeloId|tecidoId/);
     validarEntrada(ENTRADA_VENDA, corpo);
   });
 
-  it('cliente e CPF vão sem espaços nas pontas', async () => {
+  // MI-02: o CPF saiu do PDV; até a etapa 6 (contrato da pdv-cliente-telefone) o corpo leva `cpf: ''`
+  // e o celular fica só no pedido em memória.
+  it('cliente vai sem espaços nas pontas; CPF vai vazio', async () => {
     const corpos = capturarVendas();
     const { usuario } = await abrirPdv();
     await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
-    await usuario.type(screen.getByRole('textbox', { name: 'Nome do cliente' }), '  João  ');
-    await usuario.type(screen.getByRole('textbox', { name: 'CPF (opcional)' }), ' 52998224725 ');
+    await informarCliente(usuario, '  João  ', '31987654321');
     await usuario.click(aba('Dinheiro'));
     await usuario.click(botaoFechar());
     await screen.findByRole('dialog');
     servidor.events.removeAllListeners();
-    expect([corpos[0].cliente, corpos[0].cpf]).toEqual(['João', '52998224725']);
+    expect([corpos[0].cliente, corpos[0].cpf]).toEqual(['João', '']);
     validarEntrada(ENTRADA_VENDA, corpos[0]);
   });
 
@@ -564,14 +581,14 @@ describe('RF-F07 — fechar venda', () => {
     expect(texto(modal)).toContain('Pedido #1042');
   });
 
-  it('a chave muda só depois de "Nova venda" ou "Cancelar pedido"', async () => {
+  it('a chave muda só depois do OK do aviso de venda ou de "Cancelar pedido"', async () => {
     const corpos = capturarVendas();
     const { usuario } = await abrirPdv();
     const fecharCom = async () => {
       await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
       await usuario.click(aba('Pix'));
       await usuario.click(botaoFechar());
-      await usuario.click(await screen.findByRole('button', { name: 'Nova venda' }));
+      await usuario.click(await screen.findByRole('button', { name: 'OK' }));
     };
     await fecharCom();
     await fecharCom();
@@ -594,20 +611,24 @@ describe('RF-F07 — fechar venda', () => {
 });
 
 describe('RF-F08 — venda registrada', () => {
-  it('modal com número e valores do servidor; "Nova venda" zera e volta para Produtos', async () => {
+  // MI-04: o aviso sai com OK e a venda seguinte começa na etapa Cliente, com pedido e cliente zerados.
+  it('aviso com número e valores do servidor; OK zera pedido e cliente e volta para a etapa Cliente', async () => {
     const { usuario } = await abrirPdv();
     await montarReferencia(usuario);
     await usuario.click(botaoFechar());
     const modal = await screen.findByRole('dialog');
     expect(within(modal).getByRole('heading', { name: 'Venda registrada' })).toBeInTheDocument();
-    expect(texto(within(modal).getByText(/^Pedido #/))).toBe('Pedido #1042 · 3 peça(s) · R$ 203,00 em Pix · Maria');
-    await usuario.click(within(modal).getByRole('button', { name: 'Nova venda' }));
+    expect(texto(within(modal).getByText(/^Pedido #/))).toBe('Pedido #1042 · 3 peças · R$ 203,00 em Pix · Maria');
+    await usuario.click(within(modal).getByRole('button', { name: 'OK' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(aba('Produtos')).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('banner')).toHaveAttribute('aria-label', 'Cliente');
+    expect(screen.getByRole('textbox', { name: 'Nome' })).toHaveValue('');
+    expect(screen.getByRole('textbox', { name: 'Celular' })).toHaveValue('');
     expect(aba('Pedido')).toBeInTheDocument();
     await usuario.click(aba('Pedido'));
     expect(itensPedido()).toHaveLength(0);
-    expect(screen.getByRole('textbox', { name: 'Nome do cliente' })).toHaveValue('');
+    expect(texto(within(screen.getByRole('region', { name: 'Cliente' })).getByRole('button'))).toBe('Cliente não identificadoSem celularAlterar');
     expect(aba('Pix')).toHaveAttribute('aria-pressed', 'false');
   });
 
@@ -624,7 +645,7 @@ describe('RF-F08 — venda registrada', () => {
     await usuario.click(aba('Crédito'));
     await usuario.click(botaoFechar());
     const modal = await screen.findByRole('dialog');
-    expect(texto(within(modal).getByText(/^Pedido #/))).toBe('Pedido #2001 · 7 peça(s) · R$ 123,45 em Crédito');
+    expect(texto(within(modal).getByText(/^Pedido #/))).toBe('Pedido #2001 · 7 peças · R$ 123,45 em Crédito');
   });
 
   it('resposta 200 (reenvio já gravado) também abre o modal', async () => {
@@ -645,7 +666,7 @@ describe('RF-F08 — venda registrada', () => {
     await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
     await usuario.click(aba('Pix'));
     await usuario.click(botaoFechar());
-    expect(texto(within(await screen.findByRole('dialog')).getByText(/^Pedido #/))).toBe('Pedido #1042 · 1 peça(s) · R$ 55,00 em Pix · Ana');
+    expect(texto(within(await screen.findByRole('dialog')).getByText(/^Pedido #/))).toBe('Pedido #1042 · 1 peça · R$ 55,00 em Pix · Ana');
   });
 });
 
@@ -662,11 +683,11 @@ describe('RF-F09 — aba Dia', () => {
     const { usuario, simulado } = await abrirPdv();
     await montarReferencia(usuario);
     await usuario.click(botaoFechar());
-    await usuario.click(await screen.findByRole('button', { name: 'Nova venda' }));
+    await usuario.click(await screen.findByRole('button', { name: 'OK' }));
     await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
     await usuario.click(aba('Dinheiro'));
     await usuario.click(botaoFechar());
-    await usuario.click(await screen.findByRole('button', { name: 'Nova venda' }));
+    await usuario.click(await screen.findByRole('button', { name: 'OK' }));
     await usuario.click(aba('Dia'));
     const linhas = await screen.findAllByTestId('venda-dia');
     const hora = simulado.estado.vendas[1]!.hora;
@@ -705,18 +726,20 @@ describe('RF-F09 — aba Dia', () => {
 });
 
 describe('RF-F10 — erros da API', () => {
-  it('400 (CPF inválido): mensagem da API acima do botão, pedido mantido; editar apaga a mensagem', async () => {
+  // MI-02: sem campo de CPF, o 400 vem de outra validação do servidor (resposta forçada).
+  it('400 (entrada inválida): mensagem da API acima do botão, pedido mantido; editar apaga a mensagem', async () => {
     const { usuario, simulado } = await abrirPdv();
     await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
-    await usuario.type(screen.getByRole('textbox', { name: 'CPF (opcional)' }), '123.456.789-00');
+    await informarCliente(usuario, 'Maria', '31987654321');
+    servidor.use(http.post('*/api/vendas', () => HttpResponse.json({ erro: { codigo: 'entrada_invalida', mensagem: 'Nome do cliente muito longo.' } }, { status: 400 })));
     await usuario.click(aba('Pix'));
     await usuario.click(botaoFechar());
     const alerta = await screen.findByRole('alert');
-    expect(alerta).toHaveTextContent('CPF inválido');
+    expect(alerta).toHaveTextContent('Nome do cliente muito longo.');
     // A caixa fica logo acima do botão de fechar.
     expect(alerta.nextElementSibling).toBe(botaoFechar());
     expect(itensPedido()).toHaveLength(1);
-    expect(screen.getByRole('textbox', { name: 'CPF (opcional)' })).toHaveValue('123.456.789-00');
+    expect(texto(within(screen.getByRole('region', { name: 'Cliente' })).getByRole('button'))).toBe('Maria(31) 98765-4321Alterar');
     expect(simulado.estado.vendas).toHaveLength(0);
     await usuario.click(within(itensPedido()[0]!).getByRole('button', { name: 'Aumentar quantidade' }));
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -761,7 +784,7 @@ describe('RF-F10 — erros da API', () => {
     await usuario.click(aba('Débito'));
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     await falhar();
-    await usuario.type(screen.getByRole('textbox', { name: 'Nome do cliente' }), 'x');
+    await informarCliente(usuario, 'x');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     await falhar();
     await usuario.click(aba('Aumentar desconto no total'));
@@ -855,7 +878,8 @@ describe('RF-006 — recarga silenciosa do catálogo (depois da venda, 409 e ite
     await screen.findByRole('dialog');
     await waitFor(() => expect(conta.n).toBe(2));
     expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
-    await usuario.click(aba('Nova venda'));
+    await usuario.click(aba('OK'));
+    await pularCliente(usuario);
     await usuario.click(aba('Calças'));
     await usuario.click(aba(/^Calça Legging/));
     await usuario.click(botaoCor('Preto'));
@@ -888,7 +912,7 @@ describe('RF-006 — recarga silenciosa do catálogo (depois da venda, 409 e ite
     await usuario.click(within(item()).getByRole('button', { name: 'Diminuir quantidade' }));
     expect(within(item()).getByText('Só 1 em estoque')).toBeInTheDocument();
     await usuario.click(botaoFechar());
-    expect(texto(await screen.findByRole('dialog'))).toContain('Pedido #1042 · 1 peça(s) · R$ 89,00 em Pix');
+    expect(texto(await screen.findByRole('dialog'))).toContain('Pedido #1042 · 1 peça · R$ 89,00 em Pix');
   });
 
   it('recarga atualiza o preço das linhas do pedido (preço mudou no ERP)', async () => {
@@ -924,11 +948,11 @@ describe('RF-006 — recarga silenciosa do catálogo (depois da venda, 409 e ite
     servidor.events.removeAllListeners();
   });
 
-  it('outros erros (ex.: CPF inválido) não recarregam o catálogo', async () => {
+  it('outros erros (ex.: entrada inválida) não recarregam o catálogo', async () => {
     const conta = contarCatalogo();
     const { usuario } = await abrirPdv();
     await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
-    await usuario.type(screen.getByRole('textbox', { name: 'CPF (opcional)' }), '123.456.789-00');
+    servidor.use(http.post('*/api/vendas', () => HttpResponse.json({ erro: { codigo: 'entrada_invalida', mensagem: 'Dados inválidos.' } }, { status: 400 })));
     await usuario.click(aba('Pix'));
     await usuario.click(botaoFechar());
     await screen.findByRole('alert');
@@ -972,8 +996,9 @@ describe('RF-006 — recarga silenciosa do catálogo (depois da venda, 409 e ite
   });
 });
 
-describe('RNF-F08 — PIN e CPF só em memória', () => {
-  it('login + venda com CPF: nada em console, localStorage, sessionStorage ou URL', async () => {
+// MI-02: o dado pessoal da venda passou a ser o celular (o CPF saiu do PDV).
+describe('RNF-F08 — PIN e celular só em memória', () => {
+  it('login + venda com celular: nada em console, localStorage, sessionStorage ou URL', async () => {
     const metodos = ['log', 'info', 'warn', 'error', 'debug'] as const;
     const espioes = metodos.map((m) => vi.spyOn(console, m));
     const { usuario } = abrirApp();
@@ -981,14 +1006,14 @@ describe('RNF-F08 — PIN e CPF só em memória', () => {
     for (const d of '12345678') await usuario.click(screen.getByRole('button', { name: d }));
     await esperarCatalogo();
     await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
-    await usuario.type(screen.getByRole('textbox', { name: 'CPF (opcional)' }), '529.982.247-25');
+    await informarCliente(usuario, 'Maria', '31987654321');
     await usuario.click(aba('Pix'));
     await usuario.click(botaoFechar());
     await screen.findByRole('dialog');
     const registrado = espioes.flatMap((e) => e.mock.calls.map((c) => c.map(String).join(' '))).join('\n');
     espioes.forEach((e) => e.mockRestore());
-    expect(registrado).not.toMatch(/12345678|529\.?982|52998224725/);
+    expect(registrado).not.toMatch(/12345678|31987654321|98765-?4321/);
     expect([localStorage.length, sessionStorage.length]).toEqual([0, 0]);
-    expect(window.location.href).not.toMatch(/12345678|529/);
+    expect(window.location.href).not.toMatch(/12345678|9876/);
   });
 });

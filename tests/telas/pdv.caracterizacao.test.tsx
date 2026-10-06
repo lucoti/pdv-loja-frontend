@@ -83,7 +83,7 @@ describe('INV-001 — chamadas à API', () => {
     await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
     await usuario.click(botao('Pix'));
     await usuario.click(botaoFechar());
-    await usuario.click(await screen.findByRole('button', { name: 'Nova venda' }));
+    await usuario.click(await screen.findByRole('button', { name: 'OK' }));
     await waitFor(() => expect(chamadas.filter((c) => c === 'GET /api/catalogo')).toHaveLength(2));
     await usuario.click(botao('Dia'));
     await screen.findByTestId('venda-dia');

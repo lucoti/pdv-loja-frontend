@@ -1,17 +1,18 @@
-import { User } from '@phosphor-icons/react';
+import { ArrowRight, User } from '@phosphor-icons/react';
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { api, ErroApi, MENSAGEM_GENERICA, type Catalogo, type Venda } from '../../api/cliente';
 import { calcularPedido, pedidoVazio, podeFechar, qtdNoPedido, reduzirPedido, type AcaoPedido, type Pedido as PedidoEstado } from '../../dominio/carrinho';
 import { skuDe } from '../../dominio/catalogo';
-import { formatarReais } from '../../dominio/formatos';
+import { celularValido, formatarReais, mascararCelular, somenteDigitos } from '../../dominio/formatos';
 import { CaixaErro, Carregando, FalhaAoCarregar } from '../Avisos';
 import c from '../comum.module.css';
 import { Folha } from '../Folha';
 import { useCarregar } from '../useCarregar';
 import { BarraInferior, type Aba } from './BarraInferior';
+import { AvisoVenda } from './AvisoVenda';
 import { Cabecalho, nomeEtapa } from './Cabecalho';
+import { Cliente, type RascunhoCliente } from './Cliente';
 import { Dia } from './Dia';
-import { ModalSucesso } from './ModalSucesso';
 import { Pedido, ResumoPedido } from './Pedido';
 import { Produtos } from './Produtos';
 import s from './Pdv.module.css';
@@ -99,6 +100,11 @@ function Venda(props: {
   const enviandoRef = useRef(false);
   const [erro, setErro] = useState('');
   const [sucesso, setSucesso] = useState<Venda | null>(null);
+  // Etapa Cliente (MI-02, ADR-003): a aba Produtos mostra o formulário do cliente até ele ser confirmado
+  // ou pulado. "Alterar" no Pedido reabre a etapa com `origemCliente = 'pedido'`, para voltar ao Pedido.
+  const [clienteDefinido, setClienteDefinido] = useState(false);
+  const [origemCliente, setOrigemCliente] = useState<'inicio' | 'pedido'>('inicio');
+  const [rascunho, setRascunho] = useState<RascunhoCliente>({ nome: '', celular: '' });
 
   // A cada catálogo novo, o pedido aberto passa a usar o preço atual de cada SKU. Vai direto ao reducer
   // (sem o "despachar" abaixo) para não apagar a mensagem de erro de um 409 que motivou a recarga.
@@ -165,16 +171,16 @@ function Venda(props: {
     try {
       // O front não envia preços: o servidor recalcula tudo (RF-F07). A chave é a mesma em toda tentativa.
       // ATENÇÃO: este é o único ponto em que o pedido sai do aparelho, e o corpo é o contrato INV-001.
-      // O CPF circula só por aqui: campo da aba Pedido → ação 'cpf' do reducer → `pedido.cpf` → este
-      // corpo. Nome e CPF vão com espaços das pontas cortados; vazio vai como '' (o tipo gerado exige
-      // o campo). O back valida com objeto estrito: trocar `cpf` por `telefone` (feature irmã
-      // pdv-cliente-telefone) só funciona com o back novo no ar, senão toda venda volta 400.
+      // O nome vai com espaços das pontas cortados. ATENÇÃO (provisório até a etapa 6): o CPF saiu do
+      // PDV e o contrato atual ainda exige o campo, então vai `cpf: ''`; o celular (`pedido.telefone`)
+      // só entra no corpo quando a feature irmã pdv-cliente-telefone publicar o contrato novo. O back
+      // valida com objeto estrito: mandar `telefone` antes disso faz toda venda voltar 400.
       const { venda } = await api.registrarVenda({
         chaveIdempotencia: pedido.chaveIdempotencia,
         itens: pedido.itens.map((i) => ({ skuId: i.skuId, qtd: i.qtd, descPercent: i.descPercent })),
         descontoTotalCentavos: pedido.descontoTotalCentavos,
         cliente: pedido.cliente.trim(),
-        cpf: pedido.cpf.trim(),
+        cpf: '',
         pagamentoId: pedido.pagamentoId ?? '',
       });
       setSucesso(venda);
@@ -192,22 +198,44 @@ function Venda(props: {
     }
   };
 
-  // Só aqui e em "Cancelar pedido" a chave de idempotência muda (ADR-F06).
-  // ATENÇÃO: só o botão "Nova venda" do modal chama esta função. Enquanto o modal está aberto, o
-  // pedido já registrado continua no estado com a chave antiga; se a troca de chave deixar de depender
-  // do modal, um reenvio do mesmo pedido seria tratado pelo servidor como a mesma venda (INV-011).
-  const novaVenda = () => {
+  // Começa uma venda do zero na etapa Cliente: pedido e cliente zerados, chave de idempotência nova.
+  // Só o OK do aviso de venda e "Cancelar pedido" chamam esta função (ADR-F06, ADR-004, INV-011).
+  // ATENÇÃO: enquanto o aviso está aberto, o pedido já registrado continua no estado com a chave antiga;
+  // se a troca de chave deixar de depender do OK, um reenvio do mesmo pedido seria tratado pelo
+  // servidor como a mesma venda.
+  const recomecar = () => {
     setSucesso(null);
     despachar({ tipo: 'novo', chaveIdempotencia: crypto.randomUUID() });
     voltarParaProdutos();
+    setRascunho({ nome: '', celular: '' });
+    setOrigemCliente('inicio');
+    setClienteDefinido(false);
     setAba('produtos');
+  };
+
+  // "Alterar" no cartão Cliente do Pedido: reabre a etapa com o que já está no pedido.
+  const alterarCliente = () => {
+    setRascunho({ nome: pedido.cliente, celular: mascararCelular(pedido.telefone) });
+    setOrigemCliente('pedido');
+    setClienteDefinido(false);
+    setAba('produtos');
+  };
+
+  // Confirma (ou pula, com os campos vazios) a etapa Cliente e segue para onde o vendedor estava indo.
+  const confirmarCliente = (r: RascunhoCliente) => {
+    despachar({ tipo: 'cliente', nome: r.nome.trim(), telefone: somenteDigitos(r.celular) });
+    setRascunho(r);
+    setClienteDefinido(true);
+    if (origemCliente === 'pedido') setAba('pedido');
+    setOrigemCliente('inicio');
   };
 
   // A tela de cor/tamanho não é uma aba: é a aba Produtos com um produto aberto. Trocar de aba não
   // fecha o produto; ao voltar para Produtos, a tela de cor/tamanho reaparece com a escolha feita.
   // ATENÇÃO: se uma recarga do catálogo tirar o produto aberto, `produto` fica undefined e a tela
   // volta sozinha para a lista, embora `produtoId` continue guardado.
-  const naVariacao = aba === 'produtos' && !!produto;
+  const naCliente = aba === 'produtos' && !clienteDefinido;
+  const naVariacao = aba === 'produtos' && !naCliente && !!produto;
   const { totais } = calcularPedido(pedido);
   // O rótulo diz o que falta para fechar (INV-013). Os três textos são procurados literalmente pelos
   // testes de tela; mudar a redação exige ajustar os testes (AP-004).
@@ -215,7 +243,21 @@ function Venda(props: {
 
   // O botão grande da barra inferior muda conforme a tela: adicionar (variações) ou fechar (pedido).
   let acao = null;
-  if (naVariacao) {
+  if (naCliente) {
+    // Design 1a: botão principal habilitado com o celular vazio ou completo (10/11 dígitos); o segundo
+    // segue sem cliente (venda anônima continua possível, decisão do Lucas).
+    acao = (
+      <div className={s.acao}>
+        <button type="button" className={`${c.cta} ${s.ctaIcone}`} disabled={!celularValido(rascunho.celular)} onClick={() => confirmarCliente(rascunho)}>
+          {origemCliente === 'pedido' ? 'Salvar cliente' : 'Escolher produtos'}
+          {origemCliente === 'inicio' && <ArrowRight size={20} aria-hidden="true" />}
+        </button>
+        <button type="button" className={s.semCliente} onClick={() => confirmarCliente({ nome: '', celular: '' })}>
+          Venda sem cliente
+        </button>
+      </div>
+    );
+  } else if (naVariacao) {
     acao = (
       <div className={s.acao}>
         <div className={s.resumoLinha}>
@@ -242,9 +284,11 @@ function Venda(props: {
   }
 
   // Topo de cada tela conforme o design (MI-09): o que muda é o título, a linha de apoio e o complemento.
-  const etapa = nomeEtapa(aba, naVariacao);
+  const etapa = nomeEtapa(aba, naVariacao, naCliente);
   let topo;
-  if (naVariacao) {
+  if (naCliente) {
+    topo = <Cabecalho etapa={etapa} apoio={origemCliente === 'pedido' ? 'Alterar o cliente do pedido' : 'Nova venda · primeiro passo'} />;
+  } else if (naVariacao) {
     topo = <Cabecalho etapa={etapa} titulo={produto.nome} apoio={produto.tecidoNome} aoVoltar={voltarParaProdutos} />;
   } else if (aba === 'produtos') {
     topo = (
@@ -260,12 +304,12 @@ function Venda(props: {
       />
     );
   } else if (aba === 'pedido') {
-    // Sem confirmação, como antes: zera o pedido e gera chave de idempotência nova (ADR-F06, INV-011).
+    // Sem confirmação, como antes: zera o pedido e o cliente, troca a chave e volta para a etapa Cliente.
     topo = (
       <Cabecalho
         etapa={etapa}
         lateral={
-          <button type="button" className={s.cancelar} onClick={() => despachar({ tipo: 'novo', chaveIdempotencia: crypto.randomUUID() })}>
+          <button type="button" className={s.cancelar} onClick={recomecar}>
             Cancelar pedido
           </button>
         }
@@ -279,7 +323,8 @@ function Venda(props: {
     <>
       {topo}
       <main className={aba === 'pedido' || aba === 'dia' ? `${s.conteudo} ${s.conteudoCartoes}` : s.conteudo}>
-        {aba === 'produtos' && !produto && (
+        {naCliente && <Cliente rascunho={rascunho} aoMudar={setRascunho} />}
+        {aba === 'produtos' && !naCliente && !produto && (
           <Produtos
             catalogo={catalogo}
             tipoId={tipoId}
@@ -289,13 +334,13 @@ function Venda(props: {
           />
         )}
         {naVariacao && <Variacoes produto={produto} escolha={escolha} aoMudar={setEscolha} />}
-        {aba === 'pedido' && <Pedido pedido={pedido} catalogo={catalogo} despachar={despachar} />}
+        {aba === 'pedido' && <Pedido pedido={pedido} catalogo={catalogo} despachar={despachar} aoAlterarCliente={alterarCliente} />}
         {aba === 'dia' && <Dia />}
       </main>
 
       <BarraInferior aba={aba} pecas={pecas} acao={acao} aoTrocarAba={setAba} />
 
-      {sucesso && <ModalSucesso venda={sucesso} aoNovaVenda={novaVenda} />}
+      {sucesso && <AvisoVenda venda={sucesso} aoOk={recomecar} />}
     </>
   );
 }

@@ -3,8 +3,12 @@ import type { ReactNode } from 'react';
 import type { Aba } from './BarraInferior';
 import s from './Pdv.module.css';
 
-/** Nome da etapa em que o vendedor está. A tela de cor/tamanho é a aba Produtos com um produto aberto. */
-export function nomeEtapa(aba: Aba, naVariacao = false): string {
+/**
+ * Nome da etapa em que o vendedor está. Cliente e cor/tamanho não são abas: são a aba Produtos antes de
+ * o cliente ser definido (MI-02) e com um produto aberto.
+ */
+export function nomeEtapa(aba: Aba, naVariacao = false, naCliente = false): string {
+  if (naCliente) return 'Cliente';
   if (naVariacao) return 'Cor e tamanho';
   return aba === 'produtos' ? 'Produtos' : aba === 'pedido' ? 'Pedido' : 'Dia';
 }

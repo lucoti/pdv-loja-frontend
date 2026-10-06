@@ -14,3 +14,26 @@ export function formatarReais(centavos: number): string {
 export function textoPecas(pecas: number): string {
   return `${pecas} ${pecas === 1 ? 'peça' : 'peças'}`;
 }
+
+/** Só os dígitos de um texto ("(31) 98765-4321" → "31987654321"). */
+export function somenteDigitos(texto: string): string {
+  return texto.replace(/\D/g, '');
+}
+
+/**
+ * Máscara do celular enquanto o vendedor digita, como no design: até 11 dígitos, "(31) 98765-4321".
+ * Com 10 dígitos (fixo ou celular antigo) fica "(31) 9876-5432"; incompleto mostra só o que já dá.
+ */
+export function mascararCelular(texto: string): string {
+  const d = somenteDigitos(texto).slice(0, 11);
+  if (d.length <= 2) return d;
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
+/** Celular opcional: vazio vale; preenchido precisa de DDD + número (10 ou 11 dígitos). */
+export function celularValido(texto: string): boolean {
+  const n = somenteDigitos(texto).length;
+  return n === 0 || n === 10 || n === 11;
+}

@@ -25,13 +25,14 @@ export interface ItemCarrinho {
 
 // Cliente e CPF são texto livre, como o vendedor digitou (sem máscara nem validação aqui): o corte
 // de espaços é feito no envio (Pdv.tsx) e a conferência do CPF, só no servidor.
-// ATENÇÃO: `cpf` é o único lugar do estado em que o CPF fica guardado; trocá-lo por telefone mexe no
-// tipo, na ação 'cpf', em `pedidoVazio` e nos testes de domínio que comparam o pedido vazio inteiro.
+// Cliente da venda (MI-02): nome e celular, os dois opcionais, informados na etapa Cliente. O celular
+// fica só com os dígitos; a máscara é coisa da tela. O CPF saiu do PDV (pdv-mobile-refatorado).
 export interface Pedido {
   itens: ItemCarrinho[];
   descontoTotalCentavos: number;
   cliente: string;
-  cpf: string;
+  /** Celular só com dígitos (10 ou 11), ou vazio. */
+  telefone: string;
   pagamentoId: string | null;
   /** UUID reenviado em toda tentativa deste pedido; só muda num pedido novo (ADR-F06). */
   chaveIdempotencia: string;
@@ -49,8 +50,8 @@ export type AcaoPedido =
   // "limite" = valor bruto atual do pedido: o desconto no total não passa dele (ADR-005).
   | { tipo: 'descontoTotalMais'; limite: number }
   | { tipo: 'descontoTotalMenos' }
-  | { tipo: 'cliente'; valor: string }
-  | { tipo: 'cpf'; valor: string }
+  // Confirmação da etapa Cliente: grava nome e celular juntos.
+  | { tipo: 'cliente'; nome: string; telefone: string }
   | { tipo: 'pagamento'; pagamentoId: string }
   // Catálogo recarregado: preço atual de cada SKU (skuId → centavos).
   | { tipo: 'precos'; precos: ReadonlyMap<number, number> }
@@ -58,7 +59,7 @@ export type AcaoPedido =
   | { tipo: 'novo'; chaveIdempotencia: string };
 
 export function pedidoVazio(chaveIdempotencia: string): Pedido {
-  return { itens: [], descontoTotalCentavos: 0, cliente: '', cpf: '', pagamentoId: null, chaveIdempotencia };
+  return { itens: [], descontoTotalCentavos: 0, cliente: '', telefone: '', pagamentoId: null, chaveIdempotencia };
 }
 
 /** Um SKU = uma linha: é o mesmo critério do servidor para recusar peça repetida (item_repetido). */
@@ -113,9 +114,7 @@ export function reduzirPedido(p: Pedido, acao: AcaoPedido): Pedido {
       // Regra 4: mínimo 0.
       return { ...p, descontoTotalCentavos: Math.max(0, p.descontoTotalCentavos - PASSO_DESCONTO_TOTAL_CENTAVOS) };
     case 'cliente':
-      return { ...p, cliente: acao.valor };
-    case 'cpf':
-      return { ...p, cpf: acao.valor };
+      return { ...p, cliente: acao.nome, telefone: acao.telefone };
     case 'pagamento':
       return { ...p, pagamentoId: acao.pagamentoId };
     case 'precos': {

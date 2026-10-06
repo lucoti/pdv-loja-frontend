@@ -18,7 +18,7 @@ const base = () => pedidoVazio('chave-1');
 
 describe('pedidoVazio, chaveVariacao e qtdNoPedido', () => {
   it('pedido vazio com a chave informada', () => {
-    expect(base()).toEqual({ itens: [], descontoTotalCentavos: 0, cliente: '', cpf: '', pagamentoId: null, chaveIdempotencia: 'chave-1' });
+    expect(base()).toEqual({ itens: [], descontoTotalCentavos: 0, cliente: '', telefone: '', pagamentoId: null, chaveIdempotencia: 'chave-1' });
   });
 
   it('chave da linha = id do SKU em texto', () => {
@@ -184,14 +184,21 @@ describe('descontos (RN-004)', () => {
   });
 });
 
-describe('cliente, CPF, pagamento e "novo"', () => {
-  it('guarda cliente, CPF e pagamento', () => {
-    const p = aplicar(base(), { tipo: 'cliente', valor: 'Maria' }, { tipo: 'cpf', valor: '529.982.247-25' }, { tipo: 'pagamento', pagamentoId: 'pix' });
-    expect([p.cliente, p.cpf, p.pagamentoId]).toEqual(['Maria', '529.982.247-25', 'pix']);
+// MI-02 (pdv-mobile-refatorado): o CPF saiu; a etapa Cliente grava nome e celular juntos.
+describe('cliente, celular, pagamento e "novo"', () => {
+  it('guarda cliente, celular (só dígitos, como a tela manda) e pagamento', () => {
+    const p = aplicar(base(), { tipo: 'cliente', nome: 'Maria', telefone: '31987654321' }, { tipo: 'pagamento', pagamentoId: 'pix' });
+    expect([p.cliente, p.telefone, p.pagamentoId]).toEqual(['Maria', '31987654321', 'pix']);
+  });
+
+  it('confirmar o cliente de novo (Alterar) troca nome e celular; vazio apaga os dois', () => {
+    const p = aplicar(base(), { tipo: 'cliente', nome: 'Maria', telefone: '31987654321' }, { tipo: 'cliente', nome: 'Ana', telefone: '' });
+    expect([p.cliente, p.telefone]).toEqual(['Ana', '']);
+    expect(aplicar(p, { tipo: 'cliente', nome: '', telefone: '' })).toMatchObject({ cliente: '', telefone: '' });
   });
 
   it('"novo" zera tudo e troca a chave de idempotência', () => {
-    const cheio = aplicar(base(), add(legging), MAIS_TOTAL, { tipo: 'cliente', valor: 'Maria' }, { tipo: 'cpf', valor: '1' }, { tipo: 'pagamento', pagamentoId: 'pix' });
+    const cheio = aplicar(base(), add(legging), MAIS_TOTAL, { tipo: 'cliente', nome: 'Maria', telefone: '31987654321' }, { tipo: 'pagamento', pagamentoId: 'pix' });
     expect(aplicar(cheio, { tipo: 'novo', chaveIdempotencia: 'chave-2' })).toEqual(pedidoVazio('chave-2'));
   });
 
@@ -204,7 +211,7 @@ describe('cliente, CPF, pagamento e "novo"', () => {
       { tipo: 'desconto', chave: L, descPercent: 5 },
       { tipo: 'precos', precos: new Map([[2, 1000]]) },
       MAIS_TOTAL,
-      { tipo: 'cliente', valor: 'Maria' },
+      { tipo: 'cliente', nome: 'Maria', telefone: '31987654321' },
       { tipo: 'pagamento', pagamentoId: 'pix' },
       { tipo: 'remover', chave: L },
     );

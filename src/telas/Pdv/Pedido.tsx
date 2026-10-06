@@ -3,7 +3,7 @@ import type { Dispatch, ReactNode } from 'react';
 import type { Catalogo } from '../../api/cliente';
 import { calcularPedido, podeAumentarDescontoTotal, type AcaoPedido, type Pedido as PedidoEstado } from '../../dominio/carrinho';
 import { saldosPorSku } from '../../dominio/catalogo';
-import { formatarReais, textoPecas } from '../../dominio/formatos';
+import { formatarReais, mascararCelular, textoPecas } from '../../dominio/formatos';
 import c from '../comum.module.css';
 import s from './Pdv.module.css';
 
@@ -39,7 +39,17 @@ function Cartao(props: { numero: number; titulo: string; Icone: Icon; complement
  * O desconto por item (%) saiu da tela; o pedido inteiro tem um desconto só, em R$ 5 por toque, que não
  * passa do valor bruto. O resumo de valores e o botão de fechar ficam na barra de baixo (Pdv.tsx).
  */
-export function Pedido({ pedido, catalogo, despachar }: { pedido: PedidoEstado; catalogo: Catalogo; despachar: Dispatch<AcaoPedido> }) {
+export function Pedido({
+  pedido,
+  catalogo,
+  despachar,
+  aoAlterarCliente,
+}: {
+  pedido: PedidoEstado;
+  catalogo: Catalogo;
+  despachar: Dispatch<AcaoPedido>;
+  aoAlterarCliente: () => void;
+}) {
   const { itens, totais } = calcularPedido(pedido);
   // Saldo atual de cada SKU: limita o "+" e avisa quando o pedido passou do estoque (catálogo recarregado).
   const saldos = saldosPorSku(catalogo);
@@ -47,30 +57,14 @@ export function Pedido({ pedido, catalogo, despachar }: { pedido: PedidoEstado; 
   return (
     <div className={s.coluna14}>
       <Cartao numero={1} titulo="Cliente" Icone={User}>
-        <div className={s.cartaoCorpo}>
-          <input
-            className={s.campo}
-            value={pedido.cliente}
-            onChange={(e) => despachar({ tipo: 'cliente', valor: e.target.value })}
-            placeholder="Nome do cliente"
-            aria-label="Nome do cliente"
-            maxLength={120}
-            autoComplete="off"
-          />
-          {/* O CPF é validado só pelo servidor; a mensagem de erro dele aparece acima do botão de fechar.
-              ATENÇÃO: campo provisório até a etapa 5 (tela Cliente com celular, MI-02); o rótulo
-              "CPF (opcional)" é seletor de vários testes de tela. */}
-          <input
-            className={s.campo}
-            value={pedido.cpf}
-            onChange={(e) => despachar({ tipo: 'cpf', valor: e.target.value })}
-            placeholder="CPF (opcional)"
-            aria-label="CPF (opcional)"
-            inputMode="numeric"
-            maxLength={20}
-            autoComplete="off"
-          />
-        </div>
+        {/* Toque na linha inteira reabre a etapa Cliente com o que já está no pedido (MI-02). */}
+        <button type="button" className={s.linhaCliente} onClick={aoAlterarCliente}>
+          <span className={s.linhaClienteTexto}>
+            <span className={s.linhaClienteNome}>{pedido.cliente || 'Cliente não identificado'}</span>
+            <span className={s.linhaClienteCelular}>{pedido.telefone ? mascararCelular(pedido.telefone) : 'Sem celular'}</span>
+          </span>
+          <span className={s.alterar}>Alterar</span>
+        </button>
       </Cartao>
 
       <Cartao numero={2} titulo="Peças" Icone={TShirt} complemento={textoPecas(totais.pecas)}>

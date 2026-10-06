@@ -22,6 +22,12 @@
 | `src/estilos/global.css`, `src/telas/comum.module.css`, `src/telas/Login/Login.module.css`, `src/telas/Pdv/Pdv.module.css` | Estilo | Alterados — só troca de tokens/cores fixas (etapa 1) |
 | `src/main.tsx`, `index.html`, `package.json`/`package-lock.json` | Config/entrada | Alterados — Inter + Phosphor no lugar de Libre Franklin; `theme-color` #161826 (etapa 1) |
 | `src/telas/Pdv/Variacoes.tsx` | Front | Alterado — cor inline de amostra sem hex para token (etapa 1) |
+| `src/telas/Pdv/Cliente.tsx` | Front | Criado — etapa Cliente (etapa 5) |
+| `src/telas/Pdv/AvisoVenda.tsx` (era `ModalSucesso.tsx`) | Front | Renomeado/alterado — aviso com OK (etapa 5) |
+| `src/telas/Pdv/Pdv.tsx`, `Pedido.tsx`, `Cabecalho.tsx`, `Pdv.module.css` | Front | Alterados — etapa Cliente, "Alterar", `recomecar` (OK e Cancelar) (etapa 5) |
+| `src/dominio/carrinho.ts`, `src/dominio/formatos.ts` | Domínio | Alterados — `cpf` → `telefone`, ação `cliente` com nome+telefone; `somenteDigitos`, `mascararCelular`, `celularValido` (etapa 5) |
+| `tests/telas/pdv.cliente.test.tsx` | Teste | Criado — 8 testes de MI-02/MI-04 (etapa 5) |
+| `tests/telas/ajuda.tsx`, `pdv.test.tsx`, `pdv.ajustes.test.tsx`, `pdv.caracterizacao.test.tsx`, `tests/dominio/carrinho.test.ts`, `formatos.test.ts` | Teste | Alterados — inventário AP-004 da etapa 5 |
 | `src/telas/Pdv/Pedido.tsx`, `Pdv.tsx`, `Pdv.module.css`, `comum.module.css` (`.cta`) | Front | Alterados — Pedido em cartões, resumo + botão com total, trava em ref (etapa 4) |
 | `src/dominio/carrinho.ts` | Domínio | Alterado — `descontoTotalMais` com `limite` e `podeAumentarDescontoTotal` (ADR-005, etapa 4) |
 | `tests/dominio/carrinho.test.ts`, `tests/telas/pdv.test.tsx`, `pdv.caracterizacao.test.tsx`, `pdv.mobile.caracterizacao.test.tsx`, `pdv.ajustes.test.tsx` | Teste | Alterados — inventário AP-004 da etapa 4, teto do desconto, `it.fails` retirado, guardas AP-003 do Pedido |
@@ -36,6 +42,10 @@
 ## Log de decisões não previstas na arquitetura
 | Data | Decisão | Motivo | Impacto |
 |---|---|---|---|
+| 2026-10-05 | A etapa Cliente só aparece com o catálogo carregado (dentro de `Venda`); durante a carga o topo segue a aba | O rascunho e os botões ficam na barra de baixo, que pertence a `Venda`; evita duplicar estado entre os dois ramos de `Pdv` | Depois do login aparece "Carregando…" e então Cliente |
+| 2026-10-05 | O aviso de venda mantém o título "Venda registrada" e o resumo (agora "N peças"), com botão OK | Decisão do Lucas: aviso só com toque | Mesma estrutura de janela, botão novo |
+| 2026-10-05 | Até a etapa 6 o corpo do `POST /vendas` leva `cpf: ''` e não leva o celular | O contrato atual (back no ar) exige `cpf` e recusa campo extra | Celular só em memória até o contrato novo |
+| 2026-10-05 | Botão "Venda sem cliente" (secundário, sublinhado) abaixo de "Escolher produtos" | O design não tinha o "pular" que o Lucas pediu | Visual próprio, discreto |
 | 2026-10-05 | Teto do desconto: o "+" só soma se o novo valor (múltiplo de R$ 5) não passar do bruto; não arredonda para o bruto exato | O back recusa desconto que não seja múltiplo de R$ 5 (`esquemaVenda`) | Com bruto R$ 89,00 o máximo é R$ 85,00 |
 | 2026-10-05 | O cartão 1 Cliente mantém, até a etapa 5, os campos de nome e CPF | A tela Cliente e o celular chegam na etapa 5 | Visual provisório do cartão 1 |
 | 2026-10-05 | Preço unitário sai do detalhe do item e vai para "R$ X cada" | Design 1d | Testes ajustados |
@@ -108,6 +118,28 @@ Busca por `Excluir`, `sem desconto`, botões `sem/5%/10%/15%`, `% aplicado`, `De
 
 Nenhuma asserção removida sem equivalente. Invariante alterado intencionalmente: o total do pedido de referência (consequência do MI-03), registrado no `02-requisitos.md` ao fechar a fase.
 
+## Inventário AP-004 — etapa 5 (Cliente e aviso)
+Busca por `esperarCatalogo`, `esperarPdv`, `Nova venda`, `Venda registrada`, `dialog`, `Nome do cliente`, `CPF (opcional)`, `cpf`, `peça(s)` antes da troca.
+
+| Teste | O que o sinal antigo conferia | Asserção equivalente |
+|---|---|---|
+| `ajuda.tsx` `esperarCatalogo` (15 usos) | Catálogo carregado, lista à vista | Novo `pularCliente` (confere a etapa Cliente no topo e toca "Venda sem cliente") e então a lista; o comentário do helper diz que pula a etapa |
+| `ajuda.tsx` `ETAPAS`/`esperarPdv` | PDV aberto | Inclui "Cliente" (primeira tela da venda) |
+| `ajuda.tsx` `adicionarPeca` | Começa pela aba Produtos | Pula a etapa Cliente se ela estiver na tela |
+| `ajuda.tsx` `comecarNovaVenda`, testes com "Nova venda" (12) | Fecha a janela e começa venda nova | Botão OK; **acrescentado:** a tela volta para a etapa Cliente (MI-04) |
+| `ajuda.tsx` `informarCliente`, `montarReferencia`, testes que digitavam nome/CPF (9) | Nome e CPF no pedido | **MI-02:** "Alterar" → etapa Cliente → nome e celular → "Salvar cliente"; conferência no cartão 1 ("Maria(31) 98765-4321Alterar") |
+| pdv.test "cliente e CPF vão sem espaços" e corpo do `POST` | `cliente` e `cpf` aparados | `cliente` aparado; `cpf: ''` (provisório até a etapa 6); `telefone` ausente do corpo (teste novo em pdv.cliente) |
+| pdv.test 400 "CPF inválido" e "outros erros não recarregam" | Mensagem de 400 acima do botão, pedido mantido; não recarrega | 400 `entrada_invalida` forçado no servidor (sem campo de CPF não há como provocar `cpf_invalido` pela tela) — mesmas asserções |
+| pdv.test RNF-F08 "PIN e CPF só em memória" | CPF fora de console/armazenamento/URL | **Celular** fora de console/armazenamento/URL |
+| pdv.test "Cancelar pedido limpa…" | Itens, desconto, nome, CPF e pagamento zerados | Mesmo + volta para a etapa Cliente com campos vazios; cartão "Cliente não identificado / Sem celular" |
+| pdv.test "modal… Nova venda volta para Produtos" | Valores do servidor; volta para Produtos | OK; volta para a etapa Cliente (aba Produtos) com campos vazios e pedido zerado |
+| pdv.test resumos do aviso ("peça(s)") | Texto do resumo | "1 peça"/"N peças" |
+| pdv.ajustes INV-018 "etapa depois do login" | "Produtos" | **MI-02:** "Cliente" |
+| pdv.test "catálogo do ERP vazio" | Aviso logo depois do login | Aviso depois de pular a etapa Cliente |
+| carrinho.test (`cpf`, ação `cpf`, `valor`) | Guarda cliente e CPF | Ação `cliente` com `nome` e `telefone`; teste novo de "Alterar" (troca e apaga) |
+
+Nenhuma asserção removida sem equivalente; mudanças de comportamento: MI-02 e MI-04.
+
 ## Mudanças de escopo
 Nenhuma.
 
@@ -120,6 +152,7 @@ Nenhuma.
 | Etapa da migração | Resultado | Observação |
 |---|---|---|
 | 0 — caracterização sobre o código atual | verde (223 + 1 expected fail) | `it.fails` do INV-013 (a) até a etapa do ADR-006 |
+| 5 — etapa Cliente, "Alterar" e aviso com OK | verde (242); `typecheck` ok | 8 testes novos (pdv.cliente) + inventário; navegador a 375px: etapa Cliente igual ao design, largura 375 |
 | 4 — Pedido em cartões, teto do desconto, trava em ref | verde (230, sem expected fail); `typecheck` ok | Navegador a 320px: largura 320, pagamento em 2 colunas (125px cada), "R$ 89,00 cada" com 74px e "Tirar" só ícone; a 375px tudo numa linha exceto "R$ 89,00 cada" (2 linhas, sem estourar). AP-001: mutações na trava derrubam o teste |
 | 3 — Produtos, Cor e tamanho e Dia | verde (225 + 1 expected fail); `typecheck` ok | 20 testes ajustados pelo inventário; 2 guardas novas (AP-003). Mutações "tirar o minmax" em `.gradeTipos` e `.gradeTamanhos` derrubam os testes. Navegador a 320px: largura do conteúdo = 320 (sem rolagem lateral) na lista e em cor/tamanho; 4 tamanhos de 68px em 16–304px; "estoque 12" e "estoque 123" quebram dentro do botão sem passar da borda. Caso de referência: Top Nadador com 4 tamanhos (simulado) e saldos de 2–3 dígitos forçados na página |
 | 2 — topo por tela e abas com ícone | verde (223 + 1 expected fail); `typecheck` ok | 7 testes ajustados pelo inventário acima; conferido no navegador a 375px (cor/tamanho com voltar, abas com ícone e marca) |
@@ -136,4 +169,4 @@ Nenhuma.
 Nenhuma.
 
 ## Pronto para documentação e testes
-não — etapas 1 a 4 concluídas; próxima: etapa 5 (Cliente e aviso de venda).
+não — etapas 1 a 5 concluídas; a etapa 6 (contrato `cpf` → `telefone`) depende do contrato novo da feature pdv-cliente-telefone.

@@ -158,9 +158,10 @@ describe('MUD-04 — vendedor, data e "BALCÃO" não aparecem em nenhuma tela do
     conferirSemVendedorNemData();
     await usuario.click(botao('Pix'));
     await usuario.click(botaoFechar());
-    await screen.findByRole('button', { name: 'Nova venda' });
+    await screen.findByRole('button', { name: 'OK' });
     conferirSemVendedorNemData();
-    await usuario.click(botao('Nova venda'));
+    await usuario.click(botao('OK'));
+    conferirSemVendedorNemData();
     await usuario.click(botao('Dia'));
     await screen.findByTestId('venda-dia');
     conferirSemVendedorNemData();
@@ -193,7 +194,8 @@ describe('INV-018 — o sinal "entrou no PDV" não confunde a tela de login com 
     await enviarPin(usuario);
     await esperarPdv();
     expect(topoDoPdv()).toBe(screen.getByRole('banner'));
-    expect(etapaNoTopo()).toBe('Produtos');
+    // MI-02: a venda começa na etapa Cliente.
+    expect(etapaNoTopo()).toBe('Cliente');
     expect(screen.queryByText('BALCÃO')).not.toBeInTheDocument();
     expect(screen.queryByRole('img', { name: /números digitados/ })).not.toBeInTheDocument();
   });

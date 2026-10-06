@@ -231,6 +231,40 @@ img.circulo { object-fit: cover; }
 
 .campo:focus { border-color: var(--color-accent); }
 
+.linhaCliente {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 10px 14px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.linhaCliente:active { background: var(--color-neutral-900); }
+.linhaClienteTexto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.linhaClienteNome { font-size: 17px; font-weight: 500; overflow-wrap: anywhere; }
+.linhaClienteCelular { font-size: 15px; color: var(--color-neutral-400); }
+.alterar { flex: none; font-size: 15px; color: var(--color-accent-300); text-decoration: underline; }
+
+/* 1a — Cliente: rótulo acima do campo e o botão secundário "Venda sem cliente". */
+.rotuloCampo { display: flex; flex-direction: column; gap: 6px; font-size: 16px; font-weight: 500; color: var(--color-neutral-200); }
+
+.ctaIcone { display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+.semCliente {
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--color-neutral-300);
+  font-size: 16px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .vazio { padding: 16px 14px; font-size: 16px; line-height: 1.4; color: var(--color-neutral-300); }
 
 .item { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
@@ -414,7 +448,7 @@ img.circulo { object-fit: cover; }
   background: var(--color-accent);
 }
 
-/* 2e — modal de venda registrada */
+/* Aviso de venda registrada (MI-04): janela sobre o véu, sai só com o OK. */
 .sombra {
   position: fixed;
   inset: 0;
@@ -422,32 +456,33 @@ img.circulo { object-fit: cover; }
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 22px;
+  padding: 16px;
   z-index: 50;
 }
 
 .modal {
   width: 100%;
   max-width: 420px;
-  background: var(--color-bg);
-  border-radius: 20px;
-  padding: 30px 24px;
-  text-align: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-neutral-800);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 20px 16px 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
-.modalTitulo { font-size: 28px; font-weight: 700; color: var(--color-accent); margin: 0; }
-.modalResumo { font-size: 20px; color: var(--color-neutral-400); line-height: 1.5; margin: 0; }
+.modalTitulo { margin: 0; font-size: 20px; font-weight: 500; color: var(--color-accent-200); }
+.modalResumo { margin: 0; font-size: 16px; line-height: 1.45; color: var(--color-neutral-300); }
 
-.novaVenda {
-  font-size: 22px;
-  font-weight: 700;
-  padding: 22px;
-  border-radius: 14px;
-  border: none;
+.ok {
+  min-height: 52px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-accent);
   background: var(--color-accent-900);
   color: var(--color-accent-100);
+  font-size: 18px;
+  font-weight: 500;
   cursor: pointer;
 }
