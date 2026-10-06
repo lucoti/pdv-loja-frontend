@@ -51,11 +51,13 @@ export function numerosDigitados(): number {
 }
 
 /**
- * Topo do PDV (o <header> com a etapa). É o sinal de que a página saiu do login: o topo do login não
- * mostra etapa nenhuma. Ponto único dos testes que depende de como o PDV se anuncia.
+ * Topo do PDV: o <header> (papel `banner`) cujo nome acessível é a etapa. É o sinal de que a página saiu
+ * do login: o topo do login não tem nome de etapa. Ponto único dos testes que depende de como o PDV se
+ * anuncia. Desde a pdv-mobile-refatorado (MI-09) o texto visível do topo segue o design ("Vendas de
+ * hoje", nome do produto…); a etapa fica só no `aria-label`.
  */
 const ETAPAS = /^(Produtos|Cor e tamanho|Pedido|Dia)$/;
-export const topoDoPdv = () => screen.queryByText(ETAPAS, { selector: 'header div' });
+export const topoDoPdv = () => screen.queryByRole('banner', { name: ETAPAS });
 /**
  * Espera a tela de venda abrir. Confere dentro da espera, sem devolver o elemento: o topo é redesenhado
  * quando o catálogo termina de carregar, e um elemento guardado antes disso já teria saído da página.
@@ -95,7 +97,7 @@ export async function adicionarPeca(usuario: UserEvent, p: Peca) {
   await usuario.click(botaoCor(p.cor));
   await usuario.click(botaoTamanho(p.tamanho));
   await usuario.click(screen.getByRole('button', { name: 'Adicionar ao pedido' }));
-  expect(screen.getByRole('heading', { name: 'Novo pedido' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Pedido' })).toBeInTheDocument();
 }
 
 // Preços e saldos do catálogo de exemplo: Legging R$ 89 (saldo 5; Marinho P só 1), Top R$ 55 (Vinho GG sem estoque).

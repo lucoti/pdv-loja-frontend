@@ -22,15 +22,37 @@
 | `src/estilos/global.css`, `src/telas/comum.module.css`, `src/telas/Login/Login.module.css`, `src/telas/Pdv/Pdv.module.css` | Estilo | Alterados — só troca de tokens/cores fixas (etapa 1) |
 | `src/main.tsx`, `index.html`, `package.json`/`package-lock.json` | Config/entrada | Alterados — Inter + Phosphor no lugar de Libre Franklin; `theme-color` #161826 (etapa 1) |
 | `src/telas/Pdv/Variacoes.tsx` | Front | Alterado — cor inline de amostra sem hex para token (etapa 1) |
+| `src/telas/Pdv/Cabecalho.tsx` | Front | Alterado — topo por tela (título h1, apoio, voltar, complemento); etapa no `aria-label` (etapa 2) |
+| `src/telas/Pdv/BarraInferior.tsx` | Front | Alterado — abas com ícone Phosphor e marca da aba ativa (etapa 2) |
+| `src/telas/Pdv/Pdv.tsx`, `Pedido.tsx`, `Dia.tsx`, `Variacoes.tsx` | Front | Alterados — títulos, voltar e "Cancelar pedido" passam para o topo (etapa 2) |
+| `tests/telas/ajuda.tsx`, `pdv.test.tsx`, `pdv.ajustes.test.tsx`, `pdv.caracterizacao.test.tsx` | Teste | Alterados — sinal do topo (inventário AP-004 da etapa 2) |
 | `src/telas/Pdv/*.tsx`, `src/dominio/carrinho.ts`, `src/dominio/precos.ts`, `src/api/cliente.ts` | Front | Alterados — só comentários (D1 as-is, Fase 3) |
 
 ## Log de decisões não previstas na arquitetura
 | Data | Decisão | Motivo | Impacto |
 |---|---|---|---|
+| 2026-10-05 | O componente do topo continua em `Cabecalho.tsx` (com props novas), em vez de um `Topo.tsx` novo | `nomeEtapa` é importado pelos testes desse arquivo; renomear só aumentaria a troca | Nenhum |
+| 2026-10-05 | A etapa vira o nome acessível do `<header>` (`aria-label`) e o título visível segue o design | O texto visível muda por tela ("Vendas de hoje", nome do produto); o sinal dos testes precisa ser estável | Helper `topoDoPdv` passa a `queryByRole('banner', { name })` |
 | 2026-10-05 | Erro/alerta com tokens próprios do PDV (`--color-danger`, `--color-danger-bg`, `--color-danger-line`) e `--color-veu` para o fundo de janelas | O Nocturne não tem cor de erro nem véu | Cores novas só em `tokens.css` |
 | 2026-10-05 | Inter também no peso 700 | O CSS atual usa 700 em vários textos; o design usa até 600, e os pesos são revistos nas etapas 2-5 | Um arquivo de fonte a mais |
 | 2026-10-05 | `.claude/launch.json` local usa `/usr/local/bin/npm` (Node 22) | Node 20 do PATH padrão não sobe o Vite/rolldown | Só ambiente local |
 | 2026-10-05 | Testes de caracterização em arquivo novo (`pdv.mobile.caracterizacao.test.tsx`) | `pdv.caracterizacao.test.tsx` já usa IDs INV-0xx da feature anterior com outro significado | Nenhum |
+
+## Inventário AP-004 — etapa 2 (sinal do topo)
+Busca por `banner`, `topoDoPdv`, `nomeEtapa`, `'Novo pedido'`, `heading` nos testes antes da troca. Testes em que o sinal carregava informação além de "o PDV abriu" e a asserção equivalente adotada:
+
+| Teste | O que o sinal antigo conferia | Asserção equivalente |
+|---|---|---|
+| `ajuda.tsx` `topoDoPdv`/`esperarPdv` (≈26 usos) | PDV aberto e etapa (texto em `header div`) | `queryByRole('banner', { name: ETAPAS })` dentro de `waitFor`, sem devolver elemento |
+| `ajuda.tsx` `adicionarPeca` e 5 testes com `heading 'Novo pedido'` (pdv.test 304, 919; caracterizacao 331) | Tela do Pedido aberta | `heading 'Pedido'` (h1 do topo) |
+| pdv.test "RF-F04 — mostra só a etapa" | Etapa em cada aba e na cor/tamanho; ausência de vendedor/data/número | Etapa pelo `aria-label`; **acrescentado** o título visível ("Produtos", "Vendas de hoje"); ausências mantidas |
+| pdv.test "catálogo em falha, topo pela aba" e pdv.ajustes MUD-03 "carregando" | Etapa por aba sem catálogo | Etapa pelo `aria-label` (`etapaNoTopo`) |
+| pdv.test "catálogo carregando… aba Pedido não mostra o carrinho" | Carrinho ausente durante a carga (pelo h1 "Novo pedido") | `queryByTestId('totais')` ausente e depois presente |
+| pdv.ajustes "etapa é texto simples, não título" | Topo sem heading; único h1 = produto | **Invariante alterado (MI-09):** h1 do produto agora dentro do topo; continua único h1 |
+| pdv.ajustes INV-018 "topoDoPdv = primeiro filho do banner" | Topo do PDV ≠ topo do login | `topoDoPdv()` = o próprio `banner` |
+| pdv.caracterizacao INV-015 "tecido e voltar" | Tecido do produto aberto; botão voltar com "←" | Tecido dentro do `banner` + nenhum tecido no `main`; voltar com o ícone (`svg`) |
+
+Nenhuma asserção removida sem equivalente; a única mudança de comportamento é a do MI-09 (título no topo).
 
 ## Mudanças de escopo
 Nenhuma.
@@ -44,6 +66,7 @@ Nenhuma.
 | Etapa da migração | Resultado | Observação |
 |---|---|---|
 | 0 — caracterização sobre o código atual | verde (223 + 1 expected fail) | `it.fails` do INV-013 (a) até a etapa do ADR-006 |
+| 2 — topo por tela e abas com ícone | verde (223 + 1 expected fail); `typecheck` ok | 7 testes ajustados pelo inventário acima; conferido no navegador a 375px (cor/tamanho com voltar, abas com ícone e marca) |
 | 1 — tema Nocturne | verde (223 + 1 expected fail); `typecheck` ok | Conferido no navegador a 375px (Login e Produtos no tema escuro); nenhuma cor fixa fora de `tokens.css` |
 
 ## Documentação (D1-D3)
@@ -57,4 +80,4 @@ Nenhuma.
 Nenhuma.
 
 ## Pronto para documentação e testes
-não — etapa 1 concluída; próxima: etapa 2 (topo por tela e barra de abas).
+não — etapas 1 e 2 concluídas; próxima: etapa 3 (Produtos, Cor e tamanho e Dia).

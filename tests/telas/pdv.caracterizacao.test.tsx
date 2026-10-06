@@ -251,11 +251,14 @@ describe('INV-015 — voltar, nome do produto e tecido na tela de cor/tamanho', 
     const { usuario } = await abrirPdv(catalogoSeisTamanhos());
     await usuario.click(botao(/^Bermuda Ciclista/));
     expect(screen.getByRole('heading', { level: 1, name: 'Bermuda Ciclista' })).toBeInTheDocument();
-    // Na tela de cor/tamanho a lista não aparece: o único "Poliamida" é o tecido do produto aberto.
-    expect(within(screen.getByRole('main')).getByText('Poliamida')).toBeInTheDocument();
+    // Na tela de cor/tamanho a lista não aparece: o tecido do produto aberto fica no topo (MI-09) e o
+    // conteúdo não tem nenhum tecido da lista.
+    expect(within(screen.getByRole('banner')).getByText('Poliamida')).toBeInTheDocument();
     expect(within(screen.getByRole('main')).queryByText('Suplex')).not.toBeInTheDocument();
+    expect(within(screen.getByRole('main')).queryByText('Poliamida')).not.toBeInTheDocument();
     const voltar = botao('Voltar para os produtos');
-    expect(voltar).toHaveTextContent('←');
+    // A seta "←" virou o ícone ArrowLeft do Phosphor (MI-09): o botão continua visível, com o ícone.
+    expect(voltar.querySelector('svg')).not.toBeNull();
     await usuario.click(voltar);
     expect(screen.queryByRole('heading', { name: 'Bermuda Ciclista' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Voltar para os produtos' })).not.toBeInTheDocument();
@@ -328,7 +331,7 @@ describe('INV-017 — o topo aparece em todas as telas do PDV e fica preso no al
     await usuario.click(botao(/^Bermuda Ciclista/));
     conferirTopo();
     await usuario.click(botao('Pedido'));
-    expect(screen.getByRole('heading', { name: 'Novo pedido' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Pedido' })).toBeInTheDocument();
     conferirTopo();
     await usuario.click(botao('Dia'));
     await screen.findByText('Nenhuma venda registrada ainda.');

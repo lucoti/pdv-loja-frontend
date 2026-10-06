@@ -1,3 +1,4 @@
+import { User } from '@phosphor-icons/react';
 import { useCallback, useEffect, useReducer, useState } from 'react';
 import { api, ErroApi, MENSAGEM_GENERICA, type Catalogo, type Venda } from '../../api/cliente';
 import { calcularPedido, pedidoVazio, podeFechar, qtdNoPedido, reduzirPedido, type AcaoPedido, type Pedido as PedidoEstado } from '../../dominio/carrinho';
@@ -17,6 +18,11 @@ import s from './Pdv.module.css';
 import { resumoEscolha, Variacoes, type Escolha } from './Variacoes';
 
 const SEM_ESCOLHA: Escolha = { corId: null, tamanho: null };
+
+/** Data de hoje no topo da aba Dia, no formato do design: "05 out". */
+function hojeCurto(): string {
+  return new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '').replace(' de ', ' ');
+}
 
 /** Tela de venda (handoff §2). Carrega o catálogo e só então mostra Produtos e Pedido. */
 export function Pdv() {
@@ -51,7 +57,7 @@ export function Pdv() {
         />
       ) : (
         <>
-          <Cabecalho etapa={nomeEtapa(aba)} />
+          <Cabecalho etapa={nomeEtapa(aba)} titulo={aba === 'dia' ? 'Vendas de hoje' : undefined} lateral={aba === 'dia' ? hojeCurto() : undefined} />
           <main className={s.conteudo}>
             {/* A aba Dia não depende do catálogo: funciona mesmo com ele carregando ou em falha. */}
             {aba === 'dia' ? (
@@ -226,14 +232,48 @@ function Venda(props: {
     );
   }
 
+  // Topo de cada tela conforme o design (MI-09): o que muda é o título, a linha de apoio e o complemento.
+  const etapa = nomeEtapa(aba, naVariacao);
+  let topo;
+  if (naVariacao) {
+    topo = <Cabecalho etapa={etapa} titulo={produto.nome} apoio={produto.tecidoNome} aoVoltar={voltarParaProdutos} />;
+  } else if (aba === 'produtos') {
+    topo = (
+      <Cabecalho
+        etapa={etapa}
+        apoio={
+          <span className={s.apoioCliente}>
+            <User size={16} aria-hidden="true" />
+            {pedido.cliente.trim() || 'Cliente não identificado'}
+          </span>
+        }
+        lateral={`${catalogo.produtos.length} ${catalogo.produtos.length === 1 ? 'modelo' : 'modelos'}`}
+      />
+    );
+  } else if (aba === 'pedido') {
+    // Sem confirmação, como antes: zera o pedido e gera chave de idempotência nova (ADR-F06, INV-011).
+    topo = (
+      <Cabecalho
+        etapa={etapa}
+        lateral={
+          <button type="button" className={s.cancelar} onClick={() => despachar({ tipo: 'novo', chaveIdempotencia: crypto.randomUUID() })}>
+            Cancelar pedido
+          </button>
+        }
+      />
+    );
+  } else {
+    topo = <Cabecalho etapa={etapa} titulo="Vendas de hoje" lateral={hojeCurto()} />;
+  }
+
   return (
     <>
-      <Cabecalho etapa={nomeEtapa(aba, naVariacao)} />
+      {topo}
       <main className={s.conteudo}>
         {aba === 'produtos' && !produto && (
           <Produtos catalogo={catalogo} tipoId={tipoId} aoEscolherTipo={setTipoId} aoEscolherProduto={(p) => escolherProduto(p.id)} />
         )}
-        {naVariacao && <Variacoes produto={produto} escolha={escolha} aoMudar={setEscolha} aoVoltar={voltarParaProdutos} />}
+        {naVariacao && <Variacoes produto={produto} escolha={escolha} aoMudar={setEscolha} />}
         {aba === 'pedido' && <Pedido pedido={pedido} catalogo={catalogo} despachar={despachar} />}
         {aba === 'dia' && <Dia />}
       </main>

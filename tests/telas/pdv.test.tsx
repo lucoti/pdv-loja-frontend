@@ -59,9 +59,12 @@ async function montarReferencia(usuario: Awaited<ReturnType<typeof abrirPdv>>['u
 }
 
 describe('RF-F04 — cabeçalho', () => {
-  it('mostra só a etapa: "Produtos", "Cor e tamanho", "Pedido" e "Dia"; sem "BALCÃO", vendedor, data ou número do pedido', async () => {
+  // MI-09 (pdv-mobile-refatorado): a etapa é o nome acessível do topo; o texto visível segue o design.
+  it('etapa no nome do topo ("Produtos", "Cor e tamanho", "Pedido", "Dia"); sem "BALCÃO", vendedor, data completa ou número do pedido', async () => {
     const { usuario } = await abrirPdv();
-    const topo = () => texto(screen.getByRole('banner'));
+    const topo = () => screen.getByRole('banner').getAttribute('aria-label');
+    const titulo = () => texto(within(screen.getByRole('banner')).getByRole('heading', { level: 1 }));
+    expect(titulo()).toBe('Produtos');
     expect(topo()).toBe('Produtos');
     await usuario.click(aba(/^Bermuda Ciclista/));
     expect(topo()).toBe('Cor e tamanho');
@@ -69,6 +72,7 @@ describe('RF-F04 — cabeçalho', () => {
     expect(topo()).toBe('Pedido');
     await usuario.click(aba('Dia'));
     expect(topo()).toBe('Dia');
+    expect(titulo()).toBe('Vendas de hoje');
     // Trocar de aba não fecha o produto: ao voltar para Produtos, a etapa volta a ser a de cor/tamanho.
     await usuario.click(aba('Produtos'));
     expect(topo()).toBe('Cor e tamanho');
@@ -86,11 +90,12 @@ describe('RF-F04 — cabeçalho', () => {
     const { usuario } = abrirApp();
     await esperarPdv();
     await screen.findByRole('button', { name: /Tentar/ });
-    expect(texto(screen.getByRole('banner'))).toBe('Produtos');
+    const etapa = () => screen.getByRole('banner').getAttribute('aria-label');
+    expect(etapa()).toBe('Produtos');
     await usuario.click(aba('Pedido'));
-    expect(texto(screen.getByRole('banner'))).toBe('Pedido');
+    expect(etapa()).toBe('Pedido');
     await usuario.click(aba('Dia'));
-    expect(texto(screen.getByRole('banner'))).toBe('Dia');
+    expect(etapa()).toBe('Dia');
   });
 });
 
@@ -301,7 +306,7 @@ describe('RF-F06 — carrinho', () => {
     const { usuario } = await abrirPdv();
     expect(aba('Pedido')).toBeInTheDocument();
     await usuario.click(aba('Pedido'));
-    expect(screen.getByRole('heading', { name: 'Novo pedido' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Pedido' })).toBeInTheDocument();
     expect(screen.getByText(/Nenhum item ainda\./)).toHaveTextContent('Nenhum item ainda.Volte em Produtos para incluir peças.');
     expect(botaoFechar()).toHaveTextContent('Inclua uma peça');
     expect(botaoFechar()).toBeDisabled();
@@ -781,9 +786,10 @@ describe('RF-F10 — erros da API', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Carregando…');
     await usuario.click(aba('Pedido'));
     expect(screen.getByRole('status')).toHaveTextContent('Carregando…');
-    expect(screen.queryByRole('heading', { name: 'Novo pedido' })).not.toBeInTheDocument();
+    // O topo já diz "Pedido" pela aba; o carrinho (totais) só aparece com o catálogo carregado.
+    expect(screen.queryByTestId('totais')).not.toBeInTheDocument();
     liberar();
-    expect(await screen.findByRole('heading', { name: 'Novo pedido' })).toBeInTheDocument();
+    expect(await screen.findByTestId('totais')).toBeInTheDocument();
   });
 });
 
@@ -916,7 +922,7 @@ describe('RF-006 — recarga silenciosa do catálogo (depois da venda, 409 e ite
     await usuario.click(botaoFechar());
     expect(await screen.findByRole('alert')).toHaveTextContent('em estoque');
     await new Promise((r) => setTimeout(r, 20));
-    expect(screen.getByRole('heading', { name: 'Novo pedido' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Pedido' })).toBeInTheDocument();
     expect(screen.queryByText('Sem conexão. Tente de novo.')).not.toBeInTheDocument();
     expect(itensPedido()).toHaveLength(1);
   });

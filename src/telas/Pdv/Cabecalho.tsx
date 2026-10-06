@@ -1,32 +1,46 @@
+import { ArrowLeft } from '@phosphor-icons/react';
+import type { ReactNode } from 'react';
 import type { Aba } from './BarraInferior';
 import s from './Pdv.module.css';
 
-/** Nome da etapa mostrado no topo. A tela de cor/tamanho é a aba Produtos com um produto aberto. */
+/** Nome da etapa em que o vendedor está. A tela de cor/tamanho é a aba Produtos com um produto aberto. */
 export function nomeEtapa(aba: Aba, naVariacao = false): string {
   if (naVariacao) return 'Cor e tamanho';
   return aba === 'produtos' ? 'Produtos' : aba === 'pedido' ? 'Pedido' : 'Dia';
 }
 
 /**
- * Cabeçalho fixo (RF-F04): mostra só a etapa em que o vendedor está — "Produtos", "Cor e tamanho",
- * "Pedido" ou "Dia" (decisão do Lucas, 2026-10-01; antes mostrava "BALCÃO", o vendedor e a data).
- * Ficar preso no alto ao rolar a tela vem do estilo `.cabecalho` (position: sticky), não daqui.
+ * Topo de cada tela do PDV, no formato do design "PDV Mobile Refatorado" (MI-09): título da tela, uma
+ * linha de apoio opcional embaixo, botão de voltar opcional à esquerda e um complemento à direita
+ * ("N modelos", "Cancelar pedido", a data). Fica preso no alto ao rolar pelo estilo `.topo` (sticky).
  *
- * ATENÇÃO: os testes de tela usam a etapa "Produtos" neste topo (papel `banner`) como sinal de que o
- * login deu certo (helper `esperarPdv` em tests/telas/ajuda.tsx). O texto não é um título (h1): cada
- * tela já tem o seu.
+ * O título visível segue o design ("Vendas de hoje" na aba Dia, o nome do produto em cor/tamanho), mas
+ * o nome acessível do `<header>` é sempre o nome da etapa (`nomeEtapa`).
  *
- * ATENÇÃO (dependências dos testes, levantamento as-is de 2026-10-05): o helper `topoDoPdv` procura
- * um dos quatro nomes de etapa num `div` dentro de `header` (seletor 'header div'), e `esperarPdv` é
- * usado em praticamente todo teste de login e de PDV. Mudar a marcação (tag, estrutura) ou os nomes
- * quebra esse sinal. Além disso, `nomeEtapa` é importado direto por tests/telas/pdv.ajustes.test.tsx,
- * e os testes de PDV conferem o topo pelo papel `banner`. Remover ou renomear este componente exige o
- * inventário do AP-004.
+ * ATENÇÃO: os testes usam esse nome acessível como sinal de que o PDV abriu e de em que etapa ele está
+ * (helpers `topoDoPdv`/`esperarPdv` em tests/telas/ajuda.tsx, papel `banner` com nome). Trocar o
+ * `aria-label` por outro texto quebra quase todos os testes de login e de PDV (AP-004).
  */
-export function Cabecalho({ etapa }: { etapa: string }) {
+export function Cabecalho(props: {
+  etapa: string;
+  titulo?: string;
+  apoio?: ReactNode;
+  lateral?: ReactNode;
+  /** Mostra o botão de voltar (tela de cor/tamanho) e diz o que ele faz. */
+  aoVoltar?: () => void;
+}) {
   return (
-    <header className={s.cabecalho}>
-      <div className={s.etapa}>{etapa}</div>
+    <header className={s.topo} aria-label={props.etapa}>
+      {props.aoVoltar && (
+        <button type="button" className={s.voltar} onClick={props.aoVoltar} aria-label="Voltar para os produtos">
+          <ArrowLeft size={22} aria-hidden="true" />
+        </button>
+      )}
+      <div className={s.topoTexto}>
+        <h1 className={s.topoTitulo}>{props.titulo ?? props.etapa}</h1>
+        {props.apoio && <div className={s.topoApoio}>{props.apoio}</div>}
+      </div>
+      {props.lateral && <div className={s.topoLateral}>{props.lateral}</div>}
     </header>
   );
 }

@@ -16,7 +16,8 @@ import { abrirApp, adicionarPeca, botaoCor, botaoFechar, enviarPin, esperarCatal
 
 const botao = (nome: RegExp | string) => screen.getByRole('button', { name: nome });
 const texto = (el: Element | null | undefined) => sem_nbsp(el?.textContent);
-const etapaNoTopo = () => texto(screen.getByRole('banner'));
+// Etapa = nome acessível do topo (aria-label); o título visível segue o design (MI-09).
+const etapaNoTopo = () => screen.getByRole('banner').getAttribute('aria-label');
 
 async function abrirPdv(catalogo?: Catalogo) {
   usarSimulado({ sessaoDe: 'carlos', ...(catalogo ? { catalogo } : {}) });
@@ -116,10 +117,12 @@ describe('MUD-03 — topo com o nome da etapa', () => {
     expect(etapaNoTopo()).toBe('Cor e tamanho');
   });
 
-  it('a etapa é um texto simples no topo, não um título: o único h1 da tela de cor/tamanho é o produto', async () => {
+  // MI-09 (pdv-mobile-refatorado): o título da tela passou para o topo; a etapa fica no nome acessível.
+  it('a etapa é o nome do topo; o único h1 da tela de cor/tamanho é o produto, dentro do topo', async () => {
     const { usuario } = await abrirPdv();
     await usuario.click(botao(/^Bermuda Ciclista/));
-    expect(within(screen.getByRole('banner')).queryByRole('heading')).not.toBeInTheDocument();
+    expect(etapaNoTopo()).toBe('Cor e tamanho');
+    expect(within(screen.getByRole('banner')).getByRole('heading', { level: 1 })).toHaveTextContent('Bermuda Ciclista');
     expect(screen.getAllByRole('heading', { level: 1 }).map((h) => texto(h))).toEqual(['Bermuda Ciclista']);
   });
 });
@@ -179,7 +182,7 @@ describe('INV-018 — o sinal "entrou no PDV" não confunde a tela de login com 
     // Senha certa: o topo passa a ser o do PDV, com a etapa, e o do login some.
     await enviarPin(usuario);
     await esperarPdv();
-    expect(topoDoPdv()).toBe(screen.getByRole('banner').firstElementChild);
+    expect(topoDoPdv()).toBe(screen.getByRole('banner'));
     expect(etapaNoTopo()).toBe('Produtos');
     expect(screen.queryByText('BALCÃO')).not.toBeInTheDocument();
     expect(screen.queryByRole('img', { name: /números digitados/ })).not.toBeInTheDocument();

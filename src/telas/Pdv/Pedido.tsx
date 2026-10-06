@@ -21,8 +21,6 @@ export function Pedido({ pedido, catalogo, despachar }: { pedido: PedidoEstado; 
 
   return (
     <div className={s.coluna18}>
-      <h1 className={s.tituloTela}>Novo pedido</h1>
-
       <div className={`${s.cartao} ${s.cartaoCliente}`}>
         <div className={c.rotulo}>CLIENTE</div>
         <input
@@ -174,10 +172,6 @@ export function Pedido({ pedido, catalogo, despachar }: { pedido: PedidoEstado; 
         </div>
       </div>
 
-      {/* Sem confirmação, como no handoff: zera o pedido e gera chave de idempotência nova (ADR-F06). */}
-      <button type="button" className={s.cancelar} onClick={() => despachar({ tipo: 'novo', chaveIdempotencia: crypto.randomUUID() })}>
-        Cancelar pedido
-      </button>
     </div>
   );
 }

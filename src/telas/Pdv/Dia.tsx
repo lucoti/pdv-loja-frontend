@@ -13,7 +13,6 @@ export function Dia() {
 
   return (
     <div className={s.coluna16}>
-      <h1 className={s.tituloTela}>Vendas de hoje</h1>
       {carga.situacao === 'carregando' && <Carregando />}
       {carga.situacao === 'erro' && <FalhaAoCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />}
       {carga.situacao === 'ok' && (

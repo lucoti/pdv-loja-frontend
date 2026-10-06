@@ -1,25 +1,45 @@
 /* PDV Mobile (handoff §2). */
 
-/* Cabeçalho fixo */
-.cabecalho {
+/* Topo de cada tela (design "PDV Mobile Refatorado", MI-09): título, apoio, voltar e complemento. */
+.topo {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--color-surface);
+  background: var(--color-bg);
   color: var(--color-text);
-  padding: 16px 18px;
+  padding: 14px 16px 10px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  border-bottom: 1px solid var(--color-divider);
 }
 
-.etapa { font-size: 21px; font-weight: 700; letter-spacing: 0.02em; }
+.topoTexto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.topoTitulo { margin: 0; font-family: var(--font-heading); font-size: 24px; font-weight: 500; line-height: 1.2; }
+.topoApoio { font-size: 15px; color: var(--color-neutral-400); }
+.topoLateral { flex: none; font-size: 15px; color: var(--color-neutral-400); }
+.apoioCliente { display: flex; align-items: center; gap: 6px; }
+
+/* Voltar 44×44 da tela de cor/tamanho. */
+.voltar {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-neutral-800);
+  background: transparent;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
 
 /* Conteúdo; o padding inferior reserva espaço para a barra fixa. */
 .conteudo {
   flex: 1;
   min-width: 0;
-  padding: 18px 16px 150px;
+  padding: 18px 16px 24px;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -29,7 +49,6 @@
 .coluna18 { display: flex; flex-direction: column; gap: 18px; }
 .coluna22 { display: flex; flex-direction: column; gap: 22px; }
 
-.tituloTela { font-size: 26px; font-weight: 700; margin: 0; line-height: 1.2; }
 
 /* 2a — categorias e modelos */
 .chips { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -76,8 +95,6 @@
 .seta { font-size: 30px; color: var(--color-accent); font-weight: 700; }
 
 /* 2b — variações */
-.topoVariacao { display: flex; align-items: center; gap: 14px; }
-.nomeVariacao { font-size: 26px; font-weight: 700; line-height: 1.15; margin: 0; }
 .rotuloBloco { margin-bottom: 10px; }
 
 .grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -285,13 +302,12 @@
 .totalValor { font-size: 36px; font-weight: 700; line-height: 1; }
 
 .cancelar {
-  font-size: 18px;
-  font-weight: 600;
-  padding: 16px;
-  border-radius: 14px;
-  border: 2px solid var(--color-neutral-800);
   background: transparent;
-  color: var(--color-neutral-400);
+  border: 0;
+  padding: 8px 0;
+  font-size: 16px;
+  color: var(--color-neutral-300);
+  text-decoration: underline;
   cursor: pointer;
 }
 
@@ -334,36 +350,59 @@
 .vendaDetalhe { font-size: 17px; color: var(--color-neutral-400); margin-top: 4px; }
 .vendaTotal { font-size: 23px; font-weight: 700; }
 
-/* Barra inferior fixa com o CTA e as abas */
+/* Barra inferior fixa: o botão de ação da tela (quando houver) e as abas com ícone (MI-08). */
 .barra {
   position: sticky;
   bottom: 0;
   z-index: 20;
   background: var(--color-bg);
-  border-top: 2px solid var(--color-neutral-800);
-  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
 }
 
-.acao { display: flex; flex-direction: column; gap: 10px; }
-.apoio { font-size: 17px; color: var(--color-neutral-400); }
+.acao {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--color-divider);
+}
+.apoio { font-size: 16px; color: var(--color-neutral-300); }
 
-.abas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.abas {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--color-divider);
+  background: var(--color-surface);
+}
 
 .aba {
-  font-size: 18px;
-  font-weight: 700;
-  padding: 18px 8px;
-  border-radius: 14px;
+  position: relative;
+  height: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: 500;
   border: none;
-  background: var(--color-bg);
+  background: transparent;
   color: var(--color-neutral-400);
   cursor: pointer;
 }
 
-.aba[aria-current='page'] { background: var(--color-surface); color: var(--color-text); }
+/* Aba ativa: texto claro e a marca de 2px no alto, no meio da aba. */
+.aba[aria-current='page'] { color: var(--color-accent-200); }
+.aba[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 28%;
+  right: 28%;
+  height: 2px;
+  background: var(--color-accent);
+}
 
 /* 2e — modal de venda registrada */
 .sombra {

@@ -18,7 +18,7 @@ function Amostra({ cor }: { cor: CorSku }) {
 }
 
 /** Painel de variações — cor e depois tamanho, com preço e estoque de cada SKU (handoff §2b, RF-003). */
-export function Variacoes(props: { produto: Produto; escolha: Escolha; aoMudar: (escolha: Escolha) => void; aoVoltar: () => void }) {
+export function Variacoes(props: { produto: Produto; escolha: Escolha; aoMudar: (escolha: Escolha) => void }) {
   const { produto, escolha, aoMudar } = props;
   // Sem cor escolhida a lista fica vazia e o bloco TAMANHO nem é desenhado. Com cor, vêm todos os SKUs
   // dela, inclusive os zerados, na ordem da grade de tamanhos do ERP.
@@ -39,16 +39,6 @@ export function Variacoes(props: { produto: Produto; escolha: Escolha; aoMudar: 
 
   return (
     <div className={s.coluna22}>
-      <div className={s.topoVariacao}>
-        <button type="button" className={c.voltar} onClick={props.aoVoltar} aria-label="Voltar para os produtos">
-          ←
-        </button>
-        <div>
-          <h1 className={s.nomeVariacao}>{produto.nome}</h1>
-          <div className={s.modeloPreco}>{produto.tecidoNome}</div>
-        </div>
-      </div>
-
       <section>
         <div className={`${c.rotulo} ${s.rotuloBloco}`}>COR</div>
         <div className={s.grade2}>
