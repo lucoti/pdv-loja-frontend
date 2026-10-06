@@ -92,11 +92,11 @@
   font-size: 20px;
 }
 
-/* Rótulo de seção: 16px, 700, MAIÚSCULAS, espaçado. */
+/* Rótulo de seção (design "PDV Mobile Refatorado"): 14px, 600, MAIÚSCULAS, espaçado. */
 .rotulo {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.07em;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   color: var(--color-neutral-400);
 }
 

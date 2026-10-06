@@ -1,5 +1,5 @@
 import { api } from '../../api/cliente';
-import { formatarReais } from '../../dominio/formatos';
+import { formatarReais, textoPecas } from '../../dominio/formatos';
 import { Carregando, FalhaAoCarregar } from '../Avisos';
 import c from '../comum.module.css';
 import { useCarregar } from '../useCarregar';
@@ -12,7 +12,7 @@ export function Dia() {
   const [carga, tentarDeNovo] = useCarregar(api.vendasHoje);
 
   return (
-    <div className={s.coluna16}>
+    <div className={s.coluna14}>
       {carga.situacao === 'carregando' && <Carregando />}
       {carga.situacao === 'erro' && <FalhaAoCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />}
       {carga.situacao === 'ok' && (
@@ -28,20 +28,25 @@ export function Dia() {
             </div>
           </div>
           {carga.dados.vendas.length === 0 && <div className={s.semVendas}>Nenhuma venda registrada ainda.</div>}
-          {carga.dados.vendas.map((v) => (
-            <div key={v.numero} className={s.vendaDia} data-testid="venda-dia">
-              <div className={s.vendaTexto}>
-                <div className={s.vendaTitulo}>
-                  Pedido #{v.numero}
-                  {v.cliente ? ` · ${v.cliente}` : ''}
+          {/* Lista única em cartão, como no design (1e): "#N · cliente" e "hora · N peças · pagamento". */}
+          {carga.dados.vendas.length > 0 && (
+            <div className={s.lista}>
+              {carga.dados.vendas.map((v) => (
+                <div key={v.numero} className={s.vendaDia} data-testid="venda-dia">
+                  <div className={s.vendaTexto}>
+                    <div className={s.vendaTitulo}>
+                      #{v.numero}
+                      {v.cliente ? ` · ${v.cliente}` : ''}
+                    </div>
+                    <div className={s.vendaDetalhe}>
+                      {v.hora} · {textoPecas(v.pecas)} · {v.pagamento}
+                    </div>
+                  </div>
+                  <div className={`${s.vendaTotal} ${c.tabular}`}>{formatarReais(v.totalCentavos)}</div>
                 </div>
-                <div className={s.vendaDetalhe}>
-                  {v.hora} · {v.pecas} peça(s) · {v.pagamento}
-                </div>
-              </div>
-              <div className={`${s.vendaTotal} ${c.tabular}`}>{formatarReais(v.totalCentavos)}</div>
+              ))}
             </div>
-          ))}
+          )}
         </>
       )}
     </div>

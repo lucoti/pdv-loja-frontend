@@ -83,20 +83,34 @@ export interface Peca {
   tamanho: string;
 }
 
-/** Botão do tamanho: o nome acessível começa pela sigla, seguida do preço ("MR$ 89,00estoque 5"). */
-export const botaoTamanho = (sigla: string) => screen.getByRole('button', { name: new RegExp(`^${sigla}R\\$`) });
+/**
+ * Botão do tamanho: o nome acessível é a sigla seguida do saldo ("Mestoque 5"). Desde a
+ * pdv-mobile-refatorado (MI-06) o preço não fica mais no botão.
+ */
+export const botaoTamanho = (sigla: string) => screen.getByRole('button', { name: new RegExp(`^${sigla}estoque \\d+$`) });
 /** Botão da cor: o nome começa pela cor (pode vir seguido de "sem estoque"). */
 export const botaoCor = (cor: string) => screen.getByRole('button', { name: new RegExp(`^${cor}(sem estoque)?$`) });
 
-/** Aba Produtos → chip do tipo → produto → cor → tamanho → "Adicionar ao pedido" (vai para a aba Pedido). */
+/**
+ * Aba Produtos → tipo → produto → cor → tamanho → "Adicionar ao pedido" → aba Pedido.
+ * Desde a pdv-mobile-refatorado (MI-11) "Adicionar" deixa a tela em cor/tamanho com a escolha limpa;
+ * o helper confere isso e então abre a aba Pedido, para os testes seguirem do mesmo ponto de antes.
+ */
 export async function adicionarPeca(usuario: UserEvent, p: Peca) {
   const abaProdutos = screen.getByRole('button', { name: 'Produtos' });
   if (abaProdutos.getAttribute('aria-current') !== 'page') await usuario.click(abaProdutos);
+  // Produto aberto de uma peça anterior: volta para a lista antes de escolher o próximo.
+  const voltar = screen.queryByRole('button', { name: 'Voltar para os produtos' });
+  if (voltar) await usuario.click(voltar);
   if (p.tipo) await usuario.click(screen.getByRole('button', { name: p.tipo }));
   await usuario.click(screen.getByRole('button', { name: new RegExp(`^${p.produto}`) }));
   await usuario.click(botaoCor(p.cor));
   await usuario.click(botaoTamanho(p.tamanho));
   await usuario.click(screen.getByRole('button', { name: 'Adicionar ao pedido' }));
+  // MI-11: continua em cor/tamanho, sem cor nem tamanho escolhidos.
+  expect(screen.getByRole('banner')).toHaveAttribute('aria-label', 'Cor e tamanho');
+  expect(screen.getByText('Falta escolher: cor e tamanho')).toBeInTheDocument();
+  await usuario.click(screen.getByRole('button', { name: /^Pedido/ }));
   expect(screen.getByRole('heading', { name: 'Pedido' })).toBeInTheDocument();
 }
 

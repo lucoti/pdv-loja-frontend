@@ -45,128 +45,142 @@
   gap: 18px;
 }
 
-.coluna16 { display: flex; flex-direction: column; gap: 16px; }
+.coluna14 { display: flex; flex-direction: column; gap: 14px; }
 .coluna18 { display: flex; flex-direction: column; gap: 18px; }
-.coluna22 { display: flex; flex-direction: column; gap: 22px; }
 
 
-/* 2a — categorias e modelos */
-.chips { display: flex; flex-wrap: wrap; gap: 10px; }
+/* 1b — Produtos: grade de tipos e lista do tipo escolhido (MI-05). */
+/* Tipos: 3 colunas iguais; minmax(0, …) deixa a coluna encolher em vez de estourar a tela (AP-003). */
+.gradeTipos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 
-.chip {
-  font-size: 19px;
-  font-weight: 600;
-  padding: 14px 20px;
-  border-radius: 999px;
-  border: 2px solid var(--color-neutral-800);
-  background: var(--color-surface);
+.tipo {
+  min-height: 44px;
+  padding: 4px 6px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-neutral-800);
+  background: transparent;
   color: var(--color-text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
   cursor: pointer;
 }
 
-.chip[aria-pressed='true'] {
-  border-color: var(--color-accent);
-  background: var(--color-accent-900);
-  color: var(--color-accent-100);
-}
+.grupo { display: flex; flex-direction: column; border-top: 1px solid var(--color-divider); }
+.grupoTopo { display: flex; justify-content: space-between; align-items: baseline; padding: 12px 2px 6px; }
+.grupoNome { font-size: 17px; font-weight: 600; }
+.grupoQtd { font-size: 14px; color: var(--color-neutral-400); }
 
-.modelos { display: flex; flex-direction: column; gap: 12px; }
-
-.modelo {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-  min-height: 84px;
-  padding: 18px 20px;
-  border-radius: 16px;
-  border: 2px solid var(--color-neutral-800);
+/* Lista em cartão único, linhas separadas por um fio (produtos e vendas do dia). */
+.lista {
   background: var(--color-surface);
-  color: var(--color-text);
-  text-align: left;
-  cursor: pointer;
-}
-
-.modelo:active { border-color: var(--color-accent); background: var(--color-accent-900); }
-
-.modeloTexto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.modeloNome { font-size: 23px; font-weight: 700; line-height: 1.15; }
-.modeloPreco { font-size: 17px; color: var(--color-neutral-400); }
-.seta { font-size: 30px; color: var(--color-accent); font-weight: 700; }
-
-/* 2b — variações */
-.rotuloBloco { margin-bottom: 10px; }
-
-.grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-/* Tamanhos: 3 colunas iguais; minmax(0, …) deixa a coluna encolher em vez de estourar a largura da tela. */
-.gradeTamanhos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-
-.tecido {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  padding: 18px 16px;
-  min-height: 88px;
-  border-radius: 14px;
-  border: 2px solid var(--color-neutral-800);
-  background: var(--color-surface);
-  color: var(--color-text);
+}
+
+.linhaProduto {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 10px 14px;
+  border: 0;
+  background: transparent;
+  color: inherit;
   text-align: left;
   cursor: pointer;
 }
 
-.tecidoNome { font-size: 20px; font-weight: 700; line-height: 1.2; }
-.tecidoPreco { font-size: 18px; color: var(--color-neutral-400); }
+.linhaProduto + .linhaProduto { border-top: 1px solid var(--color-divider); }
+.linhaProduto:active { background: var(--color-accent-900); }
+.linhaProdutoNome { flex: 1; min-width: 0; font-size: 17px; font-weight: 500; }
 
-.tamanho {
-  height: 74px;
-  font-size: 26px;
-  font-weight: 700;
-  border-radius: 14px;
-  border: 2px solid var(--color-neutral-800);
-  background: var(--color-surface);
-  color: var(--color-text);
-  cursor: pointer;
-}
-
-.tamanho[aria-pressed='true'] {
-  border: 3px solid var(--color-accent);
+.selo {
+  flex: none;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
   background: var(--color-accent-900);
-  color: var(--color-accent-100);
+  color: var(--color-accent-200);
 }
+
+.seta { flex: none; color: var(--color-accent); }
+
+/* 1c — Cor e tamanho (MI-06). */
+.bloco { display: flex; flex-direction: column; gap: 8px; }
+.listaCores { display: flex; flex-direction: column; gap: 6px; }
 
 .cor {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px;
-  min-height: 68px;
-  border-radius: 14px;
-  border: 2px solid var(--color-neutral-800);
-  background: var(--color-surface);
+  height: 52px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-neutral-800);
+  background: transparent;
   color: var(--color-text);
+  font-size: 17px;
+  font-weight: 500;
+  text-align: left;
   cursor: pointer;
 }
 
 .circulo {
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  border: 2px solid var(--color-neutral-600);
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  border: 1px solid var(--color-neutral-600);
   display: block;
-  flex-shrink: 0;
+  flex: none;
 }
 
-.corNome { font-size: 19px; font-weight: 600; text-align: left; }
+img.circulo { object-fit: cover; }
+.corNome { flex: 1; min-width: 0; }
+.marcada { flex: none; color: var(--color-accent); }
 
-/* Seleção persistente: borda 3px verde + fundo verde claro (tecido, cor, pagamento). */
-.tecido[aria-pressed='true'],
+/* Tamanhos: 4 colunas iguais; minmax(0, …) deixa a coluna encolher em vez de estourar a tela (AP-003). */
+.gradeTamanhos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+
+.tamanho {
+  min-height: 64px;
+  padding: 0 2px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-neutral-800);
+  background: transparent;
+  color: var(--color-text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.tamanho:disabled { opacity: 0.4; cursor: not-allowed; }
+.tamanhoSigla { font-size: 20px; font-weight: 600; line-height: 1.1; }
+/* O saldo quebra em duas linhas ("estoque" / "12") só quando não cabe: a 320px a coluna tem ~62px úteis
+   e "estoque 12" mede ~66px. O botão cresce em altura; nunca passa da borda. */
+.tamanhoSaldo { font-size: 13px; line-height: 1.15; text-align: center; color: var(--color-neutral-300); overflow-wrap: anywhere; }
+
+/* Seleção: fundo e borda do acento (tipo, cor, tamanho, pagamento). */
+.tipo[aria-pressed='true'],
 .cor[aria-pressed='true'],
+.tamanho[aria-pressed='true'],
 .pagamento[aria-pressed='true'] {
-  border: 3px solid var(--color-accent);
+  border-color: var(--color-accent);
   background: var(--color-accent-900);
+  color: var(--color-accent-100);
 }
+
+.resumoLinha { display: flex; justify-content: space-between; gap: 8px; font-size: 16px; }
+.resumoPreco { flex: none; font-weight: 600; white-space: nowrap; }
+
+.grade2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 
 /* 2c — pedido */
 .cartao {
@@ -311,44 +325,31 @@
   cursor: pointer;
 }
 
-/* 2d — dia */
-.caixasDia { display: flex; gap: 12px; }
+/* 1e — Dia: cartões do dia e lista das vendas (MI-08). */
+.caixasDia { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 8px; }
 
 .caixaTotal,
 .caixaPedidos {
-  flex: 1;
-  padding: 18px 16px;
-  border-radius: 16px;
-}
-
-.caixaTotal { background: var(--color-surface); color: var(--color-text); }
-.caixaPedidos { border: 2px solid var(--color-neutral-800); background: var(--color-surface); }
-.caixaRotulo { font-size: 16px; }
-.caixaTotal .caixaRotulo { opacity: 0.75; }
-.caixaPedidos .caixaRotulo { color: var(--color-neutral-400); }
-.caixaValor { font-size: 28px; font-weight: 700; margin-top: 6px; }
-
-.semVendas {
-  padding: 40px 16px;
-  text-align: center;
-  color: var(--color-neutral-400);
-  font-size: 20px;
-}
-
-.vendaDia {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 18px 16px;
-  border-radius: 16px;
-  border: 2px solid var(--color-neutral-800);
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-neutral-800);
   background: var(--color-surface);
 }
 
-.vendaTexto { flex: 1; min-width: 0; }
-.vendaTitulo { font-size: 21px; font-weight: 700; }
-.vendaDetalhe { font-size: 17px; color: var(--color-neutral-400); margin-top: 4px; }
-.vendaTotal { font-size: 23px; font-weight: 700; }
+.caixaRotulo { font-size: 15px; color: var(--color-neutral-400); }
+.caixaValor { font-size: 24px; font-weight: 600; }
+
+.semVendas { padding: 16px 14px; font-size: 16px; color: var(--color-neutral-300); }
+
+.vendaDia { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 14px; }
+.vendaDia + .vendaDia { border-top: 1px solid var(--color-divider); }
+.vendaTexto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.vendaTitulo { font-size: 17px; font-weight: 500; }
+.vendaDetalhe { font-size: 15px; color: var(--color-neutral-400); }
+.vendaTotal { flex: none; font-size: 17px; font-weight: 600; }
 
 /* Barra inferior fixa: o botão de ação da tela (quando houver) e as abas com ícone (MI-08). */
 .barra {
@@ -443,24 +444,6 @@
 }
 
 /* Integração PDV-ERP: estoque por SKU */
-.semEstoque { font-size: 16px; font-weight: 600; color: var(--color-danger); }
-.corTexto { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
-img.circulo { object-fit: cover; }
-.tamanho {
-  height: auto;
-  min-height: 88px;
-  padding: 10px 4px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-}
-.tamanho:disabled { background: var(--color-neutral-900); color: var(--color-neutral-500); border-color: var(--color-neutral-900); cursor: not-allowed; }
-.tamanhoSigla { font-size: 24px; font-weight: 700; line-height: 1.1; }
-.tamanhoPreco { font-size: 16px; }
-.tamanhoSaldo { font-size: 16px; color: var(--color-neutral-400); }
-.tamanho:disabled .tamanhoSaldo { color: inherit; }
 .limite { font-size: 16px; font-weight: 600; color: var(--color-danger); }
 .mais:disabled { background: var(--color-neutral-900); color: var(--color-neutral-500); cursor: not-allowed; }
 .tamanho[aria-pressed='true'] .tamanhoSaldo { color: inherit; opacity: 0.85; }

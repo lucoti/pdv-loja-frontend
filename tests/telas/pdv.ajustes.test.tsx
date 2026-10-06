@@ -58,26 +58,36 @@ describe('MUD-01 — saldo do tamanho como "estoque N"', () => {
     await usuario.click(botao(/^Bermuda Ciclista/));
     await usuario.click(botaoCor('Preto'));
     const tamanhos = within(screen.getByText('TAMANHO').parentElement!).getAllByRole('button');
-    expect(tamanhos.map((b) => texto(b.children[2]))).toEqual(['estoque 3', 'estoque 0', 'estoque 12', 'estoque 7', 'estoque 1', 'estoque 0']);
+    expect(tamanhos.map((b) => texto(b.children[1]))).toEqual(['estoque 3', 'estoque 0', 'estoque 12', 'estoque 7', 'estoque 1', 'estoque 0']);
     for (const b of tamanhos) expect(texto(b)).not.toMatch(/un\.|sem estoque|-\d/);
   });
 });
 
-describe('MUD-02 — grade de tamanhos em 3 colunas iguais que encolhem', () => {
-  it('os 6 tamanhos são filhos diretos de uma grade de 3 colunas minmax(0, 1fr)', async () => {
+// MI-06 (pdv-mobile-refatorado): a grade passou de 3 para 4 colunas, como no design; continua com
+// minmax(0, 1fr) para encolher em vez de estourar a tela (AP-003).
+describe('MUD-02 — grade de tamanhos em 4 colunas iguais que encolhem', () => {
+  it('os 6 tamanhos são filhos diretos de uma grade de 4 colunas minmax(0, 1fr)', async () => {
     const { usuario } = await abrirPdv(catalogoSeisTamanhos());
     await usuario.click(botao(/^Bermuda Ciclista/));
     await usuario.click(botaoCor('Preto'));
     const tamanhos = within(screen.getByText('TAMANHO').parentElement!).getAllByRole('button');
     expect(tamanhos).toHaveLength(6);
     const grade = tamanhos[0]!.parentElement!;
-    // Todos na mesma grade, sem elemento intermediário: 6 tamanhos → 2 linhas de 3.
+    // Todos na mesma grade, sem elemento intermediário: 6 tamanhos → uma linha de 4 e outra de 2.
     expect([...grade.children]).toEqual(tamanhos);
     expect([...grade.classList]).toHaveLength(1);
     const regra = declaracoesDe(grade.classList[0]!);
     expect(regra.display).toBe('grid');
-    expect(regra['grid-template-columns']).toBe('repeat(3, minmax(0, 1fr))');
-    expect(regra.gap).toBe('12px');
+    expect(regra['grid-template-columns']).toBe('repeat(4, minmax(0, 1fr))');
+    expect(regra.gap).toBe('6px');
+    // A 320px "estoque 12" não cabe numa linha: o saldo pode quebrar e o botão cresce (nada de nowrap
+    // nem altura fixa, que fariam o texto passar da borda do botão).
+    const saldo = declaracoesDe(tamanhos[0]!.children[1]!.classList[0]!);
+    expect(saldo['white-space']).toBeUndefined();
+    expect(saldo['overflow-wrap']).toBe('anywhere');
+    const botaoRegra = declaracoesDe(tamanhos[0]!.classList[0]!);
+    expect(botaoRegra.height).toBeUndefined();
+    expect(botaoRegra['min-height']).toBe('64px');
   });
 });
 
@@ -196,5 +206,35 @@ describe('INV-018 — o sinal "entrou no PDV" não confunde a tela de login com 
     await screen.findByRole('button', { name: 'Tentar de novo' });
     expect(topoDoPdv()).toBeNull();
     expect(screen.queryByRole('navigation', { name: 'Abas' })).not.toBeInTheDocument();
+  });
+});
+
+// MI-05 (pdv-mobile-refatorado): tipos em grade de 3 colunas que encolhem (AP-003). jsdom não calcula
+// layout: a regra é lida do CSS da classe que a tela usa de fato.
+describe('MI-05 — grade de tipos em 3 colunas iguais que encolhem', () => {
+  it('os tipos são filhos diretos de uma grade de 3 colunas minmax(0, 1fr), e o nome longo pode quebrar', async () => {
+    await abrirPdv();
+    const tipos = ['Bermudas', 'Calças', 'Tops'].map((t) => botao(t));
+    const grade = tipos[0]!.parentElement!;
+    expect([...grade.children]).toEqual(tipos);
+    expect([...grade.classList]).toHaveLength(1);
+    const regra = declaracoesDe(grade.classList[0]!);
+    expect(regra.display).toBe('grid');
+    expect(regra['grid-template-columns']).toBe('repeat(3, minmax(0, 1fr))');
+    expect(declaracoesDe(tipos[0]!.classList[0]!)['overflow-wrap']).toBe('anywhere');
+  });
+});
+
+// MI-08: os dois cartões do dia dividem a largura sem estourar a tela (AP-003).
+describe('MI-08 — cartões do dia em grade que encolhe', () => {
+  it('"Total do dia" e "Pedidos" ficam numa grade minmax(0, 1.6fr) minmax(0, 1fr)', async () => {
+    const { usuario } = await abrirPdv();
+    await usuario.click(botao('Dia'));
+    const total = (await screen.findByText('Total do dia')).parentElement!;
+    const grade = total.parentElement!;
+    expect(grade.children).toHaveLength(2);
+    const regra = declaracoesDe([...grade.classList][0]!);
+    expect(regra.display).toBe('grid');
+    expect(regra['grid-template-columns']).toBe('minmax(0, 1.6fr) minmax(0, 1fr)');
   });
 });

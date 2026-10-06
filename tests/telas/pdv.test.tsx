@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { api } from '../../src/api/cliente';
 import type { Catalogo } from '../../src/api/cliente';
 import { CATALOGO } from '../../src/simulado/dados';
-import { resumoEscolha } from '../../src/telas/Pdv/Variacoes';
+import { precoDaEscolha, resumoEscolha } from '../../src/telas/Pdv/Variacoes';
 import { servidor, usarSimulado } from '../apoio';
 import { ENTRADA_VENDA, validarEntrada } from '../contrato';
 import {
@@ -105,22 +105,25 @@ const skuId = (p: number, c: number, t: number) => (p - 1) * 12 + (c - 1) * 4 + 
 const skuNoSimulado = (simulado: { estado: { catalogo: Catalogo } }, id: number) => simulado.estado.catalogo.produtos.flatMap((p) => p.skus).find((k) => k.id === id)!;
 
 describe('RF-002 — aba Produtos com os tipos do ERP', () => {
-  it('chips = tipos com produto vendável; primeiro selecionado; "a partir de" pelo menor preço; chips filtram', async () => {
+  // MI-05 (pdv-mobile-refatorado): a lista mostra só o produto e o selo "N no pedido"; preço e
+  // "sem estoque" saíram da lista (o preço continua na linha acima de "Adicionar", RF-003).
+  it('tipos com produto vendável; primeiro selecionado; lista só com o produto (sem preço nem "sem estoque"); tipos filtram', async () => {
     const { usuario } = await abrirPdv();
     const chips = ['Bermudas', 'Calças', 'Tops'];
     for (const t of chips) expect(aba(t)).toBeInTheDocument();
     expect(aba('Bermudas')).toHaveAttribute('aria-pressed', 'true');
     expect(aba('Calças')).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getAllByRole('button', { name: /a partir de/ }).map(texto)).toEqual(['Bermuda CiclistaSuplex · a partir de R$ 59,00›', 'Short CurtoSuplex · a partir de R$ 55,00sem estoque›']);
+    const lista = () => within(screen.getByRole('region', { name: 'Bermudas' })).getAllByRole('button').map(texto);
+    expect(lista()).toEqual(['Bermuda Ciclista', 'Short Curto']);
     await usuario.click(aba('Calças'));
     expect(aba('Calças')).toHaveAttribute('aria-pressed', 'true');
     expect(aba('Bermudas')).toHaveAttribute('aria-pressed', 'false');
     expect(screen.queryByRole('button', { name: /^Bermuda Ciclista/ })).not.toBeInTheDocument();
-    expect(texto(aba(/^Calça Legging/))).toContain('a partir de R$ 89,00');
-    expect(texto(aba(/^Calça Legging/))).not.toContain('sem estoque');
+    expect(texto(aba(/^Calça Legging/))).toBe('Calça Legging');
   });
 
-  it('"a partir de" usa o menor preço entre os SKUs (acréscimo por tamanho)', async () => {
+  // MI-05/MI-06: o "a partir de" saiu da lista e foi para a linha acima de "Adicionar", antes da escolha.
+  it('"a partir de" usa o menor preço entre os SKUs (acréscimo por tamanho), na linha de cor/tamanho', async () => {
     const catalogo = structuredClone(CATALOGO);
     const legging = catalogo.produtos.find((p) => p.numero === 1)!;
     for (const k of legging.skus) k.precoCentavos = k.tamanho.sigla === 'P' ? 7900 : 9900;
@@ -128,7 +131,12 @@ describe('RF-002 — aba Produtos com os tipos do ERP', () => {
     const { usuario } = abrirApp();
     await esperarCatalogo();
     await usuario.click(aba('Calças'));
-    expect(texto(aba(/^Calça Legging/))).toContain('a partir de R$ 79,00');
+    await usuario.click(aba(/^Calça Legging/));
+    expect(sem_nbsp(screen.getByText(/^a partir de/).textContent)).toBe('a partir de R$ 79,00');
+    await usuario.click(botaoCor('Preto'));
+    await usuario.click(botaoTamanho('M'));
+    expect(screen.queryByText(/^a partir de/)).not.toBeInTheDocument();
+    expect(sem_nbsp(screen.getByText(/^R\$ /).textContent)).toBe('R$ 99,00');
   });
 
   it('produto sem estoque mostra "sem estoque" e abre para consulta, com todos os tamanhos desabilitados', async () => {
@@ -151,7 +159,8 @@ describe('RF-002 — aba Produtos com os tipos do ERP', () => {
 });
 
 describe('RF-003 — variações: cor → tamanho', () => {
-  it('cores do produto com amostra; tamanhos só depois da cor, com preço e "estoque N"', async () => {
+  // MI-06: o preço saiu do botão do tamanho (fica na linha acima de "Adicionar").
+  it('cores do produto com amostra; tamanhos só depois da cor, com sigla e "estoque N"', async () => {
     const { usuario } = await abrirPdv();
     await usuario.click(aba('Calças'));
     await usuario.click(aba(/^Calça Legging/));
@@ -161,33 +170,41 @@ describe('RF-003 — variações: cor → tamanho', () => {
     expect(screen.queryByText('TAMANHO')).not.toBeInTheDocument();
     await usuario.click(botaoCor('Marinho'));
     expect(botaoCor('Marinho')).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getAllByRole('button', { name: /^(P|M|G|GG)R\$/ }).map(texto)).toEqual(['PR$ 89,00estoque 1', 'MR$ 89,00estoque 5', 'GR$ 89,00estoque 5', 'GGR$ 89,00estoque 5']);
+    expect(screen.getAllByRole('button', { name: /^(P|M|G|GG)estoque/ }).map(texto)).toEqual(['Pestoque 1', 'Mestoque 5', 'Gestoque 5', 'GGestoque 5']);
+    expect(sem_nbsp(screen.getByText(/^R\$ /).textContent)).toBe('R$ 89,00');
   });
 
   it('SKU inativo não aparece (Bermuda Vinho sem GG) e tamanho sem saldo aparece desabilitado', async () => {
     const { usuario } = await abrirPdv();
     await usuario.click(aba(/^Bermuda Ciclista/));
     await usuario.click(botaoCor('Vinho'));
-    expect(screen.getAllByRole('button', { name: /^(P|M|G|GG)R\$/ }).map((b) => texto(b).split('R$')[0])).toEqual(['P', 'M', 'G']);
+    expect(screen.getAllByRole('button', { name: /^(P|M|G|GG)estoque/ }).map((b) => texto(b).split('estoque')[0])).toEqual(['P', 'M', 'G']);
     await usuario.click(aba('Voltar para os produtos'));
     await usuario.click(aba('Tops'));
     await usuario.click(aba(/^Top Nadador/));
     await usuario.click(botaoCor('Vinho'));
     expect(botaoTamanho('GG')).toBeDisabled();
-    expect(texto(botaoTamanho('GG'))).toBe('GGR$ 55,00estoque 0');
+    expect(texto(botaoTamanho('GG'))).toBe('GGestoque 0');
     await usuario.click(botaoTamanho('GG'));
     expect(botaoTamanho('GG')).toHaveAttribute('aria-pressed', 'false');
   });
 
-  it('cor com todos os tamanhos zerados mostra "sem estoque" no botão da cor', async () => {
+  // MI-06 (decisão do Lucas: seguir o design): a cor zerada não avisa mais "sem estoque"; o saldo
+  // aparece nos tamanhos, todos "estoque 0" e desabilitados.
+  it('cor com todos os tamanhos zerados: botão da cor só com o nome; tamanhos "estoque 0" desabilitados', async () => {
     const catalogo = structuredClone(CATALOGO);
     for (const k of catalogo.produtos.find((p) => p.numero === 3)!.skus) if (k.cor.nome === 'Preto') k.saldo = 0;
     usarSimulado({ sessaoDe: 'carlos', catalogo });
     const { usuario } = abrirApp();
     await esperarCatalogo();
     await usuario.click(aba(/^Bermuda Ciclista/));
-    expect(texto(botaoCor('Preto'))).toBe('Pretosem estoque');
+    expect(texto(botaoCor('Preto'))).toBe('Preto');
     expect(texto(botaoCor('Marinho'))).toBe('Marinho');
+    await usuario.click(botaoCor('Preto'));
+    for (const t of ['P', 'M', 'G', 'GG']) {
+      expect(botaoTamanho(t)).toBeDisabled();
+      expect(texto(botaoTamanho(t))).toBe(`${t}estoque 0`);
+    }
   });
 
   it('estampa sem hex usa a miniatura da foto como amostra', async () => {
@@ -216,28 +233,33 @@ describe('RF-003 — variações: cor → tamanho', () => {
     expect(aba('Adicionar ao pedido')).toBeDisabled();
   });
 
-  it('linha de apoio: "Falta escolher: …"; completa → "Cor · Tam X — R$ preço" e botão habilitado', async () => {
+  // MI-06: o resumo e o preço ficam lado a lado ("Preto · Tam G" | "R$ 89,00"); "cor e tamanho" como no design.
+  it('linha de apoio: "Falta escolher: …"; completa → "Cor · Tam X" com o preço ao lado e botão habilitado', async () => {
     const { usuario } = await abrirPdv();
     await usuario.click(aba('Calças'));
     await usuario.click(aba(/^Calça Legging/));
     const adicionar = aba('Adicionar ao pedido');
-    expect(screen.getByText('Falta escolher: cor, tamanho')).toBeInTheDocument();
+    expect(screen.getByText('Falta escolher: cor e tamanho')).toBeInTheDocument();
     expect(adicionar).toBeDisabled();
     await usuario.click(botaoCor('Preto'));
     expect(screen.getByText('Falta escolher: tamanho')).toBeInTheDocument();
     expect(adicionar).toBeDisabled();
     await usuario.click(botaoTamanho('G'));
-    expect(sem_nbsp(screen.getByText(/^Preto · Tam G/).textContent)).toBe('Preto · Tam G — R$ 89,00');
+    const resumo = screen.getByText(/^Preto · Tam G/);
+    expect(sem_nbsp(resumo.textContent)).toBe('Preto · Tam G');
+    expect(sem_nbsp(resumo.parentElement!.textContent)).toBe('Preto · Tam GR$ 89,00');
     expect(adicionar).toBeEnabled();
   });
 
   it('resumoEscolha: falta cor e tamanho, só tamanho, ou limite atingido', () => {
     const legging = CATALOGO.produtos.find((p) => p.numero === 1)!;
-    expect(resumoEscolha(legging, { corId: null, tamanho: null }, 0)).toBe('Falta escolher: cor, tamanho');
+    expect(resumoEscolha(legging, { corId: null, tamanho: null }, 0)).toBe('Falta escolher: cor e tamanho');
     expect(resumoEscolha(legging, { corId: 1, tamanho: null }, 0)).toBe('Falta escolher: tamanho');
     expect(resumoEscolha(legging, { corId: null, tamanho: 'M' }, 0)).toBe('Falta escolher: cor');
     expect(resumoEscolha(legging, { corId: 2, tamanho: 'P' }, 1)).toBe('Só 1 em estoque — já no pedido');
-    expect(sem_nbsp(resumoEscolha(legging, { corId: 2, tamanho: 'P' }, 0))).toBe('Marinho · Tam P — R$ 89,00');
+    expect(sem_nbsp(resumoEscolha(legging, { corId: 2, tamanho: 'P' }, 0))).toBe('Marinho · Tam P');
+    expect(sem_nbsp(precoDaEscolha(legging, { corId: 2, tamanho: 'P' }))).toBe('R$ 89,00');
+    expect(sem_nbsp(precoDaEscolha(legging, { corId: null, tamanho: null }))).toBe('R$ 89,00');
   });
 
   it('voltar do painel retorna à lista e descarta a escolha', async () => {
@@ -249,18 +271,27 @@ describe('RF-003 — variações: cor → tamanho', () => {
     expect(screen.queryByRole('heading', { name: 'Bermuda Ciclista' })).not.toBeInTheDocument();
     await usuario.click(aba(/^Bermuda Ciclista/));
     expect(botaoCor('Preto')).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByText('Falta escolher: cor, tamanho')).toBeInTheDocument();
+    expect(screen.getByText('Falta escolher: cor e tamanho')).toBeInTheDocument();
   });
 
-  it('adicionar vai para a aba Pedido e limpa a variação', async () => {
+  // MI-11 (decisão do Lucas: seguir o design): adicionar fica em cor/tamanho com a escolha limpa.
+  it('adicionar fica em cor/tamanho com a escolha limpa; o contador da aba Pedido mostra a peça', async () => {
     const { usuario } = await abrirPdv();
-    await adicionarPeca(usuario, LEGGING_M_PRETO);
-    expect(aba('Pedido (1)')).toHaveAttribute('aria-current', 'page');
+    await usuario.click(aba('Calças'));
+    await usuario.click(aba(/^Calça Legging/));
+    await usuario.click(botaoCor('Preto'));
+    await usuario.click(botaoTamanho('M'));
+    await usuario.click(aba('Adicionar ao pedido'));
+    expect(screen.getByRole('heading', { name: 'Calça Legging' })).toBeInTheDocument();
+    expect(aba('Produtos')).toHaveAttribute('aria-current', 'page');
+    expect(aba('Pedido (1)')).toBeInTheDocument();
+    expect(botaoCor('Preto')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByText('TAMANHO')).not.toBeInTheDocument();
+    expect(screen.getByText('Falta escolher: cor e tamanho')).toBeInTheDocument();
+    expect(aba('Adicionar ao pedido')).toBeDisabled();
+    await usuario.click(aba('Pedido (1)'));
     expect(itensPedido()).toHaveLength(1);
     expect(texto(itensPedido()[0]!)).toContain('Suplex · Tam M · Preto · R$ 89,00');
-    await usuario.click(aba('Produtos'));
-    expect(screen.queryByRole('heading', { name: 'Calça Legging' })).not.toBeInTheDocument();
-    expect(aba(/^Calça Legging/)).toBeInTheDocument();
   });
 });
 
@@ -289,9 +320,9 @@ describe('RF-004 — pedido limitado ao estoque', () => {
     await adicionarPeca(usuario, LEGGING_P_MARINHO);
     expect(within(itensPedido()[0]!).getByText('Só 1 em estoque')).toBeInTheDocument();
     expect(within(itensPedido()[0]!).getByRole('button', { name: 'Aumentar quantidade' })).toBeDisabled();
+    // Com MI-11 o produto continua aberto ao voltar para Produtos.
     await usuario.click(aba('Produtos'));
-    await usuario.click(aba('Calças'));
-    await usuario.click(aba(/^Calça Legging/));
+    expect(screen.getByRole('heading', { name: 'Calça Legging' })).toBeInTheDocument();
     await usuario.click(botaoCor('Marinho'));
     await usuario.click(botaoTamanho('P'));
     expect(screen.getByText('Só 1 em estoque — já no pedido')).toBeInTheDocument();
@@ -629,7 +660,8 @@ describe('RF-F09 — aba Dia', () => {
     await usuario.click(aba('Dia'));
     const linhas = await screen.findAllByTestId('venda-dia');
     const hora = simulado.estado.vendas[1]!.hora;
-    expect(linhas.map(texto)).toEqual([`Pedido #1043${hora} · 1 peça(s) · DinheiroR$ 55,00`, `Pedido #1042 · Maria${simulado.estado.vendas[0]!.hora} · 3 peça(s) · PixR$ 200,20`]);
+    // MI-08: "#N · cliente" e "hora · N peças · pagamento", como no design.
+    expect(linhas.map(texto)).toEqual([`#1043${hora} · 1 peça · DinheiroR$ 55,00`, `#1042 · Maria${simulado.estado.vendas[0]!.hora} · 3 peças · PixR$ 200,20`]);
     expect(hora).toMatch(/^\d{2}:\d{2}$/);
     expect(texto(screen.getByText('Total do dia').parentElement!)).toBe('Total do diaR$ 255,20');
     expect(texto(screen.getByText('Pedidos').parentElement!)).toBe('Pedidos2');
@@ -817,7 +849,7 @@ describe('RF-006 — recarga silenciosa do catálogo (depois da venda, 409 e ite
     await usuario.click(aba('Calças'));
     await usuario.click(aba(/^Calça Legging/));
     await usuario.click(botaoCor('Preto'));
-    await waitFor(() => expect(texto(botaoTamanho('M'))).toBe('MR$ 89,00estoque 3'));
+    await waitFor(() => expect(texto(botaoTamanho('M'))).toBe('Mestoque 3'));
     servidor.events.removeAllListeners();
   });
 
@@ -898,6 +930,8 @@ describe('RF-006 — recarga silenciosa do catálogo (depois da venda, 409 e ite
     const { usuario, simulado } = await abrirPdv();
     await adicionarPeca(usuario, TOP_NADADOR_P_VINHO); // deixa "Tops" escolhido
     await usuario.click(aba('Produtos'));
+    // MI-11: o produto continua aberto depois de adicionar; volta para a lista para ver os tipos.
+    await usuario.click(aba('Voltar para os produtos'));
     expect(aba('Tops')).toHaveAttribute('aria-pressed', 'true');
     await usuario.click(aba(/^Pedido/));
     await usuario.click(aba('Pix'));

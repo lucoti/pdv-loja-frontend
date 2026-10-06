@@ -151,20 +151,24 @@ describe('INV-010 — tamanho sem saldo fica desabilitado e não pode ser escolh
   });
 });
 
-describe('INV-011 — cada tamanho mostra sigla, preço e saldo, nessa ordem; tamanhos na ordem da grade', () => {
-  it('6 tamanhos fora de ordem no catálogo aparecem pela ordem da grade, cada um com sigla → preço → saldo', async () => {
+// MI-06 (pdv-mobile-refatorado): o preço saiu do botão do tamanho; aparece na linha acima de "Adicionar".
+describe('INV-011 — cada tamanho mostra sigla e saldo, nessa ordem; tamanhos na ordem da grade; preço do SKU na linha de apoio', () => {
+  it('6 tamanhos fora de ordem no catálogo aparecem pela ordem da grade, cada um com sigla → saldo; o preço é o do tamanho escolhido', async () => {
     const { usuario } = await abrirPdv(catalogoSeisTamanhos());
     await usuario.click(botao(/^Bermuda Ciclista/));
     await usuario.click(botaoCor('Preto'));
     const botoes = botoesTamanho();
     expect(botoes.map((b) => texto(b.children[0]))).toEqual(['PP', 'P', 'M', 'G', 'GG', 'XG']);
-    expect(botoes.map((b) => texto(b.children[1]))).toEqual(['R$ 101,00', 'R$ 102,00', 'R$ 103,00', 'R$ 104,00', 'R$ 105,00', 'R$ 106,00']);
     botoes.forEach((b, i) => {
-      expect(b.children).toHaveLength(3);
-      expect(texto(b.children[2])).toMatch(mostraSaldo(NA_ORDEM[i]!.saldo));
-      // O saldo não se confunde com a sigla nem com o preço: é o terceiro texto, depois dos outros dois.
-      expect(texto(b).startsWith(`${NA_ORDEM[i]!.sigla}${texto(b.children[1])}`)).toBe(true);
+      expect(b.children).toHaveLength(2);
+      expect(texto(b.children[1])).toMatch(mostraSaldo(NA_ORDEM[i]!.saldo));
+      // O saldo não se confunde com a sigla: é o segundo texto, logo depois dela.
+      expect(texto(b)).toBe(`${NA_ORDEM[i]!.sigla}${texto(b.children[1])}`);
     });
+    // Preços diferentes por tamanho: antes da escolha "a partir de" o menor; depois, o do tamanho.
+    expect(texto(screen.getByText(/^a partir de/))).toBe('a partir de R$ 101,00');
+    await usuario.click(botaoTamanho('M'));
+    expect(texto(screen.getByText(/^R\$ /))).toBe('R$ 103,00');
   });
 
   it('catálogo de exemplo: P, M, G, GG na Legging Marinho, com o saldo de cada um (P tem 1, os demais 5)', async () => {
@@ -173,9 +177,10 @@ describe('INV-011 — cada tamanho mostra sigla, preço e saldo, nessa ordem; ta
     await usuario.click(botao(/^Calça Legging/));
     await usuario.click(botaoCor('Marinho'));
     const botoes = botoesTamanho();
-    expect(botoes.map((b) => `${texto(b.children[0])}|${texto(b.children[1])}`)).toEqual(['P|R$ 89,00', 'M|R$ 89,00', 'G|R$ 89,00', 'GG|R$ 89,00']);
-    [1, 5, 5, 5].forEach((saldo, i) => expect(texto(botoes[i]!.children[2])).toMatch(mostraSaldo(saldo)));
-    expect(texto(botoes[1]!.children[2])).not.toMatch(mostraSaldo(1));
+    expect(botoes.map((b) => texto(b.children[0]))).toEqual(['P', 'M', 'G', 'GG']);
+    [1, 5, 5, 5].forEach((saldo, i) => expect(texto(botoes[i]!.children[1])).toMatch(mostraSaldo(saldo)));
+    expect(texto(botoes[1]!.children[1])).not.toMatch(mostraSaldo(1));
+    expect(texto(screen.getByText(/^R\$ /))).toBe('R$ 89,00');
   });
 });
 
@@ -185,7 +190,7 @@ describe('INV-012 — tamanhos só depois da cor; trocar de cor mantém o tamanh
     await usuario.click(botao(/^Bermuda Ciclista/));
     expect(screen.getByText('COR')).toBeInTheDocument();
     expect(screen.queryByText('TAMANHO')).not.toBeInTheDocument();
-    expect(screen.queryAllByRole('button', { name: /^(P|M|G|GG)R\$/ })).toHaveLength(0);
+    expect(screen.queryAllByRole('button', { name: /^(P|M|G|GG)estoque/ })).toHaveLength(0);
     await usuario.click(botaoCor('Vinho'));
     expect(botoesTamanho().map((b) => texto(b.firstElementChild))).toEqual(['P', 'M', 'G']);
     await usuario.click(botaoCor('Preto'));
@@ -211,34 +216,39 @@ describe('INV-012 — tamanhos só depois da cor; trocar de cor mantém o tamanh
   });
 });
 
-describe('INV-013 — "sem estoque" na cor e no card do produto, os dois clicáveis', () => {
-  it('produto sem estoque: card avisa e abre; cada cor avisa, pode ser tocada e mostra os tamanhos desabilitados', async () => {
+// MI-05/MI-06 (decisão do Lucas: seguir o design): cartão do produto e botão da cor não avisam mais
+// "sem estoque"; continuam clicáveis e o saldo zerado aparece nos tamanhos desabilitados.
+describe('INV-013 — produto e cor sem estoque continuam clicáveis; o saldo aparece nos tamanhos', () => {
+  it('produto sem estoque: card abre; cada cor pode ser tocada e mostra os tamanhos desabilitados', async () => {
     const { usuario } = await abrirPdv();
     const card = botao(/^Short Curto/);
-    expect(texto(card)).toContain('sem estoque');
-    expect(texto(botao(/^Bermuda Ciclista/))).not.toContain('sem estoque');
+    expect(texto(card)).toBe('Short Curto');
+    expect(texto(botao(/^Bermuda Ciclista/))).toBe('Bermuda Ciclista');
     expect(card).toBeEnabled();
     await usuario.click(card);
     expect(screen.getByRole('heading', { name: 'Short Curto' })).toBeInTheDocument();
     for (const cor of ['Preto', 'Marinho', 'Vinho']) {
-      expect(texto(botaoCor(cor))).toBe(`${cor}sem estoque`);
+      expect(texto(botaoCor(cor))).toBe(cor);
       expect(botaoCor(cor)).toBeEnabled();
     }
     await usuario.click(botaoCor('Marinho'));
     expect(botaoCor('Marinho')).toHaveAttribute('aria-pressed', 'true');
     const tamanhos = botoesTamanho();
     expect(tamanhos).toHaveLength(4);
-    for (const t of tamanhos) expect(t).toBeDisabled();
+    for (const t of tamanhos) {
+      expect(t).toBeDisabled();
+      expect(texto(t.children[1])).toBe('estoque 0');
+    }
     expect(botao('Adicionar ao pedido')).toBeDisabled();
   });
 
-  it('só uma cor zerada: ela avisa "sem estoque" e continua clicável; as outras cores e o card não avisam', async () => {
+  it('só uma cor zerada: ela continua clicável, sem aviso no botão; os tamanhos dela ficam desabilitados', async () => {
     const catalogo = structuredClone(CATALOGO);
     for (const k of catalogo.produtos.find((p) => p.numero === 3)!.skus) if (k.cor.nome === 'Preto') k.saldo = 0;
     const { usuario } = await abrirPdv(catalogo);
-    expect(texto(botao(/^Bermuda Ciclista/))).not.toContain('sem estoque');
+    expect(texto(botao(/^Bermuda Ciclista/))).toBe('Bermuda Ciclista');
     await usuario.click(botao(/^Bermuda Ciclista/));
-    expect(texto(botaoCor('Preto'))).toBe('Pretosem estoque');
+    expect(texto(botaoCor('Preto'))).toBe('Preto');
     expect(texto(botaoCor('Marinho'))).toBe('Marinho');
     await usuario.click(botaoCor('Preto'));
     expect(botaoCor('Preto')).toHaveAttribute('aria-pressed', 'true');
@@ -303,6 +313,9 @@ describe('INV-016 — abas de baixo, contador "Pedido (N)" e botões principais'
     await usuario.click(botaoCor('Preto'));
     await usuario.click(botaoTamanho('M'));
     await usuario.click(adicionar()!);
+    // MI-11: adicionar fica em cor/tamanho; o botão de fechar só existe na aba Pedido.
+    expect(fechar()).toBeNull();
+    await usuario.click(botao(/^Pedido/));
     expect(texto(fechar())).toBe('Escolha o pagamento');
     expect(fechar()).toBeDisabled();
     await usuario.click(botao('Pix'));

@@ -15,7 +15,7 @@ import { ModalSucesso } from './ModalSucesso';
 import { Pedido } from './Pedido';
 import { Produtos } from './Produtos';
 import s from './Pdv.module.css';
-import { resumoEscolha, Variacoes, type Escolha } from './Variacoes';
+import { precoDaEscolha, resumoEscolha, Variacoes, type Escolha } from './Variacoes';
 
 const SEM_ESCOLHA: Escolha = { corId: null, tamanho: null };
 
@@ -146,8 +146,9 @@ function Venda(props: {
         precoUnitCentavos: sku.precoCentavos,
       },
     });
-    voltarParaProdutos();
-    setAba('pedido');
+    // MI-11 (decisão do Lucas: seguir o design): a tela fica em cor/tamanho com a escolha limpa, para
+    // incluir outra cor ou tamanho da mesma peça; o contador da aba Pedido mostra que a peça entrou.
+    setEscolha(SEM_ESCOLHA);
   };
 
   // Fechamento da venda (INV-013, INV-014): uma tentativa por vez, erro na tela com o pedido intacto.
@@ -215,7 +216,10 @@ function Venda(props: {
   if (naVariacao) {
     acao = (
       <div className={s.acao}>
-        <div className={s.apoio}>{resumoEscolha(produto, escolha, jaNoPedido)}</div>
+        <div className={s.resumoLinha}>
+          <span className={s.apoio}>{resumoEscolha(produto, escolha, jaNoPedido)}</span>
+          <span className={`${s.resumoPreco} ${c.tabular}`}>{precoDaEscolha(produto, escolha)}</span>
+        </div>
         <button type="button" className={c.cta} disabled={!podeAdicionar} onClick={adicionar}>
           Adicionar ao pedido
         </button>
@@ -271,7 +275,13 @@ function Venda(props: {
       {topo}
       <main className={s.conteudo}>
         {aba === 'produtos' && !produto && (
-          <Produtos catalogo={catalogo} tipoId={tipoId} aoEscolherTipo={setTipoId} aoEscolherProduto={(p) => escolherProduto(p.id)} />
+          <Produtos
+            catalogo={catalogo}
+            tipoId={tipoId}
+            aoEscolherTipo={setTipoId}
+            aoEscolherProduto={(p) => escolherProduto(p.id)}
+            noPedido={(p) => p.skus.reduce((soma, k) => soma + qtdNoPedido(pedido, k.id), 0)}
+          />
         )}
         {naVariacao && <Variacoes produto={produto} escolha={escolha} aoMudar={setEscolha} />}
         {aba === 'pedido' && <Pedido pedido={pedido} catalogo={catalogo} despachar={despachar} />}

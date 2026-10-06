@@ -1,4 +1,5 @@
-import { coresDoProduto, semEstoque, skuDe, skusDaCor, textoSaldo, type CorSku, type Produto } from '../../dominio/catalogo';
+import { CheckCircle } from '@phosphor-icons/react';
+import { coresDoProduto, precoMinimo, skuDe, skusDaCor, textoSaldo, type CorSku, type Produto } from '../../dominio/catalogo';
 import { formatarReais } from '../../dominio/formatos';
 import c from '../comum.module.css';
 import s from './Pdv.module.css';
@@ -17,18 +18,18 @@ function Amostra({ cor }: { cor: CorSku }) {
   return <span className={s.circulo} style={{ background: cor.hex ?? 'var(--color-neutral-800)' }} aria-hidden="true" />;
 }
 
-/** Painel de variações — cor e depois tamanho, com preço e estoque de cada SKU (handoff §2b, RF-003). */
+/**
+ * Tela de cor e tamanho (design 1c, MI-06): cores numa lista de uma coluna, com a escolhida marcada, e
+ * tamanhos numa grade de 4 colunas, cada um com a sigla e o saldo ("estoque N", INV-016). O preço saiu
+ * dos botões (decisão do Lucas: seguir o design) e aparece na linha acima de "Adicionar ao pedido".
+ */
 export function Variacoes(props: { produto: Produto; escolha: Escolha; aoMudar: (escolha: Escolha) => void }) {
   const { produto, escolha, aoMudar } = props;
   // Sem cor escolhida a lista fica vazia e o bloco TAMANHO nem é desenhado. Com cor, vêm todos os SKUs
   // dela, inclusive os zerados, na ordem da grade de tamanhos do ERP.
-  // Cada tamanho é um botão com três linhas: sigla, preço e saldo (`textoSaldo`: "estoque N").
-  // Os botões ficam na grade `.gradeTamanhos` (Pdv.module.css), de 3 colunas iguais que encolhem com a
-  // tela: com os 6 tamanhos de costume são 3 em cada linha, e um preço de 3 dígitos cabe num celular
-  // de 360px (cerca de 100px por coluna).
-  // ATENÇÃO: num celular de 320px a coluna tem cerca de 88px e um preço de 4 dígitos (R$ 1.110,00)
-  // passa da borda do próprio botão; a página não chega a rolar de lado. Só importa se a loja tiver
-  // peça acima de R$ 999,99.
+  // Os botões ficam em `.gradeTamanhos` (Pdv.module.css): 4 colunas iguais com minmax(0, 1fr), que
+  // encolhem com a tela em vez de passar da borda (AP-003). A 375px cabe "estoque 123" numa linha; a
+  // 320px (coluna de ~62px úteis) "estoque 12" já quebra em duas linhas, e o botão cresce em altura.
   const tamanhos = escolha.corId === null ? [] : skusDaCor(produto, escolha.corId);
 
   // Ao trocar de cor, o tamanho escolhido continua se existir com estoque na cor nova.
@@ -38,29 +39,24 @@ export function Variacoes(props: { produto: Produto; escolha: Escolha; aoMudar: 
   };
 
   return (
-    <div className={s.coluna22}>
-      <section>
-        <div className={`${c.rotulo} ${s.rotuloBloco}`}>COR</div>
-        <div className={s.grade2}>
-          {coresDoProduto(produto).map((cor) => {
-            // A cor sem nenhum tamanho com saldo continua clicável, para consulta, mas avisa "sem estoque".
-            const esgotada = semEstoque(skusDaCor(produto, cor.id));
-            return (
-              <button key={cor.id} type="button" className={s.cor} aria-pressed={escolha.corId === cor.id} onClick={() => escolherCor(cor.id)}>
-                <Amostra cor={cor} />
-                <span className={s.corTexto}>
-                  <span className={s.corNome}>{cor.nome}</span>
-                  {esgotada && <span className={s.semEstoque}>sem estoque</span>}
-                </span>
-              </button>
-            );
-          })}
+    <div className={s.coluna18}>
+      <section className={s.bloco}>
+        <div className={c.rotulo}>COR</div>
+        <div className={s.listaCores}>
+          {/* Cor sem nenhum tamanho com saldo continua clicável, para consulta; o saldo aparece nos tamanhos. */}
+          {coresDoProduto(produto).map((cor) => (
+            <button key={cor.id} type="button" className={s.cor} aria-pressed={escolha.corId === cor.id} onClick={() => escolherCor(cor.id)}>
+              <Amostra cor={cor} />
+              <span className={s.corNome}>{cor.nome}</span>
+              {escolha.corId === cor.id && <CheckCircle size={22} className={s.marcada} aria-hidden="true" />}
+            </button>
+          ))}
         </div>
       </section>
 
       {escolha.corId !== null && (
-        <section>
-          <div className={`${c.rotulo} ${s.rotuloBloco}`}>TAMANHO</div>
+        <section className={s.bloco}>
+          <div className={c.rotulo}>TAMANHO</div>
           <div className={s.gradeTamanhos}>
             {tamanhos.map((sku) => (
               // Sem saldo não vende (RN-24 do ERP): o tamanho aparece, mas desabilitado.
@@ -73,7 +69,6 @@ export function Variacoes(props: { produto: Produto; escolha: Escolha; aoMudar: 
                 onClick={() => aoMudar({ ...escolha, tamanho: sku.tamanho.sigla })}
               >
                 <span className={s.tamanhoSigla}>{sku.tamanho.sigla}</span>
-                <span className={s.tamanhoPreco}>{formatarReais(sku.precoCentavos)}</span>
                 <span className={s.tamanhoSaldo}>{textoSaldo(sku.saldo)}</span>
               </button>
             ))}
@@ -85,16 +80,28 @@ export function Variacoes(props: { produto: Produto; escolha: Escolha; aoMudar: 
 }
 
 /**
- * Linha de apoio acima de "Adicionar ao pedido": o que falta, o resumo com o preço ou, se o pedido
- * já tem todo o saldo desse SKU, o aviso de limite.
+ * Texto à esquerda da linha acima de "Adicionar ao pedido": o que falta, a cor e o tamanho escolhidos
+ * ou, se o pedido já tem todo o saldo desse SKU, o aviso de limite.
  */
 export function resumoEscolha(produto: Produto, escolha: Escolha, jaNoPedido: number): string {
   const sku = skuDe(produto, escolha.corId, escolha.tamanho);
   if (sku) {
     // Mesmo aviso do carrinho (RF-004): o pedido já tem todo o saldo deste SKU.
     if (jaNoPedido >= sku.saldo) return `Só ${sku.saldo} em estoque — já no pedido`;
-    return `${sku.cor.nome} · Tam ${sku.tamanho.sigla} — ${formatarReais(sku.precoCentavos)}`;
+    return `${sku.cor.nome} · Tam ${sku.tamanho.sigla}`;
   }
   const falta = [escolha.corId === null && 'cor', !escolha.tamanho && 'tamanho'].filter(Boolean);
-  return `Falta escolher: ${falta.join(', ')}`;
+  return `Falta escolher: ${falta.join(' e ')}`;
+}
+
+/**
+ * Preço à direita da mesma linha: o do SKU escolhido. Antes da escolha, o preço do produto; se os SKUs
+ * tiverem preços diferentes, "a partir de" o menor, para não prometer um preço que o tamanho não tem.
+ */
+export function precoDaEscolha(produto: Produto, escolha: Escolha): string {
+  const sku = skuDe(produto, escolha.corId, escolha.tamanho);
+  if (sku) return formatarReais(sku.precoCentavos);
+  const minimo = precoMinimo(produto);
+  const unico = produto.skus.every((k) => k.precoCentavos === minimo);
+  return unico ? formatarReais(minimo) : `a partir de ${formatarReais(minimo)}`;
 }
