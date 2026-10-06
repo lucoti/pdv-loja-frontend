@@ -10,6 +10,8 @@ import s from './Pdv.module.css';
  * ADR-004). Enquanto o aviso está aberto, o pedido registrado continua no estado com a chave antiga.
  */
 export function AvisoVenda({ venda, aoOk }: { venda: Venda; aoOk: () => void }) {
+  // Resumo com o que o servidor gravou (número, peças, total e pagamento), não com a conta da tela.
+  // O celular do cliente não aparece no aviso, só o nome.
   const resumo =
     `Pedido #${venda.numero} · ${textoPecas(venda.pecas)} · ${formatarReais(venda.totalCentavos)} em ${venda.pagamento.nome}` +
     (venda.cliente ? ` · ${venda.cliente}` : '');

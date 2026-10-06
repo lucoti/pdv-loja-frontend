@@ -6,7 +6,7 @@ Fase atual: desenvolvimento
 Status: em_andamento
 Incidente atual: nenhum
 Criado em: 2026-10-05 22:30
-Última atualização: 2026-10-06 01:10
+Última atualização: 2026-10-06 10:05
 
 <!--
 NÃO altere o nome nem o formato das linhas acima. Os hooks de métricas leem "Fase atual:" literalmente.
@@ -23,8 +23,8 @@ Valores válidos de "Incidente atual": número do incidente aberto na Fase 7 (ex
 | Planejamento | aprovada | Lucas | 2026-10-05 22:45 | 01-planejamento.md |
 | Requisitos | aprovada | Lucas | 2026-10-05 22:40 | 02-requisitos.md |
 | Arquitetura | aprovada | Lucas | 2026-10-05 22:49 | 03-arquitetura.md |
-| Desenvolvimento | em_andamento | | | 04-desenvolvimento.md |
-| Documentação | pendente | | | docs/vN/documentacao.md |
+| Desenvolvimento | aprovada | Lucas | 2026-10-06 09:45 | 04-desenvolvimento.md |
+| Documentação | aprovada | Lucas | 2026-10-06 10:05 | docs/v9/documentacao.md |
 | Testes | pendente | | | 05-testes.md |
 | Implantação | pendente | | | 06-implantacao.md |
 | Aprendizado (só refatoração) | pendente | | | .claude/aprendizados.md |

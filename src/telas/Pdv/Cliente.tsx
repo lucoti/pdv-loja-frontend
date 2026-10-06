@@ -16,6 +16,8 @@ export interface RascunhoCliente {
 export function Cliente({ rascunho, aoMudar }: { rascunho: RascunhoCliente; aoMudar: (r: RascunhoCliente) => void }) {
   return (
     <div className={s.coluna18}>
+      {/* ATENÇÃO: o limite de 120 caracteres espelha o do back (`esquemas.ts`, nome do cliente aparado).
+          Mudar só de um lado faz o back recusar o nome com 400 entrada_invalida. */}
       <label className={s.rotuloCampo}>
         <span>Nome</span>
         <input

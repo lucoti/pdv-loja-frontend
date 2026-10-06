@@ -21,6 +21,8 @@ import { precoDaEscolha, resumoEscolha, Variacoes, type Escolha } from './Variac
 const SEM_ESCOLHA: Escolha = { corId: null, tamanho: null };
 
 /** Data de hoje no topo da aba Dia, no formato do design: "05 out". */
+// Os dois `replace` limpam o que o Intl devolve em pt-BR ("05 de out."). Usa o relógio do aparelho,
+// não o fuso da loja: com o celular em outro fuso, a data do topo pode diferir da lista do servidor.
 function hojeCurto(): string {
   return new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '').replace(' de ', ' ');
 }
@@ -220,7 +222,8 @@ function Venda(props: {
     setAba('produtos');
   };
 
-  // Confirma (ou pula, com os campos vazios) a etapa Cliente e segue para onde o vendedor estava indo.
+  // Confirma (ou pula, com os campos vazios) a etapa Cliente e segue para onde o vendedor estava indo:
+  // no início da venda, para a lista de produtos; vindo do "Alterar", de volta para o Pedido.
   const confirmarCliente = (r: RascunhoCliente) => {
     despachar({ tipo: 'cliente', nome: r.nome.trim(), telefone: somenteDigitos(r.celular) });
     setRascunho(r);
@@ -240,11 +243,13 @@ function Venda(props: {
   // testes de tela; mudar a redação exige ajustar os testes (AP-004).
   const rotuloFechar = pedido.itens.length === 0 ? 'Inclua uma peça' : pedido.pagamentoId === null ? 'Escolha o pagamento' : 'Fechar venda';
 
-  // O botão grande da barra inferior muda conforme a tela: adicionar (variações) ou fechar (pedido).
+  // O botão grande da barra inferior muda conforme a tela: confirmar/pular o cliente (etapa Cliente),
+  // adicionar (variações) ou fechar (pedido). Na lista de produtos e no Dia não há botão.
   let acao = null;
   if (naCliente) {
-    // Design 1a: botão principal habilitado com o celular vazio ou completo (10/11 dígitos); o segundo
-    // segue sem cliente (venda anônima continua possível, decisão do Lucas).
+    // Design 1a: botão principal habilitado com o celular vazio ou completo (exatamente 11 dígitos, mesma
+    // regra do back); o segundo segue sem cliente (venda anônima continua possível, decisão do Lucas).
+    // Com o celular incompleto o botão fica desabilitado, sem mensagem: o vendedor completa ou apaga.
     acao = (
       <div className={s.acao}>
         <button type="button" className={`${c.cta} ${s.ctaIcone}`} disabled={!celularValido(rascunho.celular)} onClick={() => confirmarCliente(rascunho)}>
@@ -304,6 +309,9 @@ function Venda(props: {
     );
   } else if (aba === 'pedido') {
     // Sem confirmação, como antes: zera o pedido e o cliente, troca a chave e volta para a etapa Cliente.
+    // ATENÇÃO: o botão não fica desabilitado durante o envio. Um toque em "Cancelar pedido" com o
+    // fechamento em andamento zera a tela, mas não cancela a requisição: se o servidor registrar a venda,
+    // o aviso aparece mesmo assim (a venda vale) e o OK recomeça de novo.
     topo = (
       <Cabecalho
         etapa={etapa}

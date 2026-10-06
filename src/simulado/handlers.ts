@@ -23,6 +23,9 @@ function erro(status: number, codigo: Codigo, mensagem: string) {
 const semSessao = () => erro(401, 'sessao_invalida', 'Sessão expirada. Entre de novo.');
 
 /** Mesma regra do back (dominio/telefone.ts): só a máscara da tela e exatamente 11 dígitos (DDD + celular). */
+// ATENÇÃO: cópia da regra do back, não importada dele. Se o back endurecer a validação (DDD existente,
+// 9 na frente), o simulado e o `celularValido` da tela precisam acompanhar; o teste de contrato do
+// simulado (tests/simulado/contrato.test.ts) só pega a divergência se ganhar o caso novo.
 function telefoneValido(valor: string): boolean {
   return /^[\d\s()-]+$/.test(valor) && valor.replace(/\D/g, '').length === 11;
 }

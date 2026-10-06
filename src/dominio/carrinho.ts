@@ -30,7 +30,7 @@ export interface Pedido {
   itens: ItemCarrinho[];
   descontoTotalCentavos: number;
   cliente: string;
-  /** Celular só com dígitos (10 ou 11), ou vazio. */
+  /** Celular só com dígitos (exatamente 11, regra do back desde a pdv-cliente-telefone), ou vazio. */
   telefone: string;
   pagamentoId: string | null;
   /** UUID reenviado em toda tentativa deste pedido; só muda num pedido novo (ADR-F06). */
@@ -54,7 +54,8 @@ export type AcaoPedido =
   | { tipo: 'pagamento'; pagamentoId: string }
   // Catálogo recarregado: preço atual de cada SKU (skuId → centavos).
   | { tipo: 'precos'; precos: ReadonlyMap<number, number> }
-  // "Cancelar pedido" e "Nova venda": tudo zerado e chave nova (gerada fora, para o reducer ser puro).
+  // "Cancelar pedido" e o OK do aviso de venda: tudo zerado, inclusive o cliente, e chave nova (gerada
+  // fora, para o reducer ser puro).
   | { tipo: 'novo'; chaveIdempotencia: string };
 
 export function pedidoVazio(chaveIdempotencia: string): Pedido {
@@ -102,17 +103,23 @@ export function reduzirPedido(p: Pedido, acao: AcaoPedido): Pedido {
     case 'remover':
       return alterarItem(p, acao.chave, () => null);
     case 'desconto':
+      // Desconto por item (%): continua no domínio e no contrato (`descPercent`), mas a tela não oferece
+      // mais esta ação desde o MI-03. Na prática todo item entra com 0 e vai assim no POST /vendas.
       return alterarItem(p, acao.chave, (i) => ({ ...i, descPercent: acao.descPercent }));
     case 'descontoTotalMais': {
       // Teto no bruto (MI-03, ADR-005): o passo de R$ 5 só entra se o desconto novo não passar do valor
       // das peças. O desconto continua múltiplo de R$ 5, como o servidor exige.
       const novo = p.descontoTotalCentavos + PASSO_DESCONTO_TOTAL_CENTAVOS;
+      // ATENÇÃO: o teto só vale no "+". Se o vendedor tirar peças depois, o desconto pode ficar acima do
+      // bruto; o total exibido para em 0 (calcularTotais) e o servidor faz a mesma conta (ADR-005).
       return novo <= acao.limite ? { ...p, descontoTotalCentavos: novo } : p;
     }
     case 'descontoTotalMenos':
       // Regra 4: mínimo 0.
       return { ...p, descontoTotalCentavos: Math.max(0, p.descontoTotalCentavos - PASSO_DESCONTO_TOTAL_CENTAVOS) };
     case 'cliente':
+      // Nome e celular chegam já tratados pela tela (nome aparado, celular só com dígitos) e trocam
+      // juntos: "Venda sem cliente" grava os dois vazios, inclusive quando vem do "Alterar".
       return { ...p, cliente: acao.nome, telefone: acao.telefone };
     case 'pagamento':
       return { ...p, pagamentoId: acao.pagamentoId };

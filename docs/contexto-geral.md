@@ -5,7 +5,20 @@ atualizado a cada entrega; o detalhe de cada aplicação fica na documentação 
 (`<app>/docs/vN/documentacao.md`). O arquivo vive no repositório do front
 (`frontend/docs/contexto-geral.md`); `docs/contexto-geral.md` na pasta do ambiente é um link para ele.
 
-Última atualização: 2026-10-06 (feature **pdv-cliente-telefone**, **to-be** pós-desenvolvimento:
+Última atualização: 2026-10-06 (feature **pdv-mobile-refatorado**, **to-be** pós-desenvolvimento:
+pdv-frontend docs v9 — design "PDV Mobile Refatorado", tema escuro Nocturne em todas as telas (Login só
+com cores e fonte), fonte Inter e ícones Phosphor empacotados (sem CDN); etapa **Cliente** no começo da
+venda com nome e celular opcionais ("Venda sem cliente") e "Alterar" no Pedido; celular com máscara e
+**exatamente 11 dígitos**, mesma regra do back; desconto por peça fora da tela (`descPercent` sempre 0) e
+desconto no pedido de R$ 5 em R$ 5 com teto no bruto; aviso de venda com **OK**, que troca a chave de
+idempotência e volta para Cliente. **O front agora envia `telefone` (só dígitos, ou `''`) e não envia
+mais `cpf`** no `POST /vendas` (etapa 6, tipos regerados do `openapi.yaml` da pdv-cliente-telefone); a API
+simulada espelha o back (`telefone_invalido`, corpo com `cpf` → 400). Branch `pdv-mobile-refatorado` do
+front, **não publicado**; validação final (Fase 5) pendente. **Nenhuma integração nova**, nenhuma rota
+nova, nenhuma mudança de banco além da coluna `vendas.telefone` da feature irmã. Front e back novos só
+vão ao ar juntos, **sem janela de compatibilidade**, na ordem A `db:migrar` → B back → C front → D
+recarregar os celulares; ver "Implantação coordenada pdv-cliente-telefone + pdv-mobile-refatorado").
+Anterior: 2026-10-06 (feature **pdv-cliente-telefone**, **to-be** pós-desenvolvimento:
 pdv-backend docs v8 — o `POST /vendas` aceita `telefone` (opcional, exatamente 11 dígitos, gravado só com
 dígitos na coluna nova `vendas.telefone`) no lugar de `cpf`; erro 400 `telefone_invalido` ("Celular
 inválido") no lugar de `cpf_invalido`; corpo com `cpf` → 400 `entrada_invalida` "Campo não permitido:
@@ -52,9 +65,9 @@ A visão do ambiente pelo lado do ERP está em `ERP-loja/docs/contexto-geral.md`
 
 | Aplicação | Responsabilidade | Localização | Situação |
 |---|---|---|---|
-| **pdv-backend** | API do PDV: entrada do vendedor por senha (PIN de 8 números desde a v6), sessão diária, **catálogo lido do ERP** (tipos, produtos, SKUs com preço e saldo), registro de vendas com cálculo e numeração no servidor **e baixa do estoque do ERP na mesma transação** (409 `sem_estoque`), vendas do dia e conteúdo do cupom não fiscal; script `pin:trocar` | `backend/` — repositório `lucoti/pdv-loja-backend`, projeto Vercel `pdv-loja-backend` (docs: `backend/docs/v8/documentacao.md`, to-be da pdv-cliente-telefone; as-is anterior em `backend/docs/v7/`; contrato: `backend/contrato/openapi.yaml`) | v6 (PIN de 8 números) **no ar** desde 2026-10-01 (`pdv-loja-backend.vercel.app`, função em iad1), sobre a v4 (integração com o ERP), já publicada. Docs v8 (2026-10-06) é o to-be da feature **pdv-cliente-telefone** (refatoração **desenvolvida**, branch `pdv-cliente-telefone`, **não publicada**; falta a Fase 5): o celular do cliente (11 dígitos) substitui o CPF por completo no `POST /vendas`, na `Venda` e no cupom, sem janela de compatibilidade, com coluna nova `vendas.telefone`. Só pode ir ao ar junto com o front que envia `telefone` (pendente) |
-| **pdv-frontend** | Página web do vendedor no navegador do celular (React 19 + TypeScript + Vite, página estática; não é PWA): login com PIN de 8 números e entrada automática no 8º número (sem botão), topo do PDV com a etapa da venda ("Produtos", "Cor e tamanho", "Pedido" ou "Dia"; desde a v7, sem vendedor e data), aba Produtos com tipos do ERP e escolha cor → tamanho com preço e saldo ("estoque N", grade de 3 colunas desde a v7), aba Pedido limitada ao estoque, fechamento com idempotência e tratamento do 409, modal "Venda registrada" e aba Dia. Página única, sem layout de tablet | `frontend/` — repositório `lucoti/pdv-loja-frontend`, projeto Vercel `pdv-loja-frontend` (docs: `frontend/docs/v8/documentacao.md`, retrato as-is antes da refatoração pdv-mobile-refatorado; guia técnico: `frontend/README.md`) | v7 (ajustes da tela de cor/tamanho e do topo) **no ar** desde 2026-10-01 em https://pdv-loja-frontend.vercel.app (rewrite `/api`), sobre a v5 (login de 8 números) e a v3 (catálogo do ERP). Docs v8 (2026-10-05) é o retrato as-is da feature **pdv-mobile-refatorado** (refatoração em andamento, Fase 3: tema escuro Nocturne, etapa Cliente com nome e celular, desconto único no pedido em R$); a publicação do front refatorado **depende** do back com a feature pdv-cliente-telefone no ar |
-| **API simulada (MSW)** | Imitação do pdv-backend em memória (vendedor Carlos, PIN 12345678, pedidos a partir de 1042), com catálogo de exemplo no formato do ERP igual ao `SEED_ERP` do back e baixa de saldo a cada venda. Usada no `npm run dev` do front e nos testes; fica fora do build de produção | `frontend/src/simulado/` e `frontend/simulado-publico/` | Parte do pdv-frontend |
+| **pdv-backend** | API do PDV: entrada do vendedor por senha (PIN de 8 números desde a v6), sessão diária, **catálogo lido do ERP** (tipos, produtos, SKUs com preço e saldo), registro de vendas com cálculo e numeração no servidor **e baixa do estoque do ERP na mesma transação** (409 `sem_estoque`), vendas do dia e conteúdo do cupom não fiscal; script `pin:trocar` | `backend/` — repositório `lucoti/pdv-loja-backend`, projeto Vercel `pdv-loja-backend` (docs: `backend/docs/v8/documentacao.md`, to-be da pdv-cliente-telefone; as-is anterior em `backend/docs/v7/`; contrato: `backend/contrato/openapi.yaml`) | v6 (PIN de 8 números) **no ar** desde 2026-10-01 (`pdv-loja-backend.vercel.app`, função em iad1), sobre a v4 (integração com o ERP), já publicada. Docs v8 (2026-10-06) é o to-be da feature **pdv-cliente-telefone** (refatoração **desenvolvida**, branch `pdv-cliente-telefone`, **não publicada**; falta a Fase 5): o celular do cliente (11 dígitos) substitui o CPF por completo no `POST /vendas`, na `Venda` e no cupom, sem janela de compatibilidade, com coluna nova `vendas.telefone`. Testes da feature aprovados (2026-10-06). Só pode ir ao ar junto com o front que envia `telefone` (pdv-mobile-refatorado, docs v9 do front, desenvolvido e não publicado) |
+| **pdv-frontend** | Página web do vendedor no navegador do celular (React 19 + TypeScript + Vite, página estática; não é PWA): login com PIN de 8 números e entrada automática no 8º número (sem botão); no to-be (docs v9): tema escuro Nocturne, etapa **Cliente** (nome e celular de 11 dígitos, opcionais) no começo da venda, aba Produtos com tipos do ERP em grade de 3 colunas e escolha cor → tamanho com saldo ("estoque N", 4 colunas), Pedido em cartões (cliente com "Alterar", peças limitadas ao estoque, desconto único no pedido em R$ com teto no bruto, pagamento), fechamento com idempotência e tratamento do 409, aviso de venda com OK e aba Dia. Página única (o tablet mostra a coluna do celular) | `frontend/` — repositório `lucoti/pdv-loja-frontend`, projeto Vercel `pdv-loja-frontend` (docs: `frontend/docs/v9/documentacao.md`, to-be da pdv-mobile-refatorado; as-is anterior em `frontend/docs/v8/`; guia técnico: `frontend/README.md`) | v7 (ajustes da tela de cor/tamanho e do topo, tema claro, venda com `cpf`) **no ar** desde 2026-10-01 em https://pdv-loja-frontend.vercel.app (rewrite `/api`), sobre a v5 (login de 8 números) e a v3 (catálogo do ERP). Docs v9 (2026-10-06) é o to-be da feature **pdv-mobile-refatorado** (refatoração **desenvolvida**, etapas 1 a 6, branch `pdv-mobile-refatorado`, **não publicada**; falta a Fase 5): envia `telefone` e não envia `cpf`. Só pode ir ao ar junto com o back da pdv-cliente-telefone (ordem A → B → C → D) |
+| **API simulada (MSW)** | Imitação do pdv-backend em memória (vendedor Carlos, PIN 12345678, pedidos a partir de 1042), com catálogo de exemplo no formato do ERP igual ao `SEED_ERP` do back e baixa de saldo a cada venda; desde a pdv-mobile-refatorado (front docs v9), venda com `telefone` (11 dígitos, `telefone_invalido`) e corpo com `cpf` recusado, como o back novo. Usada no `npm run dev` do front e nos testes; fica fora do build de produção | `frontend/src/simulado/` e `frontend/simulado-publico/` | Parte do pdv-frontend |
 | **Banco Turso `pdv-loja`** (serviço externo) | Banco de dados libSQL em produção, **compartilhado com o ERP** (cada tabela tem um único dono; ver "Tabelas por dono") | Turso, organização `personal`, região `aws-us-east-1` | Em uso pelo PDV e pelo ERP |
 | **erp-backend** (sistema irmão) | API do ERP (NestJS): catálogo, grade de SKUs, preços, estoque, lotes, contagem, etiquetas, IA de estampas e painel de vendas. **Lê** as vendas do PDV; é dono do catálogo e do estoque que o PDV usa; cria o usuário técnico "PDV" (migração 0006) | `ERP-loja/backend/` — repositório `lucoti/erp-loja-backend`, projeto Vercel `erp-loja-backend` (docs: `ERP-loja/docs/v2/documentacao.md`) | v1 **no ar** desde 2026-09-29; v2 (integração) desenvolvida, **não publicada** |
 | **erp-frontend** (sistema irmão) | Página web do ERP (React + Vite) para desktop e celular | `ERP-loja/frontend/` — repositório `lucoti/erp-loja-frontend`, projeto Vercel `erp-loja-frontend` | v1 **no ar** desde 2026-09-29 |
@@ -224,7 +237,7 @@ cupom do back existe, mas ainda não é consumida.
   redeploy das versões anteriores dos dois projetos e recadastro de PINs de 4 números com o script
   antigo. Não há migração de banco.
 
-- **Cliente na venda (as-is, docs v8 do front):** o `POST /vendas` leva `cliente` (nome, até 120
+- **Cliente na venda (as-is, docs v8 do front; é o que está no ar):** o `POST /vendas` leva `cliente` (nome, até 120
   caracteres) e `cpf` (texto livre até 20 caracteres, `''` quando vazio), ambos digitados na aba Pedido e
   enviados com as pontas cortadas. O front não valida o CPF; o back confere os dígitos e responde 400
   `cpf_invalido` (a API simulada repete a regra). O esquema do back é objeto estrito: campo desconhecido
@@ -239,9 +252,22 @@ cupom do back existe, mas ainda não é consumida.
   venda já gravada. A `Venda` devolvida traz `telefone` (dígitos ou vazio) no lugar de `cpf`; o cupom
   traz `dados.telefoneCliente` (formatado, ou vazio) e a linha "Tel: (31) 98765-4321" com o telefone
   completo, visível a qualquer vendedor logado. `GET /vendas/hoje` não expõe o telefone. Contrato
-  `openapi.yaml` atualizado. **O front ainda envia `cpf`:** o ajuste do front (regerar tipos, enviar
-  `telefone`, tratar `telefone_invalido`) é a etapa 6 da pdv-mobile-refatorado, **pendente**. Até lá, o
-  back novo não pode ir ao ar sozinho: dependência de deploy coordenado, sem janela de compatibilidade.
+  `openapi.yaml` atualizado. O front que acompanha essa mudança é o da pdv-mobile-refatorado (próximo
+  item); o back novo não pode ir ao ar sozinho: dependência de deploy coordenado, sem janela de
+  compatibilidade.
+- **Cliente na venda no front to-be (pdv-mobile-refatorado, docs v9 do front, 2026-10-06; desenvolvido,
+  não publicado):** nome e celular são coletados na etapa **Cliente**, no começo da venda (os dois
+  opcionais; "Venda sem cliente" envia os dois vazios), e podem ser alterados pelo cartão 1 do Pedido. O
+  nome vai com as pontas cortadas (campo limitado a 120 caracteres, igual ao back). O celular é digitado
+  com máscara "(31) 98765-4321", validado na tela com **exatamente 11 dígitos** (`celularValido` em
+  `frontend/src/dominio/formatos.ts`, mesma regra de `backend/src/dominio/telefone.ts`; com o celular
+  incompleto o botão de seguir fica desabilitado) e enviado **só com os dígitos** no campo `telefone`
+  (`''` sem celular). **O corpo não leva mais `cpf`.** Os itens vão com `descPercent` 0 (o desconto por
+  peça saiu da tela) e o desconto no pedido continua em `descontoTotalCentavos`, múltiplo de R$ 5, com o
+  "+" limitado ao bruto. Tipos regerados (`npm run gerar:tipos`) do `openapi.yaml` do commit `2e78243` do
+  back. O 400 `telefone_invalido` é tratado como os demais erros de negócio (mensagem na tela, pedido
+  intacto, sem recarregar o catálogo). Rotas e demais campos não mudam; o aviso de venda e a aba Dia
+  mostram só o nome do cliente.
 - **Mudanças planejadas (2026-10-05):** a feature **pdv-cliente-telefone** (back, refatoração; docs v7
   do back = as-is, docs v8 = to-be, desenvolvido) troca `cpf` por `telefone` no corpo do `POST /vendas`, na venda devolvida, no
   cupom e no contrato `openapi.yaml`. Decisões do Lucas: `telefone` opcional, aceita máscara e grava só
@@ -255,14 +281,23 @@ cupom do back existe, mas ainda não é consumida.
   faz `INSERT INTO vendas VALUES (...)` posicional sobre a cópia `db/pdv-esquema-teste.sql`. A feature
   **pdv-mobile-refatorado** (front) passa a coletar nome e celular numa etapa "Cliente" no início da
   venda e envia só o desconto no total (`descPercent` sempre 0); rotas e demais campos não mudam.
-  Ordem obrigatória (deploy coordenado, em horário sem venda): `db:migrar` do PDV (coluna `telefone`;
-  depende de: nenhum, pode rodar antes) → back com telefone no ar (depende do `db:migrar`) → tipos do
-  front regerados (`npm run gerar:tipos`) e front publicado (depende do back; logo em seguida) →
-  **passo manual do Lucas:** recarregar o PDV em cada celular (depende do front; a página antiga aberta
-  continua mandando `cpf`). Front
-  novo com back antigo recusa toda venda (`telefone` é campo desconhecido no back antigo); back novo com
-  front antigo também recusa toda venda que leve `cpf` (sem janela de compatibilidade, decisão do
-  Lucas). Os passos e dependências vão para o checklist de implantação das duas features.
+  Situação em 2026-10-06: as duas features estão **desenvolvidas** (back com testes aprovados; front com a
+  etapa 6 concluída e os tipos já regerados), **nada publicado**.
+- **Implantação coordenada pdv-cliente-telefone + pdv-mobile-refatorado (pendente, sem janela de
+  compatibilidade):** front novo com back antigo recusa toda venda (`telefone` é campo desconhecido no
+  back antigo, objeto estrito); back novo com front antigo também recusa toda venda que leve `cpf`
+  (decisão do Lucas). Ordem obrigatória, em horário sem venda:
+
+  | Passo | O quê | Quem | Depende de |
+  |---|---|---|---|
+  | A | `db:migrar` do PDV no Turso `pdv-loja` (coluna `vendas.telefone`, ALTER idempotente) | técnico | nenhum (pode rodar antes, em paralelo a qualquer outro trabalho; o back antigo ignora a coluna) |
+  | B | Deploy de produção do pdv-backend com a pdv-cliente-telefone | técnico | A |
+  | C | Deploy de produção do pdv-frontend com a pdv-mobile-refatorado (docs v9; tipos já regerados) | técnico | B (logo em seguida: entre B e C nenhuma venda fecha) |
+  | D | **Passo manual do Lucas:** recarregar o PDV em cada celular da loja | Lucas | C (a página antiga aberta continua mandando `cpf` até ser recarregada) |
+
+  Nada roda em paralelo a B, C e D. Rollback: reverter os deploys do back e do front juntos; a coluna
+  `vendas.telefone` pode ficar no banco (aditiva, o ERP não a lê). O checklist detalhado fica na Fase 6
+  das duas features.
 
 ### pdv-frontend → API simulada (somente desenvolvimento e testes)
 - **De:** pdv-frontend
@@ -270,7 +305,10 @@ cupom do back existe, mas ainda não é consumida.
 - **Como:** no `npm run dev`, um service worker intercepta `/api` no navegador; nos testes, o
   `msw/node` faz o mesmo. O build de produção não inclui nada do MSW.
 - **O quê:** as mesmas rotas, formatos, regras e códigos de erro do pdv-backend, em memória
-  (recarregar a página zera sessão e vendas). Deve ser mantida alinhada ao contrato; a validação
+  (recarregar a página zera sessão e vendas). Desde a pdv-mobile-refatorado (front docs v9): `telefone`
+  com a mesma regra do back (máscara + 11 dígitos, gravado só com dígitos), `telefone_invalido` na mesma
+  ordem das recusas e corpo com `cpf` → 400 `entrada_invalida` antes da idempotência; a regra é copiada
+  (não importada) de `backend/src/dominio/telefone.ts`. Deve ser mantida alinhada ao contrato; a validação
   das respostas contra os schemas do `openapi.yaml` está prevista nos testes (ADR-F04, Fase 5).
 
 ### pdv-backend → Turso

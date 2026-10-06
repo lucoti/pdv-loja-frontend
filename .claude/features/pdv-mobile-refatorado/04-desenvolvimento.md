@@ -185,9 +185,9 @@ Nenhuma.
 | 1 — tema Nocturne | verde (223 + 1 expected fail); `typecheck` ok | Conferido no navegador a 375px (Login e Produtos no tema escuro); nenhuma cor fixa fora de `tokens.css` |
 
 ## Documentação (D1-D3)
-- [ ] D1 — código-fonte comentado
-- [ ] D2 — documentação executiva em `docs/vN/documentacao.md` (versão <N>)
-- [ ] D3 — `docs/contexto-geral.md` atualizado
+- [x] D1 — código-fonte comentado (7 arquivos, só comentários; 4 ATENÇÃO novos: teto do desconto só no "+", "Cancelar pedido" durante o envio — corrigido em seguida, limite de 120 do nome copiado do back, regra do telefone copiada no simulado)
+- [x] D2 — documentação executiva em `docs/v9/documentacao.md` (versão 9, to-be)
+- [x] D3 — `docs/contexto-geral.md` atualizado (front envia `telefone`; seção "Implantação coordenada" A → B → C → D)
 
 (As-is já feito na Fase 3: `docs/v8/documentacao.md`. O to-be roda depois do Desenvolvimento.)
 

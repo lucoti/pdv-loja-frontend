@@ -14,6 +14,8 @@ function avisoLimite(qtd: number, saldo: number): string {
 }
 
 /** Ícone de cada forma de pagamento do ERP; forma desconhecida usa a carteira genérica. */
+// As chaves são os ids das formas de pagamento que vêm no catálogo. Se o ERP renomear um id, a forma
+// continua funcionando, só perde o ícone próprio.
 const ICONE_PAGAMENTO: Record<string, Icon> = { dinheiro: Money, pix: QrCode, debito: CreditCard, credito: CreditCard };
 
 /** Cartão numerado do Pedido (design 1d): número, título, complemento e ícone no cabeçalho. */
@@ -57,7 +59,8 @@ export function Pedido({
   return (
     <div className={s.coluna14}>
       <Cartao numero={1} titulo="Cliente" Icone={User}>
-        {/* Toque na linha inteira reabre a etapa Cliente com o que já está no pedido (MI-02). */}
+        {/* Toque na linha inteira reabre a etapa Cliente com o que já está no pedido (MI-02). O celular
+            fica guardado só com dígitos e ganha a máscara apenas para exibir. */}
         <button type="button" className={s.linhaCliente} onClick={aoAlterarCliente}>
           <span className={s.linhaClienteTexto}>
             <span className={s.linhaClienteNome}>{pedido.cliente || 'Cliente não identificado'}</span>
