@@ -66,6 +66,8 @@ Achado do levantamento: o desconto em R$ no pedido inteiro já existe no domíni
 |---|---|---|---|---|
 | INV-001 | Corpo do `POST /vendas` com `telefone` (só dígitos, ou '') no lugar de `cpf`; testes de caracterização `CAMPOS_VENDA` e corpo exato atualizados | Contrato novo da pdv-cliente-telefone (mudança prevista no próprio INV-001) | Lucas (Requisitos e Testes da pdv-cliente-telefone) | 2026-10-06 |
 | INV-014 | Caso de erro 400 da caracterização passa de `cpf_invalido` para `telefone_invalido` (mesmo comportamento: pedido intacto, sem recarga) | O código `cpf_invalido` deixou de existir no back | Lucas | 2026-10-06 |
+| Pedido de referência dos testes | Total do pedido de referência passa de R$ 200,20 para R$ 203,00 (sem 10% na legging; só R$ 30 no pedido) | Consequência do MI-03 (fim do desconto por peça na tela) | Lucas (MI-03 nos Requisitos; registro na Fase 5) | 2026-10-06 |
+| INV-013 | Achado da caracterização (dois toques no mesmo `act` geravam 2 `POST /vendas`) corrigido pelo ADR-006; o invariante passa a valer como escrito (`it.fails` → `it`) | Trava lida da ref no toque (AP-001) | Lucas (Arquitetura) | 2026-10-06 |
 
 ## Aprendizados aplicados
 - AP-004: a troca de textos/elementos usados como sinal pelos testes (ex.: "Produtos" no `banner` em `esperarPdv`, "Venda registrada", "Nova venda", "CPF (opcional)") exige inventário por teste antes da troca.
