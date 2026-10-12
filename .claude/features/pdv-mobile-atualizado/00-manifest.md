@@ -6,7 +6,7 @@ Fase atual: aprendizado
 Status: implantada
 Incidente atual: nenhum
 Criado em: 2026-10-12 00:09
-Última atualização: 2026-10-12 16:57
+Última atualização: 2026-10-12 18:22
 
 <!--
 NÃO altere o nome nem o formato das linhas acima. Os hooks de métricas leem "Fase atual:" literalmente.
@@ -27,7 +27,7 @@ Valores válidos de "Incidente atual": número do incidente aberto na Fase 7 (ex
 | Documentação | aprovada | Lucas | 2026-10-12 15:18 | docs/v11/documentacao.md |
 | Testes | aprovada | Lucas | 2026-10-12 15:59 | 05-testes.md |
 | Implantação | aprovada | Lucas | 2026-10-12 16:57 | 06-implantacao.md |
-| Aprendizado (só refatoração) | em_andamento | | | .claude/aprendizados.md |
+| Aprendizado (só refatoração) | aprovada | Lucas | 2026-10-12 18:22 | .claude/aprendizados.md (AP-005, AP-006) |
 
 <!-- Status de fase: pendente | em_andamento | aprovada | excecao -->
 
@@ -35,7 +35,7 @@ Valores válidos de "Incidente atual": número do incidente aberto na Fase 7 (ex
 
 | Data/hora | Fase | Exceção | Risco assumido | Aprovado por |
 |---|---|---|---|---|
-| | | | | |
+| 2026-10-12 18:22 | Aprendizado | `PDV-loja/.claude/aprendizados.md` gravado (AP-005, AP-006) sem commit: o arquivo está no repositório raiz `lucoti/PDV-loja`, nunca versionado, que tem outras mudanças pendentes | Lições ficam só na máquina local até o Lucas versionar | Lucas |
 
 ## Incidentes de manutenção
 

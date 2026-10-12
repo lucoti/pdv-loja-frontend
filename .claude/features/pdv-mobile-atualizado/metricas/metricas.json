@@ -226,17 +226,53 @@
       ],
       "subagentes": {},
       "atualizado_em": "2026-10-12T19:57:04.277Z"
+    },
+    {
+      "fase": "aprendizado",
+      "tokens": 6077864,
+      "tokens_detalhe": {
+        "input": 34,
+        "output": 11061,
+        "cache_criacao": 494281,
+        "cache_leitura": 5572488
+      },
+      "tempo_execucao_min": 2.9,
+      "intervalos": [
+        [
+          1791835024275,
+          1791835033785
+        ],
+        [
+          1791835229296,
+          1791835313550
+        ],
+        [
+          1791835313625,
+          1791835339240
+        ],
+        [
+          1791840085683,
+          1791840140509
+        ]
+      ],
+      "subagentes": {
+        "fluxo-dev:fluxo-aprendizado": {
+          "tokens": 166709,
+          "execucoes": 1
+        }
+      },
+      "atualizado_em": "2026-10-12T21:22:20.511Z"
     }
   ],
   "total": {
-    "tokens": 57428809,
+    "tokens": 63506673,
     "tokens_detalhe": {
-      "input": 538,
-      "output": 198318,
-      "cache_criacao": 1581840,
-      "cache_leitura": 55648113
+      "input": 572,
+      "output": 209379,
+      "cache_criacao": 2076121,
+      "cache_leitura": 61220601
     },
-    "tempo_execucao_min": 88.6
+    "tempo_execucao_min": 91.5
   },
-  "atualizado_em": "2026-10-12T19:57:04.277Z"
+  "atualizado_em": "2026-10-12T21:22:20.511Z"
 }
