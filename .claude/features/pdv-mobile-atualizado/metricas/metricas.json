@@ -199,17 +199,40 @@
         }
       },
       "atualizado_em": "2026-10-12T19:00:23.906Z"
+    },
+    {
+      "fase": "implantacao",
+      "tokens": 2160723,
+      "tokens_detalhe": {
+        "input": 10,
+        "output": 4254,
+        "cache_criacao": 6458,
+        "cache_leitura": 2150001
+      },
+      "tempo_execucao_min": 0.8,
+      "intervalos": [
+        [
+          1791831623904,
+          1791831632924
+        ],
+        [
+          1791831824444,
+          1791831862247
+        ]
+      ],
+      "subagentes": {},
+      "atualizado_em": "2026-10-12T19:04:22.251Z"
     }
   ],
   "total": {
-    "tokens": 51318274,
+    "tokens": 53478997,
     "tokens_detalhe": {
-      "input": 510,
-      "output": 190299,
-      "cache_criacao": 1566305,
-      "cache_leitura": 49561160
+      "input": 520,
+      "output": 194553,
+      "cache_criacao": 1572763,
+      "cache_leitura": 51711161
     },
-    "tempo_execucao_min": 79.5
+    "tempo_execucao_min": 80.3
   },
-  "atualizado_em": "2026-10-12T19:00:23.906Z"
+  "atualizado_em": "2026-10-12T19:04:22.251Z"
 }
