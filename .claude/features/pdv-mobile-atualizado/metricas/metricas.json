@@ -202,14 +202,14 @@
     },
     {
       "fase": "implantacao",
-      "tokens": 2160723,
+      "tokens": 6110535,
       "tokens_detalhe": {
-        "input": 10,
-        "output": 4254,
-        "cache_criacao": 6458,
-        "cache_leitura": 2150001
+        "input": 28,
+        "output": 8019,
+        "cache_criacao": 15535,
+        "cache_leitura": 6086953
       },
-      "tempo_execucao_min": 0.8,
+      "tempo_execucao_min": 9.1,
       "intervalos": [
         [
           1791831623904,
@@ -217,22 +217,26 @@
         ],
         [
           1791831824444,
-          1791831862247
+          1791832351747
+        ],
+        [
+          1791835012945,
+          1791835024275
         ]
       ],
       "subagentes": {},
-      "atualizado_em": "2026-10-12T19:04:22.251Z"
+      "atualizado_em": "2026-10-12T19:57:04.277Z"
     }
   ],
   "total": {
-    "tokens": 53478997,
+    "tokens": 57428809,
     "tokens_detalhe": {
-      "input": 520,
-      "output": 194553,
-      "cache_criacao": 1572763,
-      "cache_leitura": 51711161
+      "input": 538,
+      "output": 198318,
+      "cache_criacao": 1581840,
+      "cache_leitura": 55648113
     },
-    "tempo_execucao_min": 80.3
+    "tempo_execucao_min": 88.6
   },
-  "atualizado_em": "2026-10-12T19:04:22.251Z"
+  "atualizado_em": "2026-10-12T19:57:04.277Z"
 }

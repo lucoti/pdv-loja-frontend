@@ -18,17 +18,17 @@ Não se aplica (só front; o pedido fica em memória, nada no navegador).
 ## Checklist de deploy (em ordem)
 Antes do push, produção está no commit `e62821c` (último da pdv-mobile-refatorado).
 
-1. [ ] Push dos commits da feature (`d052d97` … `119e542` e o commit deste artefato) para `origin/main` — Claude. **Depende de:** nenhum.
-2. [ ] Build e deploy automáticos da Vercel a partir da `main`; acompanhar até "Ready" — Claude. **Depende de:** 1.
-3. [ ] Conferir que a URL de produção serve o build novo (página carrega, sem erro no console) sem fazer login — Claude. **Depende de:** 2.
-4. [ ] **Manual (Lucas):** em cada celular da loja, recarregar o PDV (fechar e abrir a aba/atalho) para pegar o build novo. **Depende de:** 2. Pode rodar em paralelo ao passo 3.
-5. [ ] **Manual (Lucas):** num celular, entrar e conferir as telas: abas no topo, Peça → Tecido → Cor → Tamanho, "Adicionar" volta para Peça, Pedido com linha do cliente/lixeira/desconto/pagamento, "Cliente do pedido", Dia. Sem fechar venda de teste (fecharia venda real e baixaria estoque no ERP). **Depende de:** 4.
-6. [ ] **Manual (Lucas):** a primeira venda real depois do deploy confirma o fechamento e o aviso com "Nova venda"; conferir a venda na aba Dia. **Depende de:** 5.
+1. [x] Push dos commits da feature (`d052d97` … `119e542` e o commit deste artefato) para `origin/main` — Claude. **Depende de:** nenhum.
+2. [x] Build e deploy automáticos da Vercel a partir da `main`; acompanhar até "Ready" — Claude. **Depende de:** 1.
+3. [x] Conferir que a URL de produção serve o build novo (página carrega, sem erro no console) sem fazer login — Claude. **Depende de:** 2.
+4. [x] **Manual (Lucas):** em cada celular da loja, recarregar o PDV (fechar e abrir a aba/atalho) para pegar o build novo. **Depende de:** 2. Pode rodar em paralelo ao passo 3.
+5. [x] **Manual (Lucas):** num celular, entrar e conferir as telas: abas no topo, Peça → Tecido → Cor → Tamanho, "Adicionar" volta para Peça, Pedido com linha do cliente/lixeira/desconto/pagamento, "Cliente do pedido", Dia. Sem fechar venda de teste (fecharia venda real e baixaria estoque no ERP). **Depende de:** 4.
+6. [x] **Manual (Lucas):** a primeira venda real depois do deploy confirma o fechamento e o aviso com "Nova venda"; conferir a venda na aba Dia. **Depende de:** 5.
 
 ## Verificação pós-deploy
-- [ ] Deploy da Vercel em "Ready" no commit novo (passo 2).
-- [ ] Página de produção carrega o login sem erro (passo 3).
-- [ ] Telas conferidas no celular (passo 5) e primeira venda real registrada e listada no Dia (passo 6).
+- [x] Produção serve o build do commit novo: `index-BPD6xFhu.js`/`index-bEmG0YMj.css` iguais ao build local de `f09f81b` (2026-10-12). O registro de deployment no GitHub não apareceu para este commit; a conferência foi pelos arquivos servidos.
+- [x] Página de produção carrega o login sem erro no console (passo 3).
+- [x] Telas conferidas no celular (passo 5) e primeira venda real registrada e listada no Dia (passo 6) — confirmado pelo Lucas.
 
 ## Plano de rollback
 - **Gatilhos para acionar o rollback:** build falhar na Vercel; tela em branco ou erro ao abrir o PDV; venda não fecha (erro diferente dos de estoque/sessão) ou corpo recusado pelo back.
@@ -48,5 +48,5 @@ Lucas avisa a equipe da loja que a tela do PDV mudou (abas no topo, venda começ
 | Lucas | Autoriza; passos 4 a 6; comunicação com a loja |
 
 ## Aprovação
-- Aprovado por: Lucas ("pode fazer push direto na main", 2026-10-12)
-- Data/hora: 2026-10-12
+- Aprovado por: Lucas ("pode fazer push direto na main"; passos 4 a 6: "passos 4 a 6 ok")
+- Data/hora: 2026-10-12 16:57
