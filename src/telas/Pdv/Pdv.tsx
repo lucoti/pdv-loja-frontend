@@ -236,6 +236,12 @@ function Venda(props: {
   // fecha o produto; ao voltar para Produtos, a tela de cor/tamanho reaparece com a escolha feita.
   // ATENÇÃO: se uma recarga do catálogo tirar o produto aberto, `produto` fica undefined e a tela
   // volta sozinha para a lista, embora `produtoId` continue guardado.
+  // Como a tela é decidida (não há rota): a aba vem do estado `aba`; dentro da aba Produtos, a etapa
+  // Cliente tem prioridade enquanto `clienteDefinido` é falso, e depois dela um produto aberto mostra
+  // cor/tamanho; sem produto, a lista. Pedido e Dia dependem só da aba.
+  // ATENÇÃO: com a etapa Cliente aberta pelo "Alterar", trocar de aba não descarta a edição: o rascunho
+  // e `origemCliente = 'pedido'` ficam guardados, a aba Produtos volta a mostrar o formulário até ele
+  // ser salvo ou pulado, e o Pedido continua podendo ser fechado nesse meio-tempo.
   const naCliente = aba === 'produtos' && !clienteDefinido;
   const naVariacao = aba === 'produtos' && !naCliente && !!produto;
   const { totais } = calcularPedido(pedido);
@@ -345,8 +351,11 @@ function Venda(props: {
         {aba === 'dia' && <Dia />}
       </main>
 
+      {/* A troca de aba não tem trava em ref: grava direto no estado. Só Fechar e Cancelar leem a ref. */}
       <BarraInferior aba={aba} pecas={pecas} acao={acao} aoTrocarAba={setAba} />
 
+      {/* ATENÇÃO: o OK do aviso também não tem trava em ref. Dois toques antes do redesenho chamam
+          `recomecar` duas vezes e geram duas chaves seguidas; vale a última, com o pedido já vazio. */}
       {sucesso && <AvisoVenda venda={sucesso} aoOk={recomecar} />}
     </>
   );

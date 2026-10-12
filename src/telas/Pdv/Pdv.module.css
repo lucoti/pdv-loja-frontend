@@ -367,6 +367,7 @@ img.circulo { object-fit: cover; }
   text-decoration: underline;
   cursor: pointer;
 }
+/* Desligado durante o envio da venda (INV-013): apagado, sem cursor de clique. */
 .cancelar:disabled { opacity: 0.4; cursor: default; }
 
 /* 1e — Dia: cartões do dia e lista das vendas (MI-08). */

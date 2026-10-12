@@ -105,12 +105,14 @@ export const botaoTamanho = (sigla: string) => screen.getByRole('button', { name
 /** Botão da cor: o nome começa pela cor (pode vir seguido de "sem estoque"). */
 export const botaoCor = (cor: string) => screen.getByRole('button', { name: new RegExp(`^${cor}(sem estoque)?$`) });
 
-/**
- * Aba Produtos → tipo → produto → cor → tamanho → "Adicionar ao pedido" → aba Pedido.
- * Desde a pdv-mobile-refatorado (MI-11) "Adicionar" deixa a tela em cor/tamanho com a escolha limpa;
- * o helper confere isso e então abre a aba Pedido, para os testes seguirem do mesmo ponto de antes.
+/*
+ * Pontos únicos da navegação até uma peça (pdv-mobile-atualizado, caracterização). O design atualizado
+ * troca a lista de produtos (cartões "1 Peça"/"2 Tecido"), tira a etapa Cliente inicial e faz "Adicionar"
+ * voltar para Peça/Tecido: só estes helpers mudam com isso (AP-004). Nenhum devolve elemento da página.
  */
-export async function adicionarPeca(usuario: UserEvent, p: Peca) {
+
+/** Abre a lista de produtos da aba Produtos, passando pela etapa Cliente e fechando um produto aberto. */
+export async function abrirListaDeProdutos(usuario: UserEvent) {
   const abaProdutos = screen.getByRole('button', { name: 'Produtos' });
   if (abaProdutos.getAttribute('aria-current') !== 'page') await usuario.click(abaProdutos);
   // Venda nova (depois do login, de uma venda ou de "Cancelar pedido") começa na etapa Cliente.
@@ -118,10 +120,29 @@ export async function adicionarPeca(usuario: UserEvent, p: Peca) {
   // Produto aberto de uma peça anterior: volta para a lista antes de escolher o próximo.
   const voltar = screen.queryByRole('button', { name: 'Voltar para os produtos' });
   if (voltar) await usuario.click(voltar);
+}
+
+/** Lista de produtos → tipo (se informado) → produto: abre a tela de cor/tamanho do produto. */
+export async function abrirProduto(usuario: UserEvent, p: Pick<Peca, 'tipo' | 'produto'>) {
+  await abrirListaDeProdutos(usuario);
   if (p.tipo) await usuario.click(screen.getByRole('button', { name: p.tipo }));
   await usuario.click(screen.getByRole('button', { name: new RegExp(`^${p.produto}`) }));
+}
+
+/** Abre o produto e escolhe cor e tamanho, sem tocar em "Adicionar ao pedido". */
+export async function escolherVariacao(usuario: UserEvent, p: Peca) {
+  await abrirProduto(usuario, p);
   await usuario.click(botaoCor(p.cor));
   await usuario.click(botaoTamanho(p.tamanho));
+}
+
+/**
+ * Aba Produtos → tipo → produto → cor → tamanho → "Adicionar ao pedido" → aba Pedido.
+ * Desde a pdv-mobile-refatorado (MI-11) "Adicionar" deixa a tela em cor/tamanho com a escolha limpa;
+ * o helper confere isso e então abre a aba Pedido, para os testes seguirem do mesmo ponto de antes.
+ */
+export async function adicionarPeca(usuario: UserEvent, p: Peca) {
+  await escolherVariacao(usuario, p);
   await usuario.click(screen.getByRole('button', { name: 'Adicionar ao pedido' }));
   // MI-11: continua em cor/tamanho, sem cor nem tamanho escolhidos.
   expect(screen.getByRole('banner')).toHaveAttribute('aria-label', 'Cor e tamanho');
@@ -210,3 +231,43 @@ export const esperarTelaDeLogin = () =>
     expect(topoDoPdv()).not.toBeInTheDocument();
     expect(screen.getByRole('img', { name: /números digitados/ })).toBeInTheDocument();
   });
+
+/*
+ * Pontos únicos da caracterização da pdv-mobile-atualizado (tests/telas/pdv.atualizado.caracterizacao.test.tsx).
+ * Usam só o que o design atualizado mantém (abas em `navigation "Abas"` com `aria-current`, "Alterar",
+ * "Salvar cliente", campos Nome/Celular) ou aceitam o nome antigo e o novo do mesmo botão. Nenhum devolve
+ * elemento da página (AP-004).
+ */
+
+/** Nome da aba marcada como atual (`aria-current="page"`) na navegação "Abas"; exige exatamente uma. */
+export function abaAtual(): string {
+  const atuais = within(screen.getByRole('navigation', { name: 'Abas' }))
+    .getAllByRole('button')
+    .filter((b) => b.getAttribute('aria-current') === 'page')
+    .map((b) => sem_nbsp(b.textContent));
+  expect(atuais).toHaveLength(1);
+  return atuais[0]!;
+}
+
+/** Abre o formulário do cliente do pedido pelo "Alterar" da aba Pedido. */
+export async function abrirClienteDoPedido(usuario: UserEvent) {
+  const abaPedido = within(screen.getByRole('navigation', { name: 'Abas' })).getByRole('button', { name: /^Pedido/ });
+  if (abaPedido.getAttribute('aria-current') !== 'page') await usuario.click(abaPedido);
+  await usuario.click(screen.getByText('Alterar'));
+}
+
+/** Campos do formulário do cliente (o rótulo pode ganhar complemento, ex.: "Nome do cliente"). */
+export const campoNomeCliente = () => screen.getByRole('textbox', { name: /^Nome/ });
+export const campoCelularCliente = () => screen.getByRole('textbox', { name: /^Celular/ });
+
+/**
+ * Toca N vezes no "+" ou no "−" do desconto no pedido. Aceita o nome de hoje ("Aumentar desconto no
+ * total") e o do design atualizado ("Aumentar desconto"). Botão desligado não é tocado.
+ */
+export async function tocarDesconto(usuario: UserEvent, acao: 'Aumentar' | 'Diminuir', vezes: number) {
+  const nome = new RegExp(`^${acao} desconto( no total)?$`);
+  for (let i = 0; i < vezes; i++) {
+    const botao = screen.getByRole('button', { name: nome });
+    if (!(botao as HTMLButtonElement).disabled) await usuario.click(botao);
+  }
+}

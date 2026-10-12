@@ -3,10 +3,10 @@
 Slug: pdv-mobile-refatorado
 Modo: refatoracao
 Fase atual: implantacao
-Status: em_andamento
+Status: implantada
 Incidente atual: nenhum
 Criado em: 2026-10-05 22:30
-Última atualização: 2026-10-06 11:00
+Última atualização: 2026-10-12 00:20
 
 <!--
 NÃO altere o nome nem o formato das linhas acima. Os hooks de métricas leem "Fase atual:" literalmente.
@@ -26,7 +26,7 @@ Valores válidos de "Incidente atual": número do incidente aberto na Fase 7 (ex
 | Desenvolvimento | aprovada | Lucas | 2026-10-06 09:45 | 04-desenvolvimento.md |
 | Documentação | aprovada | Lucas | 2026-10-06 10:05 | docs/v9/documentacao.md |
 | Testes | aprovada | Lucas | 2026-10-06 11:00 | 05-testes.md |
-| Implantação | em_andamento | | | 06-implantacao.md |
+| Implantação | excecao | Lucas | 2026-10-12 00:20 | não gerado |
 | Aprendizado (só refatoração) | pendente | | | .claude/aprendizados.md |
 
 <!-- Status de fase: pendente | em_andamento | aprovada | excecao -->
@@ -37,6 +37,7 @@ Valores válidos de "Incidente atual": número do incidente aberto na Fase 7 (ex
 |---|---|---|---|---|
 | 2026-10-05 23:31 | Desenvolvimento | Feature pausada depois da etapa 5, antes da etapa 6 (contrato `cpf` → `telefone`) | Etapa 6, Documentação e Testes esperam a feature pdv-cliente-telefone | Lucas ("pode pausar e começar o back") |
 | 2026-10-06 01:10 | Desenvolvimento | Retomada na etapa 6 com o back pdv-cliente-telefone pronto (testes aprovados, sem deploy); decisão: celular com exatamente 11 dígitos, igual ao back | Implantação conjunta A → B → C → D (ver 05-testes da pdv-cliente-telefone) | Lucas ("pode gravar e retornar ao front") |
+| 2026-10-12 00:20 | Implantação | Deploy feito fora do fluxo (código da `main` em produção) sem `06-implantacao.md`; Aprendizado não executado. Feature substituída pela pdv-mobile-atualizado | Sem checklist de deploy registrado nem lição de refatoração | Lucas ("já foi deploy e está em prod"; "fica obsoleto") |
 
 ## Incidentes de manutenção
 
