@@ -40,6 +40,9 @@ export function Pedido({
   // Saldo atual de cada SKU: avisa quando o pedido passou do estoque (catálogo recarregado).
   const saldos = saldosPorSku(catalogo);
 
+  // ATENÇÃO: com o pedido vazio somem também a linha do cliente, o pagamento e o "Cancelar pedido". Um
+  // cliente ou pagamento já gravados continuam no estado (só o desconto cai a zero pelo teto do bruto) e
+  // reaparecem quando uma peça entra de novo; para zerá-los é preciso "Cancelar pedido" com peças.
   if (itens.length === 0) return <div className={s.cartaoVazio}>Nenhuma peça no pedido ainda. Escolha em Produtos.</div>;
 
   // O celular fica guardado só com dígitos e ganha a máscara apenas para exibir.

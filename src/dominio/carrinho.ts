@@ -24,8 +24,9 @@ export interface ItemCarrinho {
 }
 
 // O nome é texto livre, como o vendedor digitou: o corte de espaços é feito no envio (Pdv.tsx).
-// Cliente da venda (MI-02): nome e celular, os dois opcionais, informados na etapa Cliente. O celular
-// fica só com os dígitos; a máscara é coisa da tela. O CPF saiu do PDV (pdv-mobile-refatorado).
+// Cliente da venda: nome e celular, os dois opcionais, informados pelo "Alterar" da linha do cliente na
+// aba Pedido (formulário "Cliente do pedido", MI-21). O celular fica só com os dígitos; a máscara é coisa
+// da tela. O CPF saiu do PDV (pdv-mobile-refatorado).
 export interface Pedido {
   itens: ItemCarrinho[];
   descontoTotalCentavos: number;
@@ -43,6 +44,8 @@ export type NovaVariacao = Omit<ItemCarrinho, 'chave' | 'qtd' | 'descPercent'>;
 // quantidade na linha saiu com o design atualizado (INV-012 alterado, pdv-mobile-atualizado).
 export type AcaoPedido =
   | { tipo: 'adicionar'; variacao: NovaVariacao; limite: number }
+  // ATENÇÃO: `mais` e `menos` não têm mais botão na tela (o −/+ da linha saiu, MI-24); ficaram só para
+  // não mexer nos testes de domínio já verdes. Débito técnico: remover numa limpeza futura, com os testes.
   | { tipo: 'mais'; chave: string; limite: number }
   | { tipo: 'menos'; chave: string }
   | { tipo: 'remover'; chave: string }
@@ -50,13 +53,13 @@ export type AcaoPedido =
   // "limite" = valor bruto atual do pedido: o desconto no total não passa dele (ADR-005).
   | { tipo: 'descontoTotalMais'; limite: number }
   | { tipo: 'descontoTotalMenos' }
-  // Confirmação da etapa Cliente: grava nome e celular juntos.
+  // "Salvar cliente" ou "Venda sem cliente" no formulário Cliente do pedido: grava nome e celular juntos.
   | { tipo: 'cliente'; nome: string; telefone: string }
   | { tipo: 'pagamento'; pagamentoId: string }
   // Catálogo recarregado: preço atual de cada SKU (skuId → centavos).
   | { tipo: 'precos'; precos: ReadonlyMap<number, number> }
-  // "Cancelar pedido" e o OK do aviso de venda: tudo zerado, inclusive o cliente, e chave nova (gerada
-  // fora, para o reducer ser puro).
+  // "Cancelar pedido" e "Nova venda" do aviso de venda (MI-25, MI-26): tudo zerado, inclusive o cliente,
+  // e chave nova (gerada fora, para o reducer ser puro).
   | { tipo: 'novo'; chaveIdempotencia: string };
 
 export function pedidoVazio(chaveIdempotencia: string): Pedido {
@@ -117,6 +120,8 @@ function aplicar(p: Pedido, acao: AcaoPedido): Pedido {
     case 'menos':
       return alterarItem(p, acao.chave, (i) => (i.qtd > 1 ? { ...i, qtd: i.qtd - 1 } : null));
     case 'remover':
+      // Lixeira "Tirar peça": tira a linha inteira, qualquer que seja a quantidade. O desconto no pedido
+      // é reajustado logo depois por `limitarDesconto`.
       return alterarItem(p, acao.chave, () => null);
     case 'desconto':
       // Desconto por item (%): continua no domínio e no contrato (`descPercent`), mas a tela não oferece
@@ -129,7 +134,7 @@ function aplicar(p: Pedido, acao: AcaoPedido): Pedido {
       return novo <= acao.limite ? { ...p, descontoTotalCentavos: novo } : p;
     }
     case 'descontoTotalMenos':
-      // Regra 4: mínimo 0.
+      // Regra 4: mínimo 0 (o botão "−" também fica desligado em zero, `podeDiminuirDescontoTotal`).
       return { ...p, descontoTotalCentavos: Math.max(0, p.descontoTotalCentavos - PASSO_DESCONTO_TOTAL_CENTAVOS) };
     case 'cliente':
       // Nome e celular chegam já tratados pela tela (nome aparado, celular só com dígitos) e trocam

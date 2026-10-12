@@ -72,6 +72,7 @@ Riscos de nomes nos testes novos: `botaoCor` (nome pode incluir o check), `botao
 | 2026-10-12 | Marca da cor escolhida sobre a amostra, não ao lado do nome | Na coluna de ~164px (390px de tela) o ícone ao lado deixava ~44px para o nome e partia "Marinho" no meio (conferência no navegador) | Desvio visual pequeno do design |
 | 2026-10-12 | Abaixo de 380px as abas ficam sem ícone | "Pedido" + ícone + bolinha não cabia em 107px (360px) nem em 92px (320px) | A 390px (design) os ícones aparecem |
 | 2026-10-12 | Abaixo de 360px a linha do desconto usa folgas e fontes menores; título com reticências | A 320px o título "Desconto" ficava ~7px mais largo que o espaço | Guardas automáticas em `pdv.ajustes` (AP-003) |
+| 2026-10-12 | Pedido vazio esconde linha do cliente, pagamento e "Cancelar", mas cliente e pagamento continuam guardados e reaparecem com a próxima peça | Segue o design; "Cancelar" e "Nova venda" continuam zerando tudo (ATENÇÃO em Pedido.tsx) | Mantido por decisão do Lucas na Documentação |
 | 2026-10-12 | `.claude/launch.json` criado (servidor `pdv-simulado` na porta 5199) para a conferência no navegador | Ferramenta de preview do Claude | Incluído no repositório (Lucas, 2026-10-12) |
 
 ## Mudanças de escopo
@@ -94,9 +95,9 @@ nenhuma
 | 8 — navegador 390/360/320 | ok | sem rolagem lateral em nenhuma tela; 3 ajustes de tela estreita (log acima); cobertura 99,6% linhas, metas por arquivo cumpridas; `vite build` ok |
 
 ## Documentação (D1-D3)
-- [ ] D1 — código-fonte comentado
-- [ ] D2 — documentação executiva em `docs/vN/documentacao.md` (versão 11)
-- [ ] D3 — `docs/contexto-geral.md` atualizado
+- [x] D1 — código-fonte comentado (carrinho.ts, Pdv.tsx, Pedido.tsx, Abas.tsx; 4 ATENÇÃO novos; demais já conferiam)
+- [x] D2 — documentação executiva em `docs/v11/documentacao.md` (versão 11, to-be; as-is em v10)
+- [x] D3 — `docs/contexto-geral.md` atualizado (docs do front em v11; v11 não publicada)
 
 ## Exceções
 nenhuma

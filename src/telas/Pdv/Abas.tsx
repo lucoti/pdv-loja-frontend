@@ -11,6 +11,8 @@ export type Aba = 'produtos' | 'pedido' | 'dia';
  * continuam sendo o mesmo elemento e um toque nesse instante não se perde (INV-020 corrigido).
  *
  * O nome acessível da aba Pedido com peças é "Pedido (N)" (`aria-label`), como antes: a bolinha é só visual.
+ * ATENÇÃO: os testes de tela procuram a aba por esse nome; mudar o formato do `aria-label` exige ajustar
+ * os helpers de teste (AP-004).
  */
 export function Abas({ aba, pecas, aoTrocarAba }: { aba: Aba; pecas: number; aoTrocarAba: (aba: Aba) => void }) {
   const abas: Array<{ id: Aba; nome: string; Icone: Icon }> = [

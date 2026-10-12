@@ -40,7 +40,8 @@ export function Pdv() {
   const [pedido, despacharPedido] = useReducer(reduzirPedido, undefined, () => pedidoVazio(crypto.randomUUID()));
   const pecas = calcularPedido(pedido).totais.pecas;
 
-  // A troca de aba não tem trava em ref (ADR-003): grava direto no estado e não envia nada.
+  // A troca de aba não tem trava em ref (ADR-003): grava direto no estado e não envia nada. Fechar o
+  // formulário do cliente aqui é o que faz a troca de aba descartar a edição (MI-21).
   const trocarAba = (nova: Aba) => {
     setAba(nova);
     setEditandoCliente(false);
@@ -90,6 +91,9 @@ function Venda(props: {
   pedido: PedidoEstado;
   despacharPedido: (acao: AcaoPedido) => void;
 }) {
+  // ATENÇÃO: `setAba` chega aqui cru, sem o `setEditandoCliente(false)` de `trocarAba`. Hoje só o
+  // `recomecar` o usa, e ele já fecha o formulário; outro uso precisa fechar também, senão o formulário
+  // do cliente reaparece com um rascunho velho ao voltar para a aba Pedido.
   const { catalogo, aba, setAba, editandoCliente, setEditandoCliente, pedido } = props;
   // Primeiro tipo do ERP já selecionado (INV-017). Se uma recarga do catálogo tirar o tipo escolhido,
   // a tela volta para o primeiro tipo em vez de mostrar uma lista vazia sem peça marcada.
