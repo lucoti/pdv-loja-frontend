@@ -364,9 +364,9 @@ describe('INV-016 — tamanho sem saldo desligado; trocar de cor mantém o taman
     expect(botaoTamanho('GG')).toBeDisabled();
     expect(sem_nbsp(botaoTamanho('GG').textContent)).toBe('GGestoque 0');
     for (const t of ['P', 'M', 'G', 'GG']) expect(botaoTamanho(t)).toHaveAttribute('aria-pressed', 'false');
-    // Sem tamanho escolhido: hoje o botão aparece desligado; no design atualizado ele não aparece.
-    const adicionar = botaoAdicionar();
-    if (adicionar) expect(adicionar).toBeDisabled();
+    // Sem tamanho escolhido o botão não aparece (MI-23). Antes da refatoração aparecia desligado; a
+    // asserção condicional da caracterização foi apertada na validação final (T8).
+    expect(botaoAdicionar()).toBeNull();
     await usuario.click(botaoTamanho('GG'));
     expect(botaoTamanho('GG')).toHaveAttribute('aria-pressed', 'false');
   });

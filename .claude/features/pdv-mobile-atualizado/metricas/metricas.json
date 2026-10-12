@@ -163,17 +163,53 @@
         }
       },
       "atualizado_em": "2026-10-12T18:18:59.237Z"
+    },
+    {
+      "fase": "testes",
+      "tokens": 9744352,
+      "tokens_detalhe": {
+        "input": 104,
+        "output": 15164,
+        "cache_criacao": 665654,
+        "cache_leitura": 9063430
+      },
+      "tempo_execucao_min": 28.6,
+      "intervalos": [
+        [
+          1791829139235,
+          1791829146230
+        ],
+        [
+          1791829240383,
+          1791830878934
+        ],
+        [
+          1791830879021,
+          1791830920858
+        ],
+        [
+          1791831593887,
+          1791831623904
+        ]
+      ],
+      "subagentes": {
+        "fluxo-dev:fluxo-testador": {
+          "tokens": 6793025,
+          "execucoes": 1
+        }
+      },
+      "atualizado_em": "2026-10-12T19:00:23.906Z"
     }
   ],
   "total": {
-    "tokens": 41573922,
+    "tokens": 51318274,
     "tokens_detalhe": {
-      "input": 406,
-      "output": 175135,
-      "cache_criacao": 900651,
-      "cache_leitura": 40497730
+      "input": 510,
+      "output": 190299,
+      "cache_criacao": 1566305,
+      "cache_leitura": 49561160
     },
-    "tempo_execucao_min": 50.9
+    "tempo_execucao_min": 79.5
   },
-  "atualizado_em": "2026-10-12T18:18:59.237Z"
+  "atualizado_em": "2026-10-12T19:00:23.906Z"
 }
