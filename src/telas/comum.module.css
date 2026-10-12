@@ -104,3 +104,32 @@
 }
 
 .tabular { font-variant-numeric: tabular-nums; }
+
+/*
+ * Botão com relevo (ADR-006): escolhido por `aria-pressed="true"`, indisponível por `disabled`. O tamanho
+ * e o texto ficam com quem usa (Pdv.module.css). O Login não usa esta classe (INV-032).
+ */
+.tile {
+  border-radius: 10px;
+  border: var(--tile-borda);
+  background: var(--tile-bg);
+  box-shadow: var(--tile-sombra);
+  color: var(--tile-texto);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.tile[aria-pressed='true'] {
+  border: var(--tile-escolhido-borda);
+  background: var(--tile-escolhido-bg);
+  box-shadow: var(--tile-escolhido-sombra);
+  font-weight: 600;
+}
+
+.tile:disabled {
+  border: var(--tile-off-borda);
+  background: transparent;
+  box-shadow: none;
+  color: var(--tile-off-texto);
+  cursor: not-allowed;
+}

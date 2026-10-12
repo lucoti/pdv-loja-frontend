@@ -40,6 +40,23 @@
   --color-danger-line: #8c4a45;
   --color-veu: rgba(8, 9, 15, 0.72);
 
+  /*
+   * Botões com relevo do design atualizado (ADR-006, pdv-mobile-atualizado): tipo, tecido, cor, tamanho,
+   * pagamento e o −/+ do desconto. Normal: superfície mais clara que o cartão, brilho fino em cima e sombra
+   * sólida embaixo. Escolhido: roxo forte "afundado". Indisponível: sem fundo, borda tracejada.
+   */
+  --tile-bg: #40445a;
+  --tile-texto: #ffffff;
+  --tile-borda: 1px solid var(--color-neutral-600);
+  --tile-sombra: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 3px 0 #0b0c14;
+  --tile-escolhido-bg: var(--color-accent-700);
+  --tile-escolhido-borda: 2px solid var(--color-accent-300);
+  --tile-escolhido-sombra: inset 0 2px 4px rgba(0, 0, 0, 0.35);
+  --tile-off-borda: 1px dashed var(--color-neutral-700);
+  --tile-off-texto: var(--color-neutral-600);
+  /* Véu do aviso de venda registrada, um pouco mais escuro que o --color-veu das outras janelas. */
+  --color-veu-aviso: rgba(8, 9, 15, 0.78);
+
   --font-heading: 'Inter', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
 
