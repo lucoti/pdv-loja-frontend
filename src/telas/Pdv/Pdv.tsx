@@ -1,4 +1,3 @@
-import { ArrowRight, User } from '@phosphor-icons/react';
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { api, ErroApi, MENSAGEM_GENERICA, type Catalogo, type Venda } from '../../api/cliente';
 import { calcularPedido, pedidoVazio, podeFechar, qtdNoPedido, reduzirPedido, type AcaoPedido, type Pedido as PedidoEstado } from '../../dominio/carrinho';
@@ -8,28 +7,30 @@ import { CaixaErro, Carregando, FalhaAoCarregar } from '../Avisos';
 import c from '../comum.module.css';
 import { Folha } from '../Folha';
 import { useCarregar } from '../useCarregar';
-import { BarraInferior, type Aba } from './BarraInferior';
+import { Abas, type Aba } from './Abas';
 import { AvisoVenda } from './AvisoVenda';
-import { Cabecalho, nomeEtapa } from './Cabecalho';
 import { Cliente, type RascunhoCliente } from './Cliente';
 import { Dia } from './Dia';
 import { Pedido, ResumoPedido } from './Pedido';
-import { Produtos } from './Produtos';
+import { nomeNaLista, Produtos } from './Produtos';
 import s from './Pdv.module.css';
-import { precoDaEscolha, resumoEscolha, Variacoes, type Escolha } from './Variacoes';
+import { Variacoes, type Escolha } from './Variacoes';
 
 const SEM_ESCOLHA: Escolha = { corId: null, tamanho: null };
 
-/** Data de hoje no topo da aba Dia, no formato do design: "05 out". */
-// Os dois `replace` limpam o que o Intl devolve em pt-BR ("05 de out."). Usa o relógio do aparelho,
-// não o fuso da loja: com o celular em outro fuso, a data do topo pode diferir da lista do servidor.
-function hojeCurto(): string {
-  return new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '').replace(' de ', ' ');
+/** Nome da tela atual, usado como nome acessível do `<main>` (ADR-002): é o sinal dos testes de tela. */
+function nomeDaTela(aba: Aba, naVariacao = false, naCliente = false): string {
+  if (naCliente) return 'Cliente do pedido';
+  if (naVariacao) return 'Cor e tamanho';
+  return aba === 'produtos' ? 'Produtos' : aba === 'pedido' ? 'Pedido' : 'Dia';
 }
 
 /** Tela de venda (handoff §2). Carrega o catálogo e só então mostra Produtos e Pedido. */
 export function Pdv() {
   const [aba, setAba] = useState<Aba>('produtos');
+  // Formulário "Cliente do pedido" aberto (MI-21, ADR-003). Fica aqui, junto da aba, porque a troca de
+  // aba (feita pelas abas, fora de <Venda>) também o fecha, descartando o que foi digitado.
+  const [editandoCliente, setEditandoCliente] = useState(false);
   const [carga, tentarDeNovo, atualizarCatalogo] = useCarregar(api.catalogo);
   // O pedido fica aqui, acima de <Venda>, para sobreviver à troca de abas e ao recarregar do catálogo.
   // ATENÇÃO: se a sessão cair (401), o App troca para o Login e este componente é desmontado — o
@@ -39,73 +40,69 @@ export function Pdv() {
   const [pedido, despacharPedido] = useReducer(reduzirPedido, undefined, () => pedidoVazio(crypto.randomUUID()));
   const pecas = calcularPedido(pedido).totais.pecas;
 
-  // O topo mostra a etapa e é desenhado por quem a conhece: <Venda> (que sabe se há um produto aberto)
-  // ou, com o catálogo carregando ou em falha, o ramo abaixo, só pela aba. Nos dois casos ele é o
-  // primeiro filho da folha, para aparecer nas três abas.
-  // ATENÇÃO: os dois ramos montam cada um o seu topo e a sua barra inferior. Quando o catálogo termina
-  // de carregar, os do ramo de baixo saem da página e os de <Venda> entram no lugar: na tela não há
-  // diferença visível, mas um toque numa aba nesse exato instante pode se perder (visto só em teste),
-  // e um teste que guarde o elemento do topo antes da carga fica com um elemento que já saiu da página.
+  // A troca de aba não tem trava em ref (ADR-003): grava direto no estado e não envia nada.
+  const trocarAba = (nova: Aba) => {
+    setAba(nova);
+    setEditandoCliente(false);
+  };
+
+  // As abas são desenhadas uma vez só, fora do ramo que depende do catálogo (ADR-001): quando a carga
+  // termina, elas continuam sendo o mesmo elemento (INV-020 corrigido).
   return (
     <Folha>
+      <Abas aba={aba} pecas={pecas} aoTrocarAba={trocarAba} />
       {carga.situacao === 'ok' ? (
         <Venda
           catalogo={carga.dados}
           atualizarCatalogo={atualizarCatalogo}
           aba={aba}
           setAba={setAba}
+          editandoCliente={editandoCliente}
+          setEditandoCliente={setEditandoCliente}
           pedido={pedido}
           despacharPedido={despacharPedido}
-          pecas={pecas}
         />
       ) : (
-        <>
-          <Cabecalho etapa={nomeEtapa(aba)} titulo={aba === 'dia' ? 'Vendas de hoje' : undefined} lateral={aba === 'dia' ? hojeCurto() : undefined} />
-          <main className={s.conteudo}>
-            {/* A aba Dia não depende do catálogo: funciona mesmo com ele carregando ou em falha. */}
-            {aba === 'dia' ? (
-              <Dia />
-            ) : carga.situacao === 'carregando' ? (
-              <Carregando />
-            ) : (
-              <FalhaAoCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />
-            )}
-          </main>
-          <BarraInferior aba={aba} pecas={pecas} aoTrocarAba={setAba} />
-        </>
+        <main className={s.conteudo} aria-label={nomeDaTela(aba)}>
+          {/* A aba Dia não depende do catálogo: funciona mesmo com ele carregando ou em falha. */}
+          {aba === 'dia' ? (
+            <Dia />
+          ) : carga.situacao === 'carregando' ? (
+            <Carregando />
+          ) : (
+            <FalhaAoCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />
+          )}
+        </main>
       )}
     </Folha>
   );
 }
 
-/** Conteúdo do PDV com o catálogo já carregado: navegação entre abas, escolha da variação e fechamento. */
+/** Conteúdo do PDV com o catálogo já carregado: escolha da peça, pedido, cliente e fechamento. */
 function Venda(props: {
   catalogo: Catalogo;
   /** Recarrega o catálogo sem sair da tela (saldos novos depois de um 409). */
   atualizarCatalogo: () => void;
   aba: Aba;
   setAba: (aba: Aba) => void;
+  editandoCliente: boolean;
+  setEditandoCliente: (editando: boolean) => void;
   pedido: PedidoEstado;
   despacharPedido: (acao: AcaoPedido) => void;
-  pecas: number;
 }) {
-  const { catalogo, aba, setAba, pedido, pecas } = props;
-  // Primeiro tipo do ERP já selecionado (RF-002). Se uma recarga do catálogo tirar o tipo escolhido,
-  // a tela volta para o primeiro tipo em vez de mostrar uma lista vazia sem chip marcado.
+  const { catalogo, aba, setAba, editandoCliente, setEditandoCliente, pedido } = props;
+  // Primeiro tipo do ERP já selecionado (INV-017). Se uma recarga do catálogo tirar o tipo escolhido,
+  // a tela volta para o primeiro tipo em vez de mostrar uma lista vazia sem peça marcada.
   const [tipoEscolhido, setTipoId] = useState<number | null>(catalogo.tipos[0]?.id ?? null);
   const tipoId = catalogo.tipos.some((t) => t.id === tipoEscolhido) ? tipoEscolhido : (catalogo.tipos[0]?.id ?? null);
   const [produtoId, setProdutoId] = useState<number | null>(null);
   const [escolha, setEscolha] = useState<Escolha>(SEM_ESCOLHA);
   const [enviando, setEnviando] = useState(false);
-  // Trava contra envio duplo (ADR-006, AP-001): lida e escrita no ref, que muda na hora; o estado
-  // `enviando` serve só para desenhar o botão. Dois toques antes do redesenho não passam os dois.
+  // Trava contra envio duplo (ADR-006 da pdv-mobile-refatorado, AP-001): lida e escrita no ref, que muda
+  // na hora; o estado `enviando` serve só para desenhar o botão. Dois toques antes do redesenho não passam.
   const enviandoRef = useRef(false);
   const [erro, setErro] = useState('');
   const [sucesso, setSucesso] = useState<Venda | null>(null);
-  // Etapa Cliente (MI-02, ADR-003): a aba Produtos mostra o formulário do cliente até ele ser confirmado
-  // ou pulado. "Alterar" no Pedido reabre a etapa com `origemCliente = 'pedido'`, para voltar ao Pedido.
-  const [clienteDefinido, setClienteDefinido] = useState(false);
-  const [origemCliente, setOrigemCliente] = useState<'inicio' | 'pedido'>('inicio');
   const [rascunho, setRascunho] = useState<RascunhoCliente>({ nome: '', celular: '' });
 
   // A cada catálogo novo, o pedido aberto passa a usar o preço atual de cada SKU. Vai direto ao reducer
@@ -132,12 +129,13 @@ function Venda(props: {
     setEscolha(SEM_ESCOLHA);
   };
 
+  // Volta para Peça/Tecido com o tipo (peça) ainda escolhido.
   const voltarParaProdutos = () => {
     setProdutoId(null);
     setEscolha(SEM_ESCOLHA);
   };
 
-  // O limite considera o que já está no pedido: adicionar de novo o mesmo SKU soma na linha (RF-004).
+  // O limite considera o que já está no pedido: adicionar de novo o mesmo SKU soma na linha (INV-012).
   const sku = produto && skuDe(produto, escolha.corId, escolha.tamanho);
   const jaNoPedido = sku ? qtdNoPedido(pedido, sku.id) : 0;
   const podeAdicionar = !!sku && jaNoPedido < sku.saldo;
@@ -157,14 +155,14 @@ function Venda(props: {
         precoUnitCentavos: sku.precoCentavos,
       },
     });
-    // MI-11 (decisão do Lucas: seguir o design): a tela fica em cor/tamanho com a escolha limpa, para
-    // incluir outra cor ou tamanho da mesma peça; o contador da aba Pedido mostra que a peça entrou.
-    setEscolha(SEM_ESCOLHA);
+    // MI-23: depois de adicionar, volta para Peça/Tecido com a peça anterior ainda marcada; a bolinha
+    // da aba Pedido mostra que a peça entrou.
+    voltarParaProdutos();
   };
 
   // Fechamento da venda (INV-013, INV-014): uma tentativa por vez, erro na tela com o pedido intacto.
-  // A trava é o ref (ADR-006): o estado do React só muda no próximo desenho, e um segundo toque antes
-  // dele ainda veria "não enviando". O corpo vem do pedido da closure, igual nos dois toques.
+  // A trava é o ref: o estado do React só muda no próximo desenho, e um segundo toque antes dele ainda
+  // veria "não enviando". O corpo vem do pedido da closure, igual nos dois toques.
   const fechar = async () => {
     if (!podeFechar(pedido) || enviandoRef.current) return;
     enviandoRef.current = true;
@@ -174,8 +172,7 @@ function Venda(props: {
       // O front não envia preços: o servidor recalcula tudo (RF-F07). A chave é a mesma em toda tentativa.
       // ATENÇÃO: este é o único ponto em que o pedido sai do aparelho, e o corpo é o contrato INV-001.
       // O nome vai com espaços das pontas cortados e o celular só com os dígitos (ou '' sem celular).
-      // ATENÇÃO: contrato da feature pdv-cliente-telefone — o back valida com objeto estrito e recusa
-      // `cpf`; este front só funciona com o back novo publicado (deploy coordenado, sem janela).
+      // ATENÇÃO: contrato da feature pdv-cliente-telefone — o back valida com objeto estrito e recusa `cpf`.
       const { venda } = await api.registrarVenda({
         chaveIdempotencia: pedido.chaveIdempotencia,
         itens: pedido.itens.map((i) => ({ skuId: i.skuId, qtd: i.qtd, descPercent: i.descPercent })),
@@ -199,164 +196,113 @@ function Venda(props: {
     }
   };
 
-  // Começa uma venda do zero na etapa Cliente: pedido e cliente zerados, chave de idempotência nova.
-  // Só o OK do aviso de venda e "Cancelar pedido" chamam esta função (ADR-F06, ADR-004, INV-011).
+  // Começa uma venda do zero em Produtos: pedido e cliente zerados, chave de idempotência nova. Só
+  // "Nova venda" (aviso de venda) e "Cancelar pedido" chamam esta função (INV-011, MI-25, MI-26).
   // ATENÇÃO: enquanto o aviso está aberto, o pedido já registrado continua no estado com a chave antiga;
-  // se a troca de chave deixar de depender do OK, um reenvio do mesmo pedido seria tratado pelo
+  // se a troca de chave deixar de depender do "Nova venda", um reenvio do mesmo pedido seria tratado pelo
   // servidor como a mesma venda.
   const recomecar = () => {
     setSucesso(null);
     despachar({ tipo: 'novo', chaveIdempotencia: crypto.randomUUID() });
     voltarParaProdutos();
-    setRascunho({ nome: '', celular: '' });
-    setOrigemCliente('inicio');
-    setClienteDefinido(false);
+    setEditandoCliente(false);
     setAba('produtos');
   };
 
-  // "Alterar" no cartão Cliente do Pedido: reabre a etapa com o que já está no pedido.
+  // Sem confirmação: zera o pedido e o cliente, troca a chave e volta para Produtos (MI-25). A trava é
+  // lida da ref, para um toque em "Cancelar" no mesmo instante do "Fechar venda", antes do redesenho,
+  // não passar (AP-001); o botão também fica desligado durante o envio.
+  const cancelar = () => {
+    if (!enviandoRef.current) recomecar();
+  };
+
+  // "Alterar" na linha do cliente: abre o formulário com o que já está no pedido.
   const alterarCliente = () => {
     setRascunho({ nome: pedido.cliente, celular: mascararCelular(pedido.telefone) });
-    setOrigemCliente('pedido');
-    setClienteDefinido(false);
-    setAba('produtos');
+    setEditandoCliente(true);
   };
 
-  // Confirma (ou pula, com os campos vazios) a etapa Cliente e segue para onde o vendedor estava indo:
-  // no início da venda, para a lista de produtos; vindo do "Alterar", de volta para o Pedido.
-  const confirmarCliente = (r: RascunhoCliente) => {
+  // Grava o cliente (ou nenhum, com os campos vazios) e volta para o Pedido.
+  const salvarCliente = (r: RascunhoCliente) => {
     despachar({ tipo: 'cliente', nome: r.nome.trim(), telefone: somenteDigitos(r.celular) });
-    setRascunho(r);
-    setClienteDefinido(true);
-    if (origemCliente === 'pedido') setAba('pedido');
-    setOrigemCliente('inicio');
+    setEditandoCliente(false);
   };
 
-  // A tela de cor/tamanho não é uma aba: é a aba Produtos com um produto aberto. Trocar de aba não
-  // fecha o produto; ao voltar para Produtos, a tela de cor/tamanho reaparece com a escolha feita.
+  // Como a tela é decidida (não há rota): a aba vem do estado `aba`; na aba Produtos, um produto aberto
+  // mostra cor/tamanho e, sem produto, Peça/Tecido; na aba Pedido, o formulário do cliente aparece
+  // enquanto `editandoCliente` for verdadeiro. Trocar de aba não fecha o produto aberto.
   // ATENÇÃO: se uma recarga do catálogo tirar o produto aberto, `produto` fica undefined e a tela
-  // volta sozinha para a lista, embora `produtoId` continue guardado.
-  // Como a tela é decidida (não há rota): a aba vem do estado `aba`; dentro da aba Produtos, a etapa
-  // Cliente tem prioridade enquanto `clienteDefinido` é falso, e depois dela um produto aberto mostra
-  // cor/tamanho; sem produto, a lista. Pedido e Dia dependem só da aba.
-  // ATENÇÃO: com a etapa Cliente aberta pelo "Alterar", trocar de aba não descarta a edição: o rascunho
-  // e `origemCliente = 'pedido'` ficam guardados, a aba Produtos volta a mostrar o formulário até ele
-  // ser salvo ou pulado, e o Pedido continua podendo ser fechado nesse meio-tempo.
-  const naCliente = aba === 'produtos' && !clienteDefinido;
-  const naVariacao = aba === 'produtos' && !naCliente && !!produto;
+  // volta sozinha para Peça/Tecido, embora `produtoId` continue guardado.
+  const naCliente = aba === 'pedido' && editandoCliente;
+  const naVariacao = aba === 'produtos' && !!produto;
   const { totais } = calcularPedido(pedido);
   // O rótulo diz o que falta para fechar (INV-013). Os três textos são procurados literalmente pelos
   // testes de tela; mudar a redação exige ajustar os testes (AP-004).
   const rotuloFechar = pedido.itens.length === 0 ? 'Inclua uma peça' : pedido.pagamentoId === null ? 'Escolha o pagamento' : 'Fechar venda';
 
-  // O botão grande da barra inferior muda conforme a tela: confirmar/pular o cliente (etapa Cliente),
-  // adicionar (variações) ou fechar (pedido). Na lista de produtos e no Dia não há botão.
+  // A barra de baixo só existe quando a tela tem ação: salvar o cliente, adicionar (com cor e tamanho
+  // escolhidos) ou fechar a venda. Em Peça/Tecido e no Dia não há barra.
   let acao = null;
   if (naCliente) {
-    // Design 1a: botão principal habilitado com o celular vazio ou completo (exatamente 11 dígitos, mesma
-    // regra do back); o segundo segue sem cliente (venda anônima continua possível, decisão do Lucas).
-    // Com o celular incompleto o botão fica desabilitado, sem mensagem: o vendedor completa ou apaga.
+    // Celular vazio ou completo (11 dígitos, mesma regra do back) para salvar; incompleto, a mensagem
+    // aparece no formulário. "Venda sem cliente" grava nome e celular vazios.
     acao = (
-      <div className={s.acao}>
-        <button type="button" className={`${c.cta} ${s.ctaIcone}`} disabled={!celularValido(rascunho.celular)} onClick={() => confirmarCliente(rascunho)}>
-          {origemCliente === 'pedido' ? 'Salvar cliente' : 'Escolher produtos'}
-          {origemCliente === 'inicio' && <ArrowRight size={20} aria-hidden="true" />}
+      <>
+        <button type="button" className={`${c.cta} ${s.ctaForte}`} disabled={!celularValido(rascunho.celular)} onClick={() => salvarCliente(rascunho)}>
+          Salvar cliente
         </button>
-        <button type="button" className={s.semCliente} onClick={() => confirmarCliente({ nome: '', celular: '' })}>
+        <button type="button" className={s.semCliente} onClick={() => salvarCliente({ nome: '', celular: '' })}>
           Venda sem cliente
         </button>
-      </div>
+      </>
     );
-  } else if (naVariacao) {
+  } else if (naVariacao && sku) {
+    // Com todo o saldo deste tamanho já no pedido, o botão fica desligado, sem texto extra (MI-23).
     acao = (
-      <div className={s.acao}>
-        <div className={s.resumoLinha}>
-          <span className={s.apoio}>{resumoEscolha(produto, escolha, jaNoPedido)}</span>
-          <span className={`${s.resumoPreco} ${c.tabular}`}>{precoDaEscolha(produto, escolha)}</span>
-        </div>
-        <button type="button" className={c.cta} disabled={!podeAdicionar} onClick={adicionar}>
-          Adicionar ao pedido
-        </button>
-      </div>
+      <button type="button" className={c.cta} disabled={!podeAdicionar} onClick={adicionar}>
+        Adicionar ao pedido
+      </button>
     );
   } else if (aba === 'pedido') {
     acao = (
-      <div className={s.acao}>
-        <ResumoPedido pedido={pedido} />
+      <>
+        {pedido.itens.length > 0 && <ResumoPedido pedido={pedido} />}
         {erro && <CaixaErro mensagem={erro} />}
-        {/* Design 1d: o que falta (ou "Fechar venda") à esquerda e o total à direita, no mesmo botão. */}
-        <button type="button" className={`${c.cta} ${s.fechar}`} disabled={!podeFechar(pedido) || enviando} aria-busy={enviando} onClick={fechar}>
+        {/* O que falta (ou "Fechar venda") à esquerda e o total à direita, no mesmo botão. */}
+        <button type="button" className={`${c.cta} ${s.ctaForte} ${s.fechar}`} disabled={!podeFechar(pedido) || enviando} aria-busy={enviando} onClick={fechar}>
           <span className={s.fecharRotulo}>{rotuloFechar}</span>
           <span className={`${s.fecharTotal} ${c.tabular}`}>{formatarReais(totais.totalCentavos)}</span>
         </button>
-      </div>
+      </>
     );
   }
 
-  // Topo de cada tela conforme o design (MI-09): o que muda é o título, a linha de apoio e o complemento.
-  const etapa = nomeEtapa(aba, naVariacao, naCliente);
-  let topo;
-  if (naCliente) {
-    topo = <Cabecalho etapa={etapa} apoio={origemCliente === 'pedido' ? 'Alterar o cliente do pedido' : 'Nova venda · primeiro passo'} />;
-  } else if (naVariacao) {
-    topo = <Cabecalho etapa={etapa} titulo={produto.nome} apoio={produto.tecidoNome} aoVoltar={voltarParaProdutos} />;
-  } else if (aba === 'produtos') {
-    topo = (
-      <Cabecalho
-        etapa={etapa}
-        apoio={
-          <span className={s.apoioCliente}>
-            <User size={16} aria-hidden="true" />
-            {pedido.cliente.trim() || 'Cliente não identificado'}
-          </span>
-        }
-        lateral={`${catalogo.produtos.length} ${catalogo.produtos.length === 1 ? 'modelo' : 'modelos'}`}
-      />
-    );
-  } else if (aba === 'pedido') {
-    // Sem confirmação, como antes: zera o pedido e o cliente, troca a chave e volta para a etapa Cliente.
-    // Desligado enquanto a venda é enviada: zerar a tela não cancelaria a requisição, e a venda poderia
-    // ser registrada com a tela já limpa. A trava também é lida da ref, para um toque em "Cancelar" no
-    // mesmo instante do "Fechar venda", antes do redesenho, não passar (AP-001).
-    topo = (
-      <Cabecalho
-        etapa={etapa}
-        lateral={
-          <button type="button" className={s.cancelar} disabled={enviando} onClick={() => !enviandoRef.current && recomecar()}>
-            Cancelar pedido
-          </button>
-        }
-      />
-    );
-  } else {
-    topo = <Cabecalho etapa={etapa} titulo="Vendas de hoje" lateral={hojeCurto()} />;
-  }
+  const tipoDoProduto = produto && catalogo.tipos.find((t) => t.id === produto.tipoId);
 
   return (
     <>
-      {topo}
-      <main className={aba === 'pedido' || aba === 'dia' ? `${s.conteudo} ${s.conteudoCartoes}` : s.conteudo}>
-        {naCliente && <Cliente rascunho={rascunho} aoMudar={setRascunho} />}
-        {aba === 'produtos' && !naCliente && !produto && (
-          <Produtos
-            catalogo={catalogo}
-            tipoId={tipoId}
-            aoEscolherTipo={setTipoId}
-            aoEscolherProduto={(p) => escolherProduto(p.id)}
-            noPedido={(p) => p.skus.reduce((soma, k) => soma + qtdNoPedido(pedido, k.id), 0)}
+      <main className={s.conteudo} aria-label={nomeDaTela(aba, naVariacao, naCliente)}>
+        {aba === 'produtos' && !produto && <Produtos catalogo={catalogo} tipoId={tipoId} aoEscolherTipo={setTipoId} aoEscolherProduto={(p) => escolherProduto(p.id)} />}
+        {naVariacao && (
+          <Variacoes
+            produto={produto}
+            titulo={tipoDoProduto?.nome ?? produto.nome}
+            subtitulo={tipoDoProduto ? nomeNaLista(produto, tipoDoProduto.nome) : produto.tecidoNome}
+            escolha={escolha}
+            aoMudar={setEscolha}
+            aoVoltar={voltarParaProdutos}
           />
         )}
-        {naVariacao && <Variacoes produto={produto} escolha={escolha} aoMudar={setEscolha} />}
-        {aba === 'pedido' && <Pedido pedido={pedido} catalogo={catalogo} despachar={despachar} aoAlterarCliente={alterarCliente} />}
+        {aba === 'pedido' && !naCliente && (
+          <Pedido pedido={pedido} catalogo={catalogo} despachar={despachar} aoAlterarCliente={alterarCliente} aoCancelar={cancelar} cancelarDesligado={enviando} />
+        )}
+        {naCliente && <Cliente rascunho={rascunho} aoMudar={setRascunho} aoVoltar={() => setEditandoCliente(false)} />}
         {aba === 'dia' && <Dia />}
       </main>
 
-      {/* A troca de aba não tem trava em ref: grava direto no estado. Só Fechar e Cancelar leem a ref. */}
-      <BarraInferior aba={aba} pecas={pecas} acao={acao} aoTrocarAba={setAba} />
+      {acao && <div className={s.barra}>{acao}</div>}
 
-      {/* ATENÇÃO: o OK do aviso também não tem trava em ref. Dois toques antes do redesenho chamam
-          `recomecar` duas vezes e geram duas chaves seguidas; vale a última, com o pedido já vazio. */}
-      {sucesso && <AvisoVenda venda={sucesso} aoOk={recomecar} />}
+      {sucesso && <AvisoVenda venda={sucesso} aoNovaVenda={recomecar} />}
     </>
   );
 }

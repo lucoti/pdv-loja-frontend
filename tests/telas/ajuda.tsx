@@ -51,15 +51,16 @@ export function numerosDigitados(): number {
 }
 
 /**
- * Topo do PDV: o <header> (papel `banner`) cujo nome acessível é a etapa. É o sinal de que a página saiu
- * do login: o topo do login não tem nome de etapa. Ponto único dos testes que depende de como o PDV se
- * anuncia. Desde a pdv-mobile-refatorado (MI-09) o texto visível do topo segue o design ("Vendas de
- * hoje", nome do produto…); a etapa fica só no `aria-label`.
+ * Tela atual do PDV: o <main> cujo nome acessível é a tela (ADR-002 da pdv-mobile-atualizado). É o sinal
+ * de que a página saiu do login: o login não tem `main` com nome de tela. Ponto único dos testes que
+ * depende de como o PDV se anuncia. O nome mantido (`topoDoPdv`) vem de quando o sinal era o topo.
  */
-const ETAPAS = /^(Cliente|Produtos|Cor e tamanho|Pedido|Dia)$/;
-export const topoDoPdv = () => screen.queryByRole('banner', { name: ETAPAS });
+const ETAPAS = /^(Produtos|Cor e tamanho|Pedido|Cliente do pedido|Dia)$/;
+export const topoDoPdv = () => screen.queryByRole('main', { name: ETAPAS });
+/** Nome da tela atual do PDV ("Produtos", "Cor e tamanho", "Pedido", "Cliente do pedido", "Dia"). */
+export const telaAtual = () => screen.getByRole('main', { name: ETAPAS }).getAttribute('aria-label');
 /**
- * Espera a tela de venda abrir. Confere dentro da espera, sem devolver o elemento: o topo é redesenhado
+ * Espera a tela de venda abrir. Confere dentro da espera, sem devolver o elemento: o conteúdo é redesenhado
  * quando o catálogo termina de carregar, e um elemento guardado antes disso já teria saído da página.
  */
 export const esperarPdv = () => waitFor(() => expect(topoDoPdv()).toBeInTheDocument());
@@ -71,21 +72,10 @@ export async function entrar(usuario: UserEvent, pin = PIN_CERTO) {
 }
 
 /**
- * Pula a etapa Cliente (MI-02) com "Venda sem cliente". A etapa só aparece com o catálogo carregado, e
- * é a primeira tela do PDV depois do login e depois de cada venda ou "Cancelar pedido". Sem `usuario`,
- * usa a API direta do user-event (mesmo efeito de um toque).
- */
-export async function pularCliente(usuario: Pick<UserEvent, 'click'> = userEvent) {
-  await waitFor(() => expect(screen.getByRole('banner')).toHaveAttribute('aria-label', 'Cliente'));
-  await usuario.click(screen.getByRole('button', { name: 'Venda sem cliente' }));
-}
-
-/**
- * Espera o catálogo carregar e a lista do primeiro tipo ("Bermudas") aparecer. Desde a
- * pdv-mobile-refatorado a lista vem depois da etapa Cliente, que este helper pula (venda sem cliente).
+ * Espera o catálogo carregar e o cartão "2 Tecido" do primeiro tipo ("Bermudas") aparecer. Desde a
+ * pdv-mobile-atualizado (MI-21) a venda começa direto em Produtos, sem a etapa Cliente.
  */
 export async function esperarCatalogo() {
-  await pularCliente();
   await screen.findByRole('button', { name: /^Bermuda Ciclista/ });
 }
 
@@ -111,22 +101,20 @@ export const botaoCor = (cor: string) => screen.getByRole('button', { name: new 
  * voltar para Peça/Tecido: só estes helpers mudam com isso (AP-004). Nenhum devolve elemento da página.
  */
 
-/** Abre a lista de produtos da aba Produtos, passando pela etapa Cliente e fechando um produto aberto. */
+/** Abre Peça/Tecido na aba Produtos, fechando um produto aberto. */
 export async function abrirListaDeProdutos(usuario: UserEvent) {
-  const abaProdutos = screen.getByRole('button', { name: 'Produtos' });
+  const abaProdutos = within(screen.getByRole('navigation', { name: 'Abas' })).getByRole('button', { name: 'Produtos' });
   if (abaProdutos.getAttribute('aria-current') !== 'page') await usuario.click(abaProdutos);
-  // Venda nova (depois do login, de uma venda ou de "Cancelar pedido") começa na etapa Cliente.
-  if (screen.getByRole('banner').getAttribute('aria-label') === 'Cliente') await pularCliente(usuario);
-  // Produto aberto de uma peça anterior: volta para a lista antes de escolher o próximo.
-  const voltar = screen.queryByRole('button', { name: 'Voltar para os produtos' });
+  // Produto aberto de uma peça anterior: volta para Peça/Tecido antes de escolher o próximo.
+  const voltar = screen.queryByRole('button', { name: 'Voltar para peça e tecido' });
   if (voltar) await usuario.click(voltar);
 }
 
-/** Lista de produtos → tipo (se informado) → produto: abre a tela de cor/tamanho do produto. */
+/** Peça/Tecido → peça (tipo, se informado) → tecido (produto): abre a tela de cor/tamanho do produto. */
 export async function abrirProduto(usuario: UserEvent, p: Pick<Peca, 'tipo' | 'produto'>) {
   await abrirListaDeProdutos(usuario);
-  if (p.tipo) await usuario.click(screen.getByRole('button', { name: p.tipo }));
-  await usuario.click(screen.getByRole('button', { name: new RegExp(`^${p.produto}`) }));
+  if (p.tipo) await usuario.click(within(screen.getByRole('region', { name: 'Peça' })).getByRole('button', { name: p.tipo }));
+  await usuario.click(within(screen.getByRole('region', { name: 'Tecido' })).getByRole('button', { name: new RegExp(`^${p.produto}`) }));
 }
 
 /** Abre o produto e escolhe cor e tamanho, sem tocar em "Adicionar ao pedido". */
@@ -137,18 +125,18 @@ export async function escolherVariacao(usuario: UserEvent, p: Peca) {
 }
 
 /**
- * Aba Produtos → tipo → produto → cor → tamanho → "Adicionar ao pedido" → aba Pedido.
- * Desde a pdv-mobile-refatorado (MI-11) "Adicionar" deixa a tela em cor/tamanho com a escolha limpa;
- * o helper confere isso e então abre a aba Pedido, para os testes seguirem do mesmo ponto de antes.
+ * Aba Produtos → peça → tecido → cor → tamanho → "Adicionar ao pedido" → aba Pedido.
+ * Desde a pdv-mobile-atualizado (MI-23) "Adicionar" volta para Peça/Tecido; o helper confere isso e então
+ * abre a aba Pedido, para os testes seguirem do mesmo ponto de antes.
  */
 export async function adicionarPeca(usuario: UserEvent, p: Peca) {
   await escolherVariacao(usuario, p);
   await usuario.click(screen.getByRole('button', { name: 'Adicionar ao pedido' }));
-  // MI-11: continua em cor/tamanho, sem cor nem tamanho escolhidos.
-  expect(screen.getByRole('banner')).toHaveAttribute('aria-label', 'Cor e tamanho');
-  expect(screen.getByText('Falta escolher: cor e tamanho')).toBeInTheDocument();
-  await usuario.click(screen.getByRole('button', { name: /^Pedido/ }));
-  expect(screen.getByRole('heading', { name: 'Pedido' })).toBeInTheDocument();
+  // MI-23: de volta a Peça/Tecido, sem a barra de adicionar.
+  expect(telaAtual()).toBe('Produtos');
+  expect(screen.queryByRole('button', { name: 'Adicionar ao pedido' })).not.toBeInTheDocument();
+  await usuario.click(within(screen.getByRole('navigation', { name: 'Abas' })).getByRole('button', { name: /^Pedido/ }));
+  expect(telaAtual()).toBe('Pedido');
 }
 
 // Preços e saldos do catálogo de exemplo: Legging R$ 89 (saldo 5; Marinho P só 1), Top R$ 55 (Vinho GG sem estoque).
@@ -177,41 +165,40 @@ export const sem_nbsp = (s: string | null | undefined) => (s ?? '').replace(/ /
 export const esperarVendaRegistrada = () => waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
 
 /**
- * Fecha o aviso de venda registrada com o OK (ADR-004) e começa a venda seguinte. Confere que o aviso
- * saiu e que a tela voltou para a etapa Cliente (MI-04).
+ * Fecha o aviso de venda registrada com "Nova venda" e começa a venda seguinte. Confere que o aviso saiu
+ * e que a tela voltou para Produtos (MI-26).
  */
 export async function comecarNovaVenda(usuario: UserEvent) {
   await esperarVendaRegistrada();
-  await usuario.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'OK' }));
+  await usuario.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Nova venda' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-  expect(screen.getByRole('banner')).toHaveAttribute('aria-label', 'Cliente');
+  expect(telaAtual()).toBe('Produtos');
 }
 
-/** "Cancelar pedido" (no topo da aba Pedido, MI-07); a tela volta para a etapa Cliente (MI-04). */
+/** "Cancelar pedido" (no fim da aba Pedido, MI-24); a tela volta para Produtos (MI-25). */
 export async function cancelarPedido(usuario: UserEvent) {
   await usuario.click(screen.getByRole('button', { name: 'Cancelar pedido' }));
 }
 
 /**
- * Informa o cliente pelo "Alterar" do cartão Cliente do Pedido (MI-02): abre a etapa Cliente, troca nome
- * e celular e salva; confere que voltou para o Pedido.
+ * Informa o cliente pelo "Alterar" da linha do cliente no Pedido (MI-21): abre "Cliente do pedido", troca
+ * nome e celular e salva; confere que voltou para o Pedido. A linha só existe com peça no pedido.
  */
 export async function informarCliente(usuario: UserEvent, nome: string, celular = '') {
-  if (screen.getByRole('banner').getAttribute('aria-label') !== 'Pedido') await usuario.click(screen.getByRole('button', { name: /^Pedido/ }));
-  await usuario.click(screen.getByText('Alterar'));
-  const campoNome = screen.getByRole('textbox', { name: 'Nome' });
+  await abrirClienteDoPedido(usuario);
+  const campoNome = campoNomeCliente();
   await usuario.clear(campoNome);
   await usuario.type(campoNome, nome);
-  const campoCelular = screen.getByRole('textbox', { name: 'Celular' });
+  const campoCelular = campoCelularCliente();
   await usuario.clear(campoCelular);
   if (celular) await usuario.type(campoCelular, celular);
   await usuario.click(screen.getByRole('button', { name: 'Salvar cliente' }));
-  await waitFor(() => expect(screen.getByRole('banner')).toHaveAttribute('aria-label', 'Pedido'));
+  await waitFor(() => expect(telaAtual()).toBe('Pedido'));
 }
 
 /** Toca N vezes no "+" do desconto no pedido (passos de R$ 5). */
 export async function aumentarDescontoNoPedido(usuario: UserEvent, vezes: number) {
-  for (let i = 0; i < vezes; i++) await usuario.click(screen.getByRole('button', { name: 'Aumentar desconto no total' }));
+  for (let i = 0; i < vezes; i++) await usuario.click(screen.getByRole('button', { name: 'Aumentar desconto' }));
 }
 
 /** Escolhe a forma de pagamento pelo nome do catálogo (Pix, Dinheiro, Débito, Crédito). */
@@ -244,7 +231,8 @@ export function abaAtual(): string {
   const atuais = within(screen.getByRole('navigation', { name: 'Abas' }))
     .getAllByRole('button')
     .filter((b) => b.getAttribute('aria-current') === 'page')
-    .map((b) => sem_nbsp(b.textContent));
+    // Nome acessível: a aba Pedido com peças leva o contador no `aria-label` ("Pedido (2)").
+    .map((b) => b.getAttribute('aria-label') ?? sem_nbsp(b.textContent));
   expect(atuais).toHaveLength(1);
   return atuais[0]!;
 }

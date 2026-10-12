@@ -50,12 +50,29 @@ Riscos de nomes nos testes novos: `botaoCor` (nome pode incluir o check), `botao
 | `tests/telas/pdv.atualizado.caracterizacao.test.tsx` | Teste | criado (caracterização) |
 | `tests/dominio/carrinho.caracterizacao.test.ts` | Teste | criado (caracterização) |
 | `tests/config/caracterizacao.atualizado.test.ts` | Teste | criado (caracterização) |
-| `tests/telas/ajuda.tsx` | Teste | alterado (helpers novos) |
+| `tests/telas/ajuda.tsx` | Teste | alterado (helpers novos; etapa 4: sinais novos `main` com nome, "Nova venda", Peça/Tecido) |
+| `src/dominio/carrinho.ts` | Domínio | alterado (teto do desconto no reducer, `podeDiminuirDescontoTotal`; `mais`/`menos` mantidos, ver log) |
+| `src/dominio/formatos.ts` | Domínio | alterado (máscara progressiva, ADR-005) |
+| `src/estilos/tokens.css` | Estilo | alterado (tokens `--tile-*`, `--color-veu-aviso`) |
+| `src/telas/comum.module.css` | Estilo | alterado (classe `.tile`) |
+| `src/telas/Pdv/Abas.tsx` | Tela | criado (abas no topo, ADR-001) |
+| `src/telas/Pdv/Cartao.tsx` | Tela | criado (cartões numerados 1 a 4) |
+| `src/telas/Pdv/Cabecalho.tsx`, `BarraInferior.tsx` | Tela | removidos |
+| `src/telas/Pdv/Pdv.tsx`, `Produtos.tsx`, `Variacoes.tsx`, `Pedido.tsx`, `Cliente.tsx`, `AvisoVenda.tsx`, `Dia.tsx`, `Pdv.module.css` | Tela | alterados (MI-20 a MI-28) |
+| `tests/dominio/carrinho.test.ts`, `formatos.test.ts`, `carrinho.caracterizacao.test.ts` | Teste | alterados (ADR-004/005; 3 testes novos do teto do desconto) |
+| `tests/telas/pdv.test.tsx`, `pdv.cliente.test.tsx`, `pdv.validacao.test.tsx`, `pdv.ajustes.test.tsx`, `pdv.caracterizacao.test.tsx`, `pdv.mobile.caracterizacao.test.tsx`, `pdv.atualizado.caracterizacao.test.tsx` | Teste | alterados (mudanças intencionais; ver tabela "Testes que vão mudar") |
 
 ## Log de decisões não previstas na arquitetura
 | Data | Decisão | Motivo | Impacto |
 |---|---|---|---|
-| | | | |
+| 2026-10-12 | Ações `mais`/`menos` continuam no reducer (sem uso na tela), em vez de sair na etapa 2 | A tela antiga ainda as usava na etapa 2; depois da troca de tela ficaram sem uso. Tirar agora mexeria em testes de domínio já verdes sem ganho | Débito técnico registrado abaixo |
+| 2026-10-12 | Etapas 4 a 7 feitas em um só passo e um só commit (não um commit por etapa) | `Venda` (estado da tela), a barra de ação e os helpers de teste mudam juntos; separar exigiria telas intermediárias que não existem no design | Rollback dessas etapas é um único `git revert`; suíte rodada ao fim (290 verdes) |
+| 2026-10-12 | `editandoCliente` fica em `Pdv` (não em `Venda`) | A troca de aba acontece nas `Abas`, fora de `Venda`, e precisa descartar a edição (ADR-003) | Nenhum |
+| 2026-10-12 | Título da tela de cor/tamanho: tipo do ERP como "peça" e `nomeNaLista` como "tecido" | Mesmo texto do botão do cartão "2 Tecido"; no ERP real o nome do produto sem o tipo é o tecido | Nenhum |
+| 2026-10-12 | Marca da cor escolhida sobre a amostra, não ao lado do nome | Na coluna de ~164px (390px de tela) o ícone ao lado deixava ~44px para o nome e partia "Marinho" no meio (conferência no navegador) | Desvio visual pequeno do design |
+| 2026-10-12 | Abaixo de 380px as abas ficam sem ícone | "Pedido" + ícone + bolinha não cabia em 107px (360px) nem em 92px (320px) | A 390px (design) os ícones aparecem |
+| 2026-10-12 | Abaixo de 360px a linha do desconto usa folgas e fontes menores; título com reticências | A 320px o título "Desconto" ficava ~7px mais largo que o espaço | Guardas automáticas em `pdv.ajustes` (AP-003) |
+| 2026-10-12 | `.claude/launch.json` criado (servidor `pdv-simulado` na porta 5199) para a conferência no navegador | Ferramenta de preview do Claude | Fora do commit; decidir se fica no repositório |
 
 ## Mudanças de escopo
 nenhuma
@@ -64,11 +81,17 @@ nenhuma
 | Item | Motivo | Sugestão de tratamento |
 |---|---|---|
 | INV-021 sem teste | `crypto.randomUUID` fora de contexto seguro; fora do escopo | Tratar em feature própria |
+| Ações `mais`/`menos` sem uso na tela | O −/+ saiu (MI-24); o domínio ainda as aceita | Remover numa limpeza futura, junto com os testes de domínio delas |
+| `precoMinimo` (catalogo.ts) sem uso na tela | A linha "a partir de" saiu (MI-23) | Remover numa limpeza futura |
 
 ## Execuções da suíte de caracterização por etapa (somente refatoração)
 | Etapa da migração | Resultado | Observação |
 |---|---|---|
 | 1 — caracterização | verde, 285 | código atual, 2026-10-12 |
+| 2 — domínio | verde, 288 | 3 testes de domínio ajustados (desconto com peça no pedido; máscara) + 3 novos do teto; commit e79aaa9 |
+| 3 — tokens e `.tile` | verde, 288 | guarda do INV-032 (Login) verde; commit 002a891 |
+| 4 a 7 — telas | verde, 290 | 77 testes ajustados pelas mudanças intencionais (tabela acima); INV-020 invertido para "mesma navegação"; 2 guardas novas de CSS |
+| 8 — navegador 390/360/320 | ok | sem rolagem lateral em nenhuma tela; 3 ajustes de tela estreita (log acima); cobertura 99,6% linhas, metas por arquivo cumpridas; `vite build` ok |
 
 ## Documentação (D1-D3)
 - [ ] D1 — código-fonte comentado

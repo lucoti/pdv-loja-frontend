@@ -10,14 +10,15 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import type { Catalogo } from '../../src/api/cliente';
 import { CATALOGO } from '../../src/simulado/dados';
-import { nomeEtapa } from '../../src/telas/Pdv/Cabecalho';
 import { servidor, usarSimulado } from '../apoio';
-import { abrirApp, adicionarPeca, botaoCor, botaoFechar, enviarPin, esperarCatalogo, esperarEtapaSenha, esperarPdv, PIN_ERRADO, sem_nbsp, TOP_NADADOR_P_VINHO, topoDoPdv } from './ajuda';
+import { abrirApp, adicionarPeca, botaoCor, botaoFechar, enviarPin, esperarCatalogo, esperarEtapaSenha, esperarPdv, PIN_ERRADO, sem_nbsp, telaAtual, TOP_NADADOR_P_VINHO, topoDoPdv } from './ajuda';
 
 const botao = (nome: RegExp | string) => screen.getByRole('button', { name: nome });
 const texto = (el: Element | null | undefined) => sem_nbsp(el?.textContent);
-// Etapa = nome acessível do topo (aria-label); o título visível segue o design (MI-09).
-const etapaNoTopo = () => screen.getByRole('banner').getAttribute('aria-label');
+// Tela = nome acessível do `main` (ADR-002 da pdv-mobile-atualizado).
+const etapaNoTopo = telaAtual;
+/** Botões de tamanho, na ordem da tela (cartão "4 Tamanho"). */
+const botoesTamanho = () => within(screen.getByRole('region', { name: 'Tamanho' })).getAllByRole('button');
 
 async function abrirPdv(catalogo?: Catalogo) {
   usarSimulado({ sessaoDe: 'carlos', ...(catalogo ? { catalogo } : {}) });
@@ -52,12 +53,21 @@ function declaracoesDe(classe: string): Record<string, string> {
   return Object.fromEntries(pares.map(([prop, valor]) => [prop!, valor!.replace(/\s+/g, ' ')]));
 }
 
+/**
+ * Declarações de todas as classes do elemento em Pdv.module.css, juntas (a última vence). Desde a
+ * pdv-mobile-atualizado os botões levam `.tile` (comum.module.css) e uma classe de tamanho do PDV, e as
+ * grades ficam no corpo do cartão (`.cartaoCorpo` + a classe da grade).
+ */
+function declaracoesDoElemento(el: Element): Record<string, string> {
+  return Object.assign({}, ...[...el.classList].map(declaracoesDe));
+}
+
 describe('MUD-01 — saldo do tamanho como "estoque N"', () => {
   it('cada tamanho mostra "estoque N"; zerado e negativo mostram "estoque 0"; nada de "un." nem "sem estoque" no tamanho', async () => {
     const { usuario } = await abrirPdv(catalogoSeisTamanhos());
     await usuario.click(botao(/^Bermuda Ciclista/));
     await usuario.click(botaoCor('Preto'));
-    const tamanhos = within(screen.getByText('TAMANHO').parentElement!).getAllByRole('button');
+    const tamanhos = botoesTamanho();
     expect(tamanhos.map((b) => texto(b.children[1]))).toEqual(['estoque 3', 'estoque 0', 'estoque 12', 'estoque 7', 'estoque 1', 'estoque 0']);
     for (const b of tamanhos) expect(texto(b)).not.toMatch(/un\.|sem estoque|-\d/);
   });
@@ -70,37 +80,29 @@ describe('MUD-02 — grade de tamanhos em 4 colunas iguais que encolhem', () => 
     const { usuario } = await abrirPdv(catalogoSeisTamanhos());
     await usuario.click(botao(/^Bermuda Ciclista/));
     await usuario.click(botaoCor('Preto'));
-    const tamanhos = within(screen.getByText('TAMANHO').parentElement!).getAllByRole('button');
+    const tamanhos = botoesTamanho();
     expect(tamanhos).toHaveLength(6);
     const grade = tamanhos[0]!.parentElement!;
     // Todos na mesma grade, sem elemento intermediário: 6 tamanhos → uma linha de 4 e outra de 2.
     expect([...grade.children]).toEqual(tamanhos);
-    expect([...grade.classList]).toHaveLength(1);
-    const regra = declaracoesDe(grade.classList[0]!);
+    const regra = declaracoesDoElemento(grade);
     expect(regra.display).toBe('grid');
     expect(regra['grid-template-columns']).toBe('repeat(4, minmax(0, 1fr))');
-    expect(regra.gap).toBe('6px');
+    expect(regra.gap).toBe('8px');
     // A 320px "estoque 12" não cabe numa linha: o saldo pode quebrar e o botão cresce (nada de nowrap
     // nem altura fixa, que fariam o texto passar da borda do botão).
     const saldo = declaracoesDe(tamanhos[0]!.children[1]!.classList[0]!);
     expect(saldo['white-space']).toBeUndefined();
     expect(saldo['overflow-wrap']).toBe('anywhere');
-    const botaoRegra = declaracoesDe(tamanhos[0]!.classList[0]!);
+    const botaoRegra = declaracoesDoElemento(tamanhos[0]!);
     expect(botaoRegra.height).toBeUndefined();
     expect(botaoRegra['min-height']).toBe('64px');
   });
 });
 
-describe('MUD-03 — topo com o nome da etapa', () => {
-  it('nomeEtapa: as três abas e a tela de cor/tamanho', () => {
-    expect(nomeEtapa('produtos')).toBe('Produtos');
-    expect(nomeEtapa('pedido')).toBe('Pedido');
-    expect(nomeEtapa('dia')).toBe('Dia');
-    expect(nomeEtapa('produtos', false)).toBe('Produtos');
-    expect(nomeEtapa('produtos', true)).toBe('Cor e tamanho');
-  });
-
-  it('catálogo ainda carregando: o topo mostra a etapa pela aba e, depois da carga, a etapa da venda', async () => {
+// MI-20 / ADR-002 (pdv-mobile-atualizado): o topo com a etapa saiu; a tela atual é o nome do `main`.
+describe('MUD-03 — tela atual no nome do conteúdo (`main`)', () => {
+  it('catálogo ainda carregando: o nome segue a aba e, depois da carga, a tela da venda', async () => {
     let liberar!: () => void;
     const segura = new Promise<void>((r) => (liberar = r));
     usarSimulado({ sessaoDe: 'carlos' });
@@ -127,13 +129,14 @@ describe('MUD-03 — topo com o nome da etapa', () => {
     expect(etapaNoTopo()).toBe('Cor e tamanho');
   });
 
-  // MI-09 (pdv-mobile-refatorado): o título da tela passou para o topo; a etapa fica no nome acessível.
-  it('a etapa é o nome do topo; o único h1 da tela de cor/tamanho é o produto, dentro do topo', async () => {
+  it('o único h1 da tela de cor/tamanho é a peça (tipo); Dia tem "Vendas de hoje"; sem `banner` no PDV', async () => {
     const { usuario } = await abrirPdv();
+    expect(screen.queryByRole('banner')).not.toBeInTheDocument();
     await usuario.click(botao(/^Bermuda Ciclista/));
     expect(etapaNoTopo()).toBe('Cor e tamanho');
-    expect(within(screen.getByRole('banner')).getByRole('heading', { level: 1 })).toHaveTextContent('Bermuda Ciclista');
-    expect(screen.getAllByRole('heading', { level: 1 }).map((h) => texto(h))).toEqual(['Bermuda Ciclista']);
+    expect(screen.getAllByRole('heading', { level: 1 }).map((h) => texto(h))).toEqual(['Bermudas']);
+    await usuario.click(botao('Dia'));
+    expect(screen.getAllByRole('heading', { level: 1 }).map((h) => texto(h))).toEqual(['Vendas de hoje']);
   });
 });
 
@@ -153,14 +156,14 @@ describe('MUD-04 — vendedor, data e "BALCÃO" não aparecem em nenhuma tela do
     conferirSemVendedorNemData();
     await usuario.click(botao(/^Bermuda Ciclista/));
     conferirSemVendedorNemData();
-    await usuario.click(botao('Voltar para os produtos'));
+    await usuario.click(botao('Voltar para peça e tecido'));
     await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
     conferirSemVendedorNemData();
     await usuario.click(botao('Pix'));
     await usuario.click(botaoFechar());
-    await screen.findByRole('button', { name: 'OK' });
+    await screen.findByRole('button', { name: 'Nova venda' });
     conferirSemVendedorNemData();
-    await usuario.click(botao('OK'));
+    await usuario.click(botao('Nova venda'));
     conferirSemVendedorNemData();
     await usuario.click(botao('Dia'));
     await screen.findByTestId('venda-dia');
@@ -179,7 +182,7 @@ describe('MUD-04 — vendedor, data e "BALCÃO" não aparecem em nenhuma tela do
 });
 
 describe('INV-018 — o sinal "entrou no PDV" não confunde a tela de login com o PDV', () => {
-  it('a tela de login tem topo (banner) com "BALCÃO", mas `topoDoPdv` não a reconhece e `esperarPdv` não se cumpre', async () => {
+  it('a tela de login tem topo (banner) com "BALCÃO", mas `topoDoPdv` (o `main` com nome de tela) não a reconhece', async () => {
     const { usuario } = abrirApp();
     await esperarEtapaSenha();
     expect(screen.getByRole('banner')).toHaveTextContent('BALCÃO');
@@ -190,12 +193,13 @@ describe('INV-018 — o sinal "entrou no PDV" não confunde a tela de login com 
     expect(await screen.findByRole('alert')).toHaveTextContent('Senha incorreta. Tente de novo.');
     expect(screen.getByRole('banner')).toHaveTextContent('BALCÃO');
     expect(topoDoPdv()).toBeNull();
-    // Senha certa: o topo passa a ser o do PDV, com a etapa, e o do login some.
+    // Senha certa: o PDV abre (conteúdo com nome de tela) e o topo do login some.
     await enviarPin(usuario);
     await esperarPdv();
-    expect(topoDoPdv()).toBe(screen.getByRole('banner'));
-    // MI-02: a venda começa na etapa Cliente.
-    expect(etapaNoTopo()).toBe('Cliente');
+    expect(topoDoPdv()).toBe(screen.getByRole('main'));
+    expect(screen.queryByRole('banner')).not.toBeInTheDocument();
+    // MI-21: a venda começa direto em Produtos.
+    expect(etapaNoTopo()).toBe('Produtos');
     expect(screen.queryByText('BALCÃO')).not.toBeInTheDocument();
     expect(screen.queryByRole('img', { name: /números digitados/ })).not.toBeInTheDocument();
   });
@@ -219,11 +223,10 @@ describe('MI-05 — grade de tipos em 3 colunas iguais que encolhem', () => {
     const tipos = ['Bermudas', 'Calças', 'Tops'].map((t) => botao(t));
     const grade = tipos[0]!.parentElement!;
     expect([...grade.children]).toEqual(tipos);
-    expect([...grade.classList]).toHaveLength(1);
-    const regra = declaracoesDe(grade.classList[0]!);
+    const regra = declaracoesDoElemento(grade);
     expect(regra.display).toBe('grid');
     expect(regra['grid-template-columns']).toBe('repeat(3, minmax(0, 1fr))');
-    expect(declaracoesDe(tipos[0]!.classList[0]!)['overflow-wrap']).toBe('anywhere');
+    expect(declaracoesDoElemento(tipos[0]!)['overflow-wrap']).toBe('anywhere');
   });
 });
 
@@ -241,32 +244,56 @@ describe('MI-08 — cartões do dia em grade que encolhe', () => {
   });
 });
 
-// MI-07 (pdv-mobile-refatorado): pagamento em 2 colunas dentro do cartão e "Tirar" só com o ícone
-// abaixo de 360px (AP-003: a regra é lida do CSS da classe em uso).
-describe('MI-07 — layout do Pedido em celular estreito', () => {
-  it('formas de pagamento numa grade de 2 colunas minmax(0, 1fr), mesmo dentro do corpo do cartão (flex)', async () => {
-    const { usuario } = await abrirPdv();
-    await usuario.click(botao(/^Pedido/));
-    const pix = botao('Pix');
-    const grade = pix.parentElement!;
-    expect(grade.children).toHaveLength(4);
-    const classes = [...grade.classList];
-    expect(classes).toHaveLength(2);
-    // As duas classes juntas: a regra combinada `.cartaoCorpo.grade2` precisa devolver o display de grade.
-    const css = readFileSync(resolve(import.meta.dirname, '../../src/telas/Pdv/Pdv.module.css'), 'utf8');
-    expect(css).toMatch(new RegExp(`\\.${classes[0]}\\.${classes[1]}\\s*\\{\\s*display:\\s*grid;`));
-    expect(declaracoesDe(classes[1]!)['grid-template-columns']).toBe('repeat(2, minmax(0, 1fr))');
-  });
-
-  it('"Tirar" tem o texto num span que some abaixo de 360px; o nome acessível continua "Tirar"', async () => {
+// MI-24 (pdv-mobile-atualizado): pagamento em 2 colunas que encolhem e lixeira só com ícone, 44px
+// (AP-003: a regra é lida do CSS das classes em uso).
+describe('MI-24 — layout do Pedido em celular estreito', () => {
+  it('formas de pagamento numa grade de 2 colunas minmax(0, 1fr)', async () => {
     const { usuario } = await abrirPdv();
     await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
-    const tirar = within(screen.getByTestId('item-pedido')).getByRole('button', { name: 'Tirar' });
-    const span = tirar.querySelector('span')!;
-    expect(span).toHaveTextContent('Tirar');
-    const css = readFileSync(resolve(import.meta.dirname, '../../src/telas/Pdv/Pdv.module.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-    const media = /@media \(max-width: 359px\)\s*\{([\s\S]*?\})\s*\}/.exec(css)?.[1] ?? '';
-    expect(media).toContain(`.${span.classList[0]}`);
-    expect(media).toMatch(/clip: rect\(0 0 0 0\)/);
+    const grade = botao('Pix').parentElement!;
+    expect(grade.children).toHaveLength(4);
+    const regra = declaracoesDoElemento(grade);
+    expect(regra.display).toBe('grid');
+    expect(regra['grid-template-columns']).toBe('repeat(2, minmax(0, 1fr))');
+  });
+
+  it('a lixeira é um botão de 44×44 só com o ícone, com o nome acessível "Tirar peça"', async () => {
+    const { usuario } = await abrirPdv();
+    await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
+    const tirar = within(screen.getByTestId('item-pedido')).getByRole('button', { name: 'Tirar peça' });
+    expect(texto(tirar)).toBe('');
+    expect(tirar.querySelector('svg')).not.toBeNull();
+    const regra = declaracoesDoElemento(tirar);
+    expect([regra.width, regra.height, regra.flex]).toEqual(['44px', '44px', 'none']);
+  });
+});
+
+// AP-003 (pdv-mobile-atualizado): ajustes de tela estreita achados na conferência a 360px e 320px.
+// jsdom não aplica o CSS nem media queries: as regras são lidas do arquivo, pelas classes em uso.
+describe('MI-20 / MI-24 — abas e linha do desconto em celular estreito', () => {
+  const css = () => readFileSync(resolve(import.meta.dirname, '../../src/telas/Pdv/Pdv.module.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const media = (largura: number) => new RegExp(`@media \\(max-width: ${largura}px\\)\\s*\\{([\\s\\S]*?\\})\\s*\\}`).exec(css())?.[1] ?? '';
+
+  it('abas: 3 colunas iguais que encolhem, presas no alto; abaixo de 380px o ícone some e o nome fica', async () => {
+    await abrirPdv();
+    const nav = screen.getByRole('navigation', { name: 'Abas' });
+    const regra = declaracoesDoElemento(nav);
+    expect(regra['grid-template-columns']).toBe('repeat(3, minmax(0, 1fr))');
+    expect([regra.position, regra.top]).toEqual(['sticky', '0']);
+    const aba = within(nav).getByRole('button', { name: 'Produtos' });
+    expect(aba.querySelector('svg')).not.toBeNull();
+    expect(media(379)).toMatch(new RegExp(`\\.${aba.classList[0]} svg\\s*\\{\\s*display: none;`));
+  });
+
+  it('linha do desconto: abaixo de 360px folgas e fontes menores; o título corta com reticências em vez de vazar', async () => {
+    const { usuario } = await abrirPdv();
+    await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
+    const linha = screen.getByRole('region', { name: 'Desconto no pedido' });
+    const titulo = within(linha).getByRole('heading', { name: 'Desconto' });
+    const t = declaracoesDoElemento(titulo);
+    expect([t['white-space'], t.overflow, t['text-overflow'], t['min-width']]).toEqual(['nowrap', 'hidden', 'ellipsis', '0']);
+    const m = media(359);
+    expect(m).toContain(`.${linha.classList[0]}`);
+    expect(m).toContain(`.${titulo.classList[0]}`);
   });
 });

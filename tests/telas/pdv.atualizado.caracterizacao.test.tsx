@@ -202,12 +202,12 @@ describe('INV-011 — "Cancelar pedido" e "Nova venda" zeram o pedido (inclusive
 
     await cancelarPedido(usuario);
     expect(abaAtual()).toBe('Produtos');
-    // Direto para o Pedido, sem passar pela etapa Cliente (que hoje também zeraria o cliente).
     await abrirAbaPedido(usuario);
+    expect(itensPedido()).toHaveLength(0);
+    // Pedido vazio mostra só a mensagem (MI-24): a linha do cliente aparece com a peça nova.
+    await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
     expect(screen.getByText('Cliente não identificado')).toBeInTheDocument();
     expect(screen.queryByText(/Maria|98765/)).not.toBeInTheDocument();
-    expect(itensPedido()).toHaveLength(0);
-    await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
     // Pagamento zerado: o botão de fechar pede a forma de pagamento.
     expect(sem_nbsp(botaoFechar().textContent)).toMatch(/^Escolha o pagamento/);
     await escolherPagamento(usuario, 'Pix');
@@ -239,11 +239,11 @@ describe('INV-011 — "Cancelar pedido" e "Nova venda" zeram o pedido (inclusive
     await comecarNovaVenda(usuario);
     expect(abaAtual()).toBe('Produtos');
     await abrirAbaPedido(usuario);
-    expect(screen.getByText('Cliente não identificado')).toBeInTheDocument();
-    expect(screen.queryByText(/Ana|91234/)).not.toBeInTheDocument();
     expect(itensPedido()).toHaveLength(0);
     await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
     expect(itensPedido()).toHaveLength(1);
+    expect(screen.getByText('Cliente não identificado')).toBeInTheDocument();
+    expect(screen.queryByText(/Ana|91234/)).not.toBeInTheDocument();
     expect(sem_nbsp(botaoFechar().textContent)).toMatch(/^Escolha o pagamento/);
     await escolherPagamento(usuario, 'Débito');
     const segunda = await fecharComSucesso(usuario, req);
@@ -471,14 +471,14 @@ describe('INV-031 — desconto no pedido em R$, de 5 em 5, nunca acima do bruto'
   });
 });
 
-describe('INV-020 — bug conhecido: o fim da carga do catálogo remonta a navegação [muda na etapa 4]', () => {
+describe('INV-020 — corrigido: o fim da carga do catálogo não remonta mais a navegação (ADR-001)', () => {
   /**
-   * Comportamento ATUAL (bug preservado até a etapa 4): a `navigation "Abas"` desenhada com o catálogo
-   * carregando sai da página quando ele termina de carregar, e outra entra no lugar. O ADR-001 corrige
-   * isso (abas desenhadas uma vez, acima dos ramos); na etapa 4 este teste passa a exigir o MESMO
-   * elemento antes e depois da carga (mudança intencional aprovada pelo Lucas em 2026-10-12).
+   * Até a pdv-mobile-refatorado a `navigation "Abas"` desenhada com o catálogo carregando saía da página
+   * quando ele terminava de carregar, e outra entrava no lugar (um toque nesse instante podia se perder).
+   * O ADR-001 desenha as abas uma vez, acima dos ramos: o elemento é o mesmo antes e depois da carga
+   * (mudança intencional aprovada pelo Lucas em 2026-10-12).
    */
-  it('a navegação de antes da carga não é a mesma de depois (remontada)', async () => {
+  it('a navegação de antes da carga é a mesma de depois', async () => {
     let liberar!: () => void;
     const segura = new Promise<void>((r) => (liberar = r));
     usarSimulado({ sessaoDe: 'carlos' });
@@ -494,7 +494,7 @@ describe('INV-020 — bug conhecido: o fim da carga do catálogo remonta a naveg
     liberar();
     await esperarCatalogo();
     const depois = screen.getByRole('navigation', { name: 'Abas' });
-    expect(antes.isConnected).toBe(false);
-    expect(depois).not.toBe(antes);
+    expect(antes.isConnected).toBe(true);
+    expect(depois).toBe(antes);
   });
 });

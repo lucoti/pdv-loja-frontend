@@ -7,6 +7,8 @@
  * - Cor sem tom cadastrado e sem foto usa o token do tema na amostra.
  * - Selo "N no pedido" na linha do produto (MI-05): nenhum teste conferia o selo (sobreviveu à mutação
  *   "selo some" no T8 da validação final).
+ * Atualizado na pdv-mobile-atualizado: cartões "1 Peça"/"2 Tecido" com "N opções" no lugar da contagem
+ * de modelos (MI-22), pagamento sem ícones e selo removido (MI-22/MI-24).
  */
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
@@ -14,18 +16,18 @@ import type { Catalogo } from '../../src/api/cliente';
 import { CATALOGO } from '../../src/simulado/dados';
 import { nomeNaLista } from '../../src/telas/Pdv/Produtos';
 import { servidor, usarSimulado } from '../apoio';
-import { abrirApp, botaoCor, botaoFechar, botaoTamanho, pularCliente, sem_nbsp } from './ajuda';
+import { abrirApp, botaoCor, botaoFechar, botaoTamanho, esperarPdv, sem_nbsp, telaAtual } from './ajuda';
 
 const botao = (nome: RegExp | string) => screen.getByRole('button', { name: nome });
 const texto = (el: Element | null | undefined) => sem_nbsp(el?.textContent);
 const produto = (nome: string) => ({ ...CATALOGO.produtos[0]!, nome });
 
-/** PDV logado, etapa Cliente pulada; espera o primeiro tipo do catálogo marcado. */
+/** PDV logado, com o catálogo carregado (cartão "1 Peça" na tela). */
 async function abrirPdv(catalogo: Catalogo) {
   const simulado = usarSimulado({ sessaoDe: 'carlos', catalogo });
   const app = abrirApp();
-  await pularCliente();
-  await waitFor(() => expect(screen.getByRole('banner')).toHaveAttribute('aria-label', 'Produtos'));
+  await esperarPdv();
+  await screen.findByRole('region', { name: 'Peça' });
   return { ...app, simulado };
 }
 
@@ -44,15 +46,17 @@ describe('nomeNaLista — nome do produto na lista sem repetir o tipo', () => {
     expect(nomeNaLista(produto('Short Bermudas Suplex'), 'Bermudas')).toBe('Short Bermudas Suplex');
   });
 
-  it('na tela: a linha mostra só o tecido; o topo da cor/tamanho e o Pedido mostram o nome inteiro', async () => {
+  it('na tela: o cartão Tecido e o título da cor/tamanho mostram só o tecido; o Pedido mostra o nome inteiro', async () => {
     const catalogo = structuredClone(CATALOGO);
     catalogo.produtos.find((p) => p.numero === 3)!.nome = 'Bermudas Ciclista Suplex';
     const { usuario } = await abrirPdv(catalogo);
     await usuario.click(botao('Bermudas'));
-    const grupo = within(screen.getByRole('region', { name: 'Bermudas' }));
+    const grupo = within(screen.getByRole('region', { name: 'Tecido' }));
     expect(grupo.getAllByRole('button').map((b) => texto(b))).toEqual(['Ciclista Suplex', 'Short Curto']);
     await usuario.click(grupo.getByRole('button', { name: 'Ciclista Suplex' }));
-    expect(within(screen.getByRole('banner')).getByRole('heading', { level: 1 })).toHaveTextContent('Bermudas Ciclista Suplex');
+    // MI-23: título com a peça (tipo) e, embaixo, o tecido sem repetir o tipo.
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Bermudas');
+    expect(screen.getByText('Ciclista Suplex')).toBeInTheDocument();
     await usuario.click(botaoCor('Preto'));
     await usuario.click(botaoTamanho('M'));
     await usuario.click(botao('Adicionar ao pedido'));
@@ -61,26 +65,32 @@ describe('nomeNaLista — nome do produto na lista sem repetir o tipo', () => {
   });
 });
 
-describe('contagem de modelos', () => {
-  it('catálogo com um produto: "1 modelo" no topo e no grupo; com vários, "N modelos"', async () => {
+// MI-22 (pdv-mobile-atualizado): "N modelos" saiu; o cartão Tecido mostra "1 opção"/"N opções" e o
+// cartão Peça, o nome do tipo escolhido.
+describe('complementos dos cartões Peça e Tecido', () => {
+  const complemento = (cartao: string) => texto(within(screen.getByRole('region', { name: cartao })).getByRole('heading').nextElementSibling);
+
+  it('catálogo com um produto: "1 opção" no Tecido e o tipo no Peça', async () => {
     const catalogo = structuredClone(CATALOGO);
     catalogo.produtos = catalogo.produtos.filter((p) => p.numero === 1);
     catalogo.tipos = catalogo.tipos.filter((t) => t.id === catalogo.produtos[0]!.tipoId);
     await abrirPdv(catalogo);
-    expect(texto(within(screen.getByRole('banner')).getByText(/modelos?$/))).toBe('1 modelo');
-    expect(texto(within(screen.getByRole('region', { name: 'Calças' })).getByText(/modelos?$/))).toBe('1 modelo');
+    expect(complemento('Peça')).toBe('Calças');
+    expect(complemento('Tecido')).toBe('1 opção');
   });
 
-  it('catálogo de exemplo: topo com o total do catálogo e grupo com os do tipo escolhido', async () => {
+  it('catálogo de exemplo: o complemento acompanha o tipo escolhido', async () => {
     const { usuario } = await abrirPdv(structuredClone(CATALOGO));
-    expect(texto(within(screen.getByRole('banner')).getByText(/modelos?$/))).toBe(`${CATALOGO.produtos.length} modelos`);
     await usuario.click(botao('Bermudas'));
-    expect(texto(within(screen.getByRole('region', { name: 'Bermudas' })).getByText(/modelos?$/))).toBe('2 modelos');
+    expect(complemento('Peça')).toBe('Bermudas');
+    expect(complemento('Tecido')).toBe('2 opções');
+    expect(screen.queryByText(/modelos?$/)).toBeNull();
   });
 });
 
-describe('forma de pagamento sem ícone próprio', () => {
-  it('aparece com o ícone de carteira, pode ser escolhida e vai no corpo da venda', async () => {
+// MI-24 (pdv-mobile-atualizado): pagamentos sem ícones; forma nova do ERP aparece e funciona igual.
+describe('forma de pagamento nova do ERP', () => {
+  it('aparece sem ícone, como as outras, pode ser escolhida e vai no corpo da venda', async () => {
     const catalogo = structuredClone(CATALOGO);
     catalogo.pagamentos.push({ id: 'vale', nome: 'Vale-presente' });
     const corpos: Array<Record<string, unknown>> = [];
@@ -95,10 +105,7 @@ describe('forma de pagamento sem ícone próprio', () => {
     await usuario.click(botao('Adicionar ao pedido'));
     await usuario.click(botao(/^Pedido/));
     const vale = botao('Vale-presente');
-    expect(vale.querySelector('svg')).not.toBeNull();
-    // O ícone de carteira é diferente do ícone do Pix (QrCode) e do dinheiro.
-    expect(vale.querySelector('svg')!.innerHTML).not.toBe(botao('Pix').querySelector('svg')!.innerHTML);
-    expect(vale.querySelector('svg')!.innerHTML).not.toBe(botao('Dinheiro').querySelector('svg')!.innerHTML);
+    for (const nome of ['Vale-presente', 'Pix', 'Dinheiro']) expect(botao(nome).querySelector('svg')).toBeNull();
     await usuario.click(vale);
     expect(vale).toHaveAttribute('aria-pressed', 'true');
     expect(texto(botaoFechar().firstElementChild)).toBe('Fechar venda');
@@ -129,27 +136,24 @@ describe('amostra da cor', () => {
   });
 });
 
-describe('MI-05 — selo "N no pedido" na lista de produtos', () => {
-  it('soma as peças de todos os tamanhos e cores do produto, só nele, e acompanha as mudanças do pedido', async () => {
+// MI-22/MI-23 (pdv-mobile-atualizado): o selo "N no pedido" saiu; depois de adicionar a tela volta para
+// Peça/Tecido com o tipo ainda escolhido, e a bolinha da aba Pedido mostra as peças.
+describe('MI-23 — adicionar volta para Peça/Tecido', () => {
+  it('a peça escolhida continua marcada; sem selo no tecido; a aba Pedido soma as peças', async () => {
     const { usuario } = await abrirPdv(structuredClone(CATALOGO));
-    const linhas = (tipo: string) => within(screen.getByRole('region', { name: tipo })).getAllByRole('button').map((b) => texto(b));
+    const tecidos = () => within(screen.getByRole('region', { name: 'Tecido' })).getAllByRole('button').map((b) => texto(b));
     await usuario.click(botao('Calças'));
-    expect(linhas('Calças')).toEqual(['Calça Legging']);
-    await usuario.click(botao(/^Calça Legging/));
     for (const [cor, tamanho] of [['Preto', 'M'], ['Preto', 'M'], ['Marinho', 'G']] as const) {
+      await usuario.click(botao(/^Calça Legging/));
       await usuario.click(botaoCor(cor));
       await usuario.click(botaoTamanho(tamanho));
       await usuario.click(botao('Adicionar ao pedido'));
+      expect(telaAtual()).toBe('Produtos');
+      expect(botao('Calças')).toHaveAttribute('aria-pressed', 'true');
     }
-    await usuario.click(botao('Voltar para os produtos'));
-    expect(linhas('Calças')).toEqual(['Calça Legging3 no pedido']);
-    await usuario.click(botao('Tops'));
-    expect(linhas('Tops')).toEqual(['Top Nadador']);
-    // "−" numa linha do pedido: o selo acompanha.
+    expect(tecidos()).toEqual(['Calça Legging']);
+    expect(botao('Pedido (3)')).toBeInTheDocument();
     await usuario.click(botao(/^Pedido/));
-    await usuario.click(within(screen.getAllByTestId('item-pedido')[0]!).getByRole('button', { name: 'Diminuir quantidade' }));
-    await usuario.click(botao('Produtos'));
-    await usuario.click(botao('Calças'));
-    expect(linhas('Calças')).toEqual(['Calça Legging2 no pedido']);
+    expect(screen.getAllByTestId('item-pedido')).toHaveLength(2);
   });
 });

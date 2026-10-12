@@ -1,28 +1,28 @@
 /**
- * Etapa Cliente e aviso de venda (pdv-mobile-refatorado, MI-02 e MI-04).
- * - A venda começa na etapa Cliente (aba Produtos), com nome e celular opcionais.
- * - "Alterar" no cartão Cliente do Pedido reabre a etapa e volta ao Pedido ao salvar.
- * - O celular (11 dígitos) vai no corpo da venda como `telefone`, só com os dígitos (etapa 6).
- * - O aviso de venda sai só com OK e a venda seguinte começa de novo na etapa Cliente.
+ * Cliente do pedido e aviso de venda (pdv-mobile-atualizado, MI-21 e MI-26).
+ * - A venda começa direto em Produtos; o cliente é informado pelo "Alterar" da linha do cliente no Pedido,
+ *   que abre o formulário "Cliente do pedido" (nome e celular opcionais).
+ * - O celular (11 dígitos) vai no corpo da venda como `telefone`, só com os dígitos.
+ * - Voltar e trocar de aba descartam a edição.
+ * - O aviso de venda sai só com "Nova venda" e a venda seguinte começa em Produtos, com tudo zerado.
  */
 import { screen, waitFor, within } from '@testing-library/react';
 import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { servidor, usarSimulado } from '../apoio';
-import { abrirApp, adicionarPeca, botaoFechar, sem_nbsp, TOP_NADADOR_P_VINHO } from './ajuda';
+import { abrirApp, abrirClienteDoPedido, adicionarPeca, botaoFechar, campoCelularCliente, campoNomeCliente, esperarCatalogo, sem_nbsp, telaAtual, TOP_NADADOR_P_VINHO } from './ajuda';
 
 const botao = (nome: RegExp | string) => screen.getByRole('button', { name: nome });
 const texto = (el: Element | null | undefined) => sem_nbsp(el?.textContent);
-const etapa = () => screen.getByRole('banner').getAttribute('aria-label');
-const campoNome = () => screen.getByRole('textbox', { name: 'Nome' });
-const campoCelular = () => screen.getByRole('textbox', { name: 'Celular' });
-const linhaCliente = () => within(screen.getByRole('region', { name: 'Cliente' })).getByRole('button');
+const linhaCliente = () => screen.getByRole('button', { name: /Alterar$/ });
+const mensagemIncompleto = () => screen.queryByText('Complete o celular com DDD (11 números) ou deixe em branco.');
 
-/** Abre o PDV logado e espera a etapa Cliente (primeira tela da venda). */
-async function abrirNaEtapaCliente() {
+/** Abre o PDV logado, com o catálogo carregado, e põe uma peça no pedido (a linha do cliente só existe com peça). */
+async function abrirComPeca() {
   const simulado = usarSimulado({ sessaoDe: 'carlos' });
   const app = abrirApp();
-  await waitFor(() => expect(etapa()).toBe('Cliente'));
+  await esperarCatalogo();
+  await adicionarPeca(app.usuario, TOP_NADADOR_P_VINHO);
   return { ...app, simulado };
 }
 
@@ -35,84 +35,115 @@ function capturarVendas() {
   return corpos;
 }
 
-describe('MI-02 — etapa Cliente no começo da venda', () => {
-  it('depois do login a venda começa na etapa Cliente, na aba Produtos, com os dois campos vazios', async () => {
-    await abrirNaEtapaCliente();
-    expect(within(screen.getByRole('banner')).getByRole('heading', { level: 1 })).toHaveTextContent('Cliente');
-    expect(screen.getByText('Nova venda · primeiro passo')).toBeInTheDocument();
-    expect(botao('Produtos')).toHaveAttribute('aria-current', 'page');
-    expect(campoNome()).toHaveValue('');
-    expect(campoCelular()).toHaveValue('');
-    expect(campoCelular()).toHaveAttribute('type', 'tel');
-    expect(botao('Escolher produtos')).toBeEnabled();
+describe('MI-21 — a venda começa em Produtos; cliente pelo "Alterar" do Pedido', () => {
+  it('depois do login a tela é Produtos, sem formulário de cliente; pedido vazio não tem linha do cliente', async () => {
+    usarSimulado({ sessaoDe: 'carlos' });
+    const { usuario } = abrirApp();
+    await esperarCatalogo();
+    expect(telaAtual()).toBe('Produtos');
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Venda sem cliente' })).not.toBeInTheDocument();
+    await usuario.click(botao('Pedido'));
+    expect(screen.getByText('Nenhuma peça no pedido ainda. Escolha em Produtos.')).toBeInTheDocument();
+    expect(screen.queryByText('Alterar')).not.toBeInTheDocument();
+  });
+
+  it('linha do cliente com "Cliente não identificado"; "Alterar" abre o formulário vazio, com teclado numérico', async () => {
+    const { usuario } = await abrirComPeca();
+    expect(texto(linhaCliente())).toBe('Cliente não identificadoAlterar');
+    await abrirClienteDoPedido(usuario);
+    expect(telaAtual()).toBe('Cliente do pedido');
+    expect(screen.getByRole('heading', { level: 1, name: 'Cliente do pedido' })).toBeInTheDocument();
+    expect(campoNomeCliente()).toHaveValue('');
+    expect(campoNomeCliente()).toHaveAttribute('placeholder', 'Nome do cliente');
+    expect(campoCelularCliente()).toHaveValue('');
+    expect(campoCelularCliente()).toHaveAttribute('inputmode', 'numeric');
+    expect(botao('Salvar cliente')).toBeEnabled();
     expect(botao('Venda sem cliente')).toBeEnabled();
+    expect(mensagemIncompleto()).toBeNull();
+    // O botão de fechar não aparece com o formulário aberto.
+    expect(screen.queryByRole('button', { name: /^(Inclua uma peça|Escolha o pagamento|Fechar venda)/ })).toBeNull();
   });
 
-  it('celular com máscara enquanto digita; incompleto desabilita "Escolher produtos"; completo habilita', async () => {
-    const { usuario } = await abrirNaEtapaCliente();
-    await usuario.type(campoCelular(), '3198765');
-    expect(campoCelular()).toHaveValue('(31) 98765');
-    expect(botao('Escolher produtos')).toBeDisabled();
+  it('celular com máscara enquanto digita; incompleto mostra a mensagem e desliga "Salvar cliente"; completo liga', async () => {
+    const { usuario } = await abrirComPeca();
+    await abrirClienteDoPedido(usuario);
+    await usuario.type(campoCelularCliente(), '3198765');
+    expect(campoCelularCliente()).toHaveValue('(31) 98765');
+    expect(botao('Salvar cliente')).toBeDisabled();
+    expect(mensagemIncompleto()).toBeInTheDocument();
     // 10 dígitos (fixo ou celular sem o 9) também não vale: o back exige 11 (pdv-cliente-telefone).
-    await usuario.type(campoCelular(), '432');
-    expect(campoCelular()).toHaveValue('(31) 98765-432');
-    expect(botao('Escolher produtos')).toBeDisabled();
-    await usuario.type(campoCelular(), '1');
-    expect(campoCelular()).toHaveValue('(31) 98765-4321');
-    expect(botao('Escolher produtos')).toBeEnabled();
-    await usuario.type(campoCelular(), '99');
-    expect(campoCelular()).toHaveValue('(31) 98765-4321');
+    await usuario.type(campoCelularCliente(), '432');
+    expect(campoCelularCliente()).toHaveValue('(31) 98765-432');
+    expect(botao('Salvar cliente')).toBeDisabled();
+    await usuario.type(campoCelularCliente(), '1');
+    expect(campoCelularCliente()).toHaveValue('(31) 98765-4321');
+    expect(botao('Salvar cliente')).toBeEnabled();
+    expect(mensagemIncompleto()).toBeNull();
+    await usuario.type(campoCelularCliente(), '99');
+    expect(campoCelularCliente()).toHaveValue('(31) 98765-4321');
   });
 
-  it('"Escolher produtos" leva à lista com o nome do cliente no topo; o Pedido mostra nome e celular', async () => {
-    const { usuario } = await abrirNaEtapaCliente();
-    await usuario.type(campoNome(), '  Maria Aparecida ');
-    await usuario.type(campoCelular(), '31987654321');
-    await usuario.click(botao('Escolher produtos'));
-    expect(etapa()).toBe('Produtos');
-    expect(within(screen.getByRole('banner')).getByText('Maria Aparecida')).toBeInTheDocument();
-    expect(botao(/^Bermuda Ciclista/)).toBeInTheDocument();
-    await usuario.click(botao('Pedido'));
-    expect(texto(linhaCliente())).toBe('Maria Aparecida(31) 98765-4321Alterar');
-  });
-
-  it('"Venda sem cliente" segue com os campos descartados: topo e Pedido mostram "Cliente não identificado"', async () => {
-    const { usuario } = await abrirNaEtapaCliente();
-    await usuario.type(campoNome(), 'Rascunho');
-    await usuario.click(botao('Venda sem cliente'));
-    expect(etapa()).toBe('Produtos');
-    expect(within(screen.getByRole('banner')).getByText('Cliente não identificado')).toBeInTheDocument();
-    await usuario.click(botao('Pedido'));
-    expect(texto(linhaCliente())).toBe('Cliente não identificadoSem celularAlterar');
-  });
-
-  it('"Alterar" reabre a etapa preenchida, com "Salvar cliente", e volta ao Pedido com o cliente novo', async () => {
-    const { usuario } = await abrirNaEtapaCliente();
-    await usuario.type(campoNome(), 'Maria');
-    await usuario.click(botao('Escolher produtos'));
-    await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
-    await usuario.click(screen.getByText('Alterar'));
-    expect(etapa()).toBe('Cliente');
-    expect(screen.getByText('Alterar o cliente do pedido')).toBeInTheDocument();
-    expect(campoNome()).toHaveValue('Maria');
-    expect(screen.queryByRole('button', { name: 'Escolher produtos' })).not.toBeInTheDocument();
-    await usuario.clear(campoNome());
-    await usuario.type(campoNome(), 'Ana');
-    await usuario.type(campoCelular(), '11912345678');
+  it('"Salvar cliente" volta ao Pedido com "nome · celular" na linha; "Alterar" reabre preenchido; as peças continuam', async () => {
+    const { usuario } = await abrirComPeca();
+    await abrirClienteDoPedido(usuario);
+    await usuario.type(campoNomeCliente(), '  Maria Aparecida ');
+    await usuario.type(campoCelularCliente(), '31987654321');
     await usuario.click(botao('Salvar cliente'));
-    expect(etapa()).toBe('Pedido');
-    expect(texto(linhaCliente())).toBe('Ana(11) 91234-5678Alterar');
-    // As peças continuam no pedido.
+    expect(telaAtual()).toBe('Pedido');
+    expect(texto(linhaCliente())).toBe('Maria Aparecida · (31) 98765-4321Alterar');
+    await usuario.click(screen.getByText('Alterar'));
+    expect(campoNomeCliente()).toHaveValue('Maria Aparecida');
+    expect(campoCelularCliente()).toHaveValue('(31) 98765-4321');
+    await usuario.clear(campoNomeCliente());
+    await usuario.type(campoNomeCliente(), 'Ana');
+    await usuario.clear(campoCelularCliente());
+    await usuario.click(botao('Salvar cliente'));
+    expect(texto(linhaCliente())).toBe('AnaAlterar');
     expect(screen.getAllByTestId('item-pedido')).toHaveLength(1);
+  });
+
+  it('"Venda sem cliente" apaga o cliente salvo e volta ao Pedido', async () => {
+    const { usuario } = await abrirComPeca();
+    await abrirClienteDoPedido(usuario);
+    await usuario.type(campoNomeCliente(), 'Maria');
+    await usuario.click(botao('Salvar cliente'));
+    await usuario.click(screen.getByText('Alterar'));
+    await usuario.click(botao('Venda sem cliente'));
+    expect(telaAtual()).toBe('Pedido');
+    expect(texto(linhaCliente())).toBe('Cliente não identificadoAlterar');
+  });
+
+  it('voltar e trocar de aba descartam a edição: o cliente salvo continua o mesmo', async () => {
+    const { usuario } = await abrirComPeca();
+    await abrirClienteDoPedido(usuario);
+    await usuario.type(campoNomeCliente(), 'Maria');
+    await usuario.click(botao('Salvar cliente'));
+
+    await usuario.click(screen.getByText('Alterar'));
+    await usuario.clear(campoNomeCliente());
+    await usuario.type(campoNomeCliente(), 'Rascunho 1');
+    await usuario.click(botao('Voltar para o pedido'));
+    expect(telaAtual()).toBe('Pedido');
+    expect(texto(linhaCliente())).toBe('MariaAlterar');
+
+    await usuario.click(screen.getByText('Alterar'));
+    await usuario.clear(campoNomeCliente());
+    await usuario.type(campoNomeCliente(), 'Rascunho 2');
+    await usuario.click(botao('Dia'));
+    await usuario.click(botao(/^Pedido/));
+    // Voltar à aba Pedido mostra o pedido, não o formulário.
+    expect(telaAtual()).toBe('Pedido');
+    expect(texto(linhaCliente())).toBe('MariaAlterar');
   });
 
   it('o corpo da venda leva o nome sem espaços nas pontas e o celular só com os dígitos, sem `cpf`', async () => {
     const corpos = capturarVendas();
-    const { usuario } = await abrirNaEtapaCliente();
-    await usuario.type(campoNome(), '  João ');
-    await usuario.type(campoCelular(), '31987654321');
-    await usuario.click(botao('Escolher produtos'));
-    await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
+    const { usuario } = await abrirComPeca();
+    await abrirClienteDoPedido(usuario);
+    await usuario.type(campoNomeCliente(), '  João ');
+    await usuario.type(campoCelularCliente(), '31987654321');
+    await usuario.click(botao('Salvar cliente'));
     await usuario.click(botao('Pix'));
     await usuario.click(botaoFechar());
     await screen.findByRole('dialog');
@@ -123,39 +154,49 @@ describe('MI-02 — etapa Cliente no começo da venda', () => {
   });
 });
 
-describe('MI-04 — aviso de venda com OK', () => {
-  it('o aviso fica até o OK; o OK começa a venda seguinte na etapa Cliente, com pedido e cliente zerados', async () => {
-    const { usuario, simulado } = await abrirNaEtapaCliente();
-    await usuario.type(campoNome(), 'Maria');
-    await usuario.click(botao('Escolher produtos'));
-    await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
+describe('MI-26 — aviso de venda com "Nova venda"', () => {
+  it('o aviso mostra total, peças, pagamento e cliente; fica até "Nova venda", que volta a Produtos com tudo zerado', async () => {
+    const { usuario } = await abrirComPeca();
+    await abrirClienteDoPedido(usuario);
+    await usuario.type(campoNomeCliente(), 'Maria');
+    await usuario.click(botao('Salvar cliente'));
     await usuario.click(botao('Pix'));
     await usuario.click(botaoFechar());
-    const aviso = await screen.findByRole('dialog');
-    expect(within(aviso).getByRole('heading', { name: 'Venda registrada' })).toBeInTheDocument();
-    expect(texto(within(aviso).getByText(/^Pedido #/))).toBe(`Pedido #${simulado.estado.vendas[0]!.numero} · 1 peça · R$ 55,00 em Pix · Maria`);
+    const aviso = await screen.findByRole('dialog', { name: 'Venda registrada' });
+    expect(texto(within(aviso).getByText(/^R\$/))).toBe('R$ 55,00');
+    expect(texto(within(aviso).getByText(/peça/))).toBe('1 peça · Pix');
+    expect(within(aviso).getByText('Maria')).toBeInTheDocument();
+    // Sem número do pedido no aviso (MI-26).
+    expect(within(aviso).queryByText(/#/)).toBeNull();
     // Sem toque, o aviso continua (não some sozinho).
     await new Promise((r) => setTimeout(r, 50));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(within(aviso).getAllByRole('button').map((b) => texto(b))).toEqual(['OK']);
-    await usuario.click(within(aviso).getByRole('button', { name: 'OK' }));
+    expect(within(aviso).getAllByRole('button').map((b) => texto(b))).toEqual(['Nova venda']);
+    await usuario.click(within(aviso).getByRole('button', { name: 'Nova venda' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(etapa()).toBe('Cliente');
-    expect(campoNome()).toHaveValue('');
-    expect(botao('Pedido')).toBeInTheDocument();
+    expect(telaAtual()).toBe('Produtos');
     await usuario.click(botao('Pedido'));
     expect(screen.queryAllByTestId('item-pedido')).toHaveLength(0);
-    expect(texto(linhaCliente())).toBe('Cliente não identificadoSem celularAlterar');
+    // Cliente zerado: com a próxima peça, a linha volta a "Cliente não identificado".
+    await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
+    expect(texto(linhaCliente())).toBe('Cliente não identificadoAlterar');
   });
 
-  it('com o aviso aberto, a chave da venda registrada continua no pedido; depois do OK a próxima venda usa chave nova', async () => {
-    const corpos = capturarVendas();
-    const { usuario } = await abrirNaEtapaCliente();
-    await usuario.click(botao('Venda sem cliente'));
-    await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
+  it('venda sem cliente: o aviso diz "Cliente não identificado"', async () => {
+    const { usuario } = await abrirComPeca();
     await usuario.click(botao('Pix'));
     await usuario.click(botaoFechar());
-    await usuario.click(await screen.findByRole('button', { name: 'OK' }));
+    const aviso = await screen.findByRole('dialog', { name: 'Venda registrada' });
+    expect(within(aviso).getByText('Cliente não identificado')).toBeInTheDocument();
+  });
+
+  it('com o aviso aberto, a chave da venda registrada continua no pedido; depois de "Nova venda" a próxima venda usa chave nova', async () => {
+    const corpos = capturarVendas();
+    const { usuario } = await abrirComPeca();
+    await usuario.click(botao('Pix'));
+    await usuario.click(botaoFechar());
+    await usuario.click(await screen.findByRole('button', { name: 'Nova venda' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
     await usuario.click(botao('Pix'));
     servidor.use(http.post('*/api/vendas', () => new Response(null, { status: 500 })));

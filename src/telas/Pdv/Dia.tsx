@@ -5,6 +5,13 @@ import c from '../comum.module.css';
 import { useCarregar } from '../useCarregar';
 import s from './Pdv.module.css';
 
+/** Data de hoje ao lado do título, no formato do design: "05 out". */
+// Os dois `replace` limpam o que o Intl devolve em pt-BR ("05 de out."). Usa o relógio do aparelho,
+// não o fuso da loja: com o celular em outro fuso, a data pode diferir da lista do servidor.
+function hojeCurto(): string {
+  return new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '').replace(' de ', ' ');
+}
+
 /** Aba Dia — vendas de hoje do vendedor logado, buscadas na API a cada abertura (handoff §2d, RF-F09). */
 export function Dia() {
   // Busca de novo toda vez que a aba é montada (sem cache): a lista inclui a venda que acabou de fechar.
@@ -12,8 +19,13 @@ export function Dia() {
   // gravada e no cupom.
   const [carga, tentarDeNovo] = useCarregar(api.vendasHoje);
 
+  // Título e data dentro do conteúdo (MI-27): aparecem também com o catálogo carregando ou em falha.
   return (
     <div className={s.coluna14}>
+      <div className={s.tituloDia}>
+        <h1 className={s.tituloDiaTexto}>Vendas de hoje</h1>
+        <span className={s.tituloDiaData}>{hojeCurto()}</span>
+      </div>
       {carga.situacao === 'carregando' && <Carregando />}
       {carga.situacao === 'erro' && <FalhaAoCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />}
       {carga.situacao === 'ok' && (

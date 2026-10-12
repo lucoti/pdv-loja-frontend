@@ -117,7 +117,8 @@ describe('INV-001 — corpo do POST /vendas', () => {
     const req = registrarRequisicoes();
     const { usuario } = await abrirPdv();
     await adicionarPeca(usuario, LEGGING_M_PRETO);
-    await usuario.click(within(itensPedido()[0]!).getByRole('button', { name: 'Aumentar quantidade' }));
+    // Sem −/+ na linha desde a pdv-mobile-atualizado (INV-012 alterado): adicionar de novo soma na linha.
+    await adicionarPeca(usuario, LEGGING_M_PRETO);
     await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
     await aumentarDescontoNoPedido(usuario, 2);
     await informarCliente(usuario, '  Ana  ');
@@ -200,7 +201,8 @@ describe('INV-011 — chave de idempotência', () => {
     await montarUmaPeca(usuario);
     await tentar();
     await tentar();
-    await usuario.click(within(itensPedido()[0]!).getByRole('button', { name: 'Aumentar quantidade' }));
+    // Edição: a mesma peça de novo (soma na linha; o −/+ saiu na pdv-mobile-atualizado).
+    await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
     await tentar();
     // Pedido B (depois de "Cancelar pedido"): erro e depois sucesso.
     await cancelarPedido(usuario);
@@ -330,7 +332,7 @@ describe('INV-014 — erro do servidor: pedido intacto e recarga do catálogo s�
     await usuario.click(botaoFechar());
     await esperarErroAoFechar();
     expect(screen.getByRole('alert')).toHaveTextContent('Erro interno.');
-    await usuario.click(within(itensPedido()[0]!).getByRole('button', { name: 'Diminuir quantidade' }));
+    await usuario.click(within(itensPedido()[0]!).getByRole('button', { name: 'Tirar peça' }));
     expect(itensPedido()).toHaveLength(0);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });

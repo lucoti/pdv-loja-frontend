@@ -1,6 +1,7 @@
-import { CaretRight } from '@phosphor-icons/react';
 import type { Catalogo } from '../../api/cliente';
 import type { Produto } from '../../dominio/catalogo';
+import c from '../comum.module.css';
+import { Cartao } from './Cartao';
 import s from './Pdv.module.css';
 
 /**
@@ -16,17 +17,14 @@ export function nomeNaLista(produto: Produto, tipoNome: string): string {
 }
 
 /**
- * Aba Produtos — grade com os tipos do ERP e a lista de produtos do tipo escolhido (design 1b, MI-05).
- * Cada linha mostra o produto e, se ele já está no pedido, o selo "N no pedido". Preço e "sem estoque"
- * saíram da lista por decisão do Lucas (seguir o design): o vendedor vê preço e saldo em cor/tamanho.
+ * Aba Produtos (MI-22): cartão "1 Peça" com os tipos do ERP e cartão "2 Tecido" com os produtos do tipo
+ * escolhido. Tocar num tecido abre a tela de cor e tamanho. Preço e saldo aparecem só lá.
  */
 export function Produtos(props: {
   catalogo: Catalogo;
   tipoId: number | null;
   aoEscolherTipo: (id: number) => void;
   aoEscolherProduto: (produto: Produto) => void;
-  /** Quantas peças do produto (somando todos os SKUs) já estão no pedido. */
-  noPedido: (produto: Produto) => number;
 }) {
   const { catalogo, tipoId } = props;
   // Os tipos vêm só com produto vendável (o back já filtra), então nenhum tipo abre lista vazia.
@@ -37,36 +35,29 @@ export function Produtos(props: {
   if (!catalogo.produtos.length) return <div className={s.vazio}>Nenhum produto cadastrado no ERP.</div>;
 
   return (
-    <div className={s.coluna14}>
-      {/* Grade de 3 colunas iguais que encolhem (AP-003): todos os tipos à vista, sem rolar de lado. */}
-      <div className={s.gradeTipos}>
-        {catalogo.tipos.map((t) => (
-          <button key={t.id} type="button" className={s.tipo} aria-pressed={t.id === tipoId} onClick={() => props.aoEscolherTipo(t.id)}>
-            {t.nome}
-          </button>
-        ))}
-      </div>
+    <>
+      <Cartao numero={1} titulo="Peça" complemento={tipo?.nome}>
+        {/* Grade de 3 colunas iguais que encolhem (AP-003): todos os tipos à vista, sem rolar de lado. */}
+        <div className={`${s.cartaoCorpo} ${s.gradeTipos}`}>
+          {catalogo.tipos.map((t) => (
+            <button key={t.id} type="button" className={`${c.tile} ${s.tipo}`} aria-pressed={t.id === tipoId} onClick={() => props.aoEscolherTipo(t.id)}>
+              {t.nome}
+            </button>
+          ))}
+        </div>
+      </Cartao>
 
       {tipo && (
-        <section className={s.grupo} aria-label={tipo.nome}>
-          <div className={s.grupoTopo}>
-            <span className={s.grupoNome}>{tipo.nome}</span>
-            <span className={s.grupoQtd}>{produtos.length === 1 ? '1 modelo' : `${produtos.length} modelos`}</span>
+        <Cartao numero={2} titulo="Tecido" complemento={produtos.length === 1 ? '1 opção' : `${produtos.length} opções`}>
+          <div className={`${s.cartaoCorpo} ${s.grade2}`}>
+            {produtos.map((p) => (
+              <button key={p.id} type="button" className={`${c.tile} ${s.tecido}`} onClick={() => props.aoEscolherProduto(p)}>
+                {nomeNaLista(p, tipo.nome)}
+              </button>
+            ))}
           </div>
-          <div className={s.lista}>
-            {produtos.map((p) => {
-              const qtd = props.noPedido(p);
-              return (
-                <button key={p.id} type="button" className={s.linhaProduto} onClick={() => props.aoEscolherProduto(p)}>
-                  <span className={s.linhaProdutoNome}>{nomeNaLista(p, tipo.nome)}</span>
-                  {qtd > 0 && <span className={s.selo}>{qtd} no pedido</span>}
-                  <CaretRight size={20} className={s.seta} aria-hidden="true" />
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        </Cartao>
       )}
-    </div>
+    </>
   );
 }

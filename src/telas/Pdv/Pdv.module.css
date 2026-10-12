@@ -1,191 +1,77 @@
-/* PDV Mobile (handoff §2). */
+/* PDV Mobile — design atualizado (pdv-mobile-atualizado): abas no topo, peça → tecido → cor → tamanho. */
 
-/* Topo de cada tela (design "PDV Mobile Refatorado", MI-09): título, apoio, voltar e complemento. */
-.topo {
+/* Abas no topo (MI-20): presas no alto ao rolar, 3 colunas iguais que encolhem (AP-003). */
+.abas {
   position: sticky;
   top: 0;
   z-index: 20;
   background: var(--color-bg);
-  color: var(--color-text);
-  padding: 14px 16px 10px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
   border-bottom: 1px solid var(--color-divider);
+  padding: calc(6px + env(safe-area-inset-top)) 10px 6px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
 }
 
-.topoTexto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.topoTitulo { margin: 0; font-family: var(--font-heading); font-size: 24px; font-weight: 500; line-height: 1.2; }
-.topoApoio { font-size: 15px; color: var(--color-neutral-400); }
-.topoLateral { flex: none; font-size: 15px; color: var(--color-neutral-400); }
-.apoioCliente { display: flex; align-items: center; gap: 6px; }
-
-/* Voltar 44×44 da tela de cor/tamanho. */
-.voltar {
-  flex: none;
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-neutral-800);
-  background: transparent;
-  color: var(--color-text);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-/* Conteúdo; o padding inferior reserva espaço para a barra fixa. */
-.conteudo {
-  flex: 1;
+/* 46px de altura: acima do mínimo de toque de 44px, com o topo inteiro em ~58px. */
+.aba {
+  height: 46px;
   min-width: 0;
-  padding: 18px 16px 24px;
+  padding: 0 4px;
   display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-/* Pedido e Dia (design 1d/1e): margem lateral de 12px, um pouco menor, para os cartões. */
-.conteudoCartoes { padding: 14px 12px 18px; }
-
-.coluna14 { display: flex; flex-direction: column; gap: 14px; }
-.coluna18 { display: flex; flex-direction: column; gap: 18px; }
-
-
-/* 1b — Produtos: grade de tipos e lista do tipo escolhido (MI-05). */
-/* Tipos: 3 colunas iguais; minmax(0, …) deixa a coluna encolher em vez de estourar a tela (AP-003). */
-.gradeTipos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-
-.tipo {
-  min-height: 44px;
-  padding: 4px 6px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-neutral-800);
-  background: transparent;
-  color: var(--color-text);
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.15;
-  overflow-wrap: anywhere;
-  cursor: pointer;
-}
-
-.grupo { display: flex; flex-direction: column; border-top: 1px solid var(--color-divider); }
-.grupoTopo { display: flex; justify-content: space-between; align-items: baseline; padding: 12px 2px 6px; }
-.grupoNome { font-size: 17px; font-weight: 600; }
-.grupoQtd { font-size: 14px; color: var(--color-neutral-400); }
-
-/* Lista em cartão único, linhas separadas por um fio (produtos e vendas do dia). */
-.lista {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.linhaProduto {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 60px;
-  padding: 10px 14px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.linhaProduto + .linhaProduto { border-top: 1px solid var(--color-divider); }
-.linhaProduto:active { background: var(--color-accent-900); }
-.linhaProdutoNome { flex: 1; min-width: 0; font-size: 17px; font-weight: 500; }
-
-.selo {
-  flex: none;
-  font-size: 14px;
-  font-weight: 500;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  background: var(--color-accent-900);
-  color: var(--color-accent-200);
-}
-
-.seta { flex: none; color: var(--color-accent); }
-
-/* 1c — Cor e tamanho (MI-06). */
-.bloco { display: flex; flex-direction: column; gap: 8px; }
-.listaCores { display: flex; flex-direction: column; gap: 6px; }
-
-.cor {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 52px;
-  padding: 0 14px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-neutral-800);
-  background: transparent;
-  color: var(--color-text);
-  font-size: 17px;
-  font-weight: 500;
-  text-align: left;
-  cursor: pointer;
-}
-
-.circulo {
-  width: 24px;
-  height: 24px;
-  border-radius: 12px;
-  border: 1px solid var(--color-neutral-600);
-  display: block;
-  flex: none;
-}
-
-img.circulo { object-fit: cover; }
-.corNome { flex: 1; min-width: 0; }
-.marcada { flex: none; color: var(--color-accent); }
-
-/* Tamanhos: 4 colunas iguais; minmax(0, …) deixa a coluna encolher em vez de estourar a tela (AP-003). */
-.gradeTamanhos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-
-.tamanho {
-  min-height: 64px;
-  padding: 0 2px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-neutral-800);
-  background: transparent;
-  color: var(--color-text);
-  display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 6px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-neutral-400);
+  font-size: 16px;
+  font-weight: 500;
   cursor: pointer;
 }
 
-.tamanho:disabled { opacity: 0.4; cursor: not-allowed; }
-.tamanhoSigla { font-size: 20px; font-weight: 600; line-height: 1.1; }
-/* O saldo quebra em duas linhas ("estoque" / "12") só quando não cabe: a 320px a coluna tem ~62px úteis
-   e "estoque 12" mede ~66px. O botão cresce em altura; nunca passa da borda. */
-.tamanhoSaldo { font-size: 13px; line-height: 1.15; text-align: center; color: var(--color-neutral-300); overflow-wrap: anywhere; }
-
-/* Seleção: fundo e borda do acento (tipo, cor, tamanho, pagamento). */
-.tipo[aria-pressed='true'],
-.cor[aria-pressed='true'],
-.tamanho[aria-pressed='true'],
-.pagamento[aria-pressed='true'] {
+.aba[aria-current='page'] {
   border-color: var(--color-accent);
   background: var(--color-accent-900);
   color: var(--color-accent-100);
+  font-weight: 600;
 }
 
-.resumoLinha { display: flex; justify-content: space-between; gap: 8px; font-size: 16px; }
-.resumoPreco { flex: none; font-weight: 600; white-space: nowrap; }
+.aba svg { flex: none; }
 
-.grade2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+/* Abaixo de 380px a coluna da aba tem ~107px ou menos (92px a 320px): "Pedido" com o ícone e a bolinha
+   (~105px, mais com 2 dígitos) não cabe. As abas ficam só com o nome (e a bolinha); o ícone é decorativo
+   (aria-hidden). A 390px, a largura do design, os ícones aparecem. */
+@media (max-width: 379px) {
+  .aba { gap: 4px; }
+  .aba svg { display: none; }
+}
 
-/* 1d — Pedido: cartões numerados (MI-07). */
+/* Número de peças na aba Pedido. */
+.bolinha {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+/* Conteúdo de todas as telas. */
+.conteudo {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 12px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.coluna14 { display: flex; flex-direction: column; gap: 14px; }
+
+/* Cartões numerados 1 Peça, 2 Tecido, 3 Cor e 4 Tamanho (MI-22, MI-23). */
 .cartao {
   display: flex;
   flex-direction: column;
@@ -212,16 +98,209 @@ img.circulo { object-fit: cover; }
   color: var(--color-accent-200);
 }
 
-.cartaoTitulo { flex: 1; min-width: 0; margin: 0; font-size: 18px; font-weight: 500; }
-.cartaoComplemento { flex: none; font-size: 15px; color: var(--color-neutral-400); }
-.cartaoIcone { flex: none; color: var(--color-neutral-400); }
-.cartaoCorpo { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 8px; }
+.cartaoTitulo { flex: 1; min-width: 0; margin: 0; font-size: 18px; font-weight: 600; }
+.cartaoComplemento { flex: none; max-width: 55%; font-size: 15px; color: var(--color-neutral-400); text-align: right; overflow-wrap: anywhere; }
+.cartaoCorpo { padding: 12px 14px 14px; }
+
+/* Grades com minmax(0, …): as colunas encolhem com a tela em vez de passar da borda (AP-003). */
+.gradeTipos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 8px; }
+.grade2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 8px; }
+.gradeTamanhos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+
+/* Botões das escolhas; a aparência (relevo, escolhido, indisponível) vem do .tile (comum.module.css). */
+.tipo { min-height: 52px; min-width: 0; padding: 6px; font-size: 15px; line-height: 1.15; overflow-wrap: anywhere; }
+.tecido { min-height: 60px; min-width: 0; padding: 8px 10px; font-size: 17px; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+
+.cor {
+  min-height: 60px;
+  min-width: 0;
+  padding: 4px 10px 4px 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 17px;
+  text-align: left;
+}
+
+/* Amostra 60×52, quase da altura do botão. A 320px a coluna tem ~140px: sobra ~60px para o nome. */
+.amostra {
+  width: 60px;
+  height: 52px;
+  flex: none;
+  border-radius: 5px;
+  border: 1px solid var(--color-neutral-600);
+  display: block;
+}
+
+img.amostra { object-fit: cover; }
+.corNome { flex: 1; min-width: 0; line-height: 1.15; overflow-wrap: break-word; }
+
+/* Marca da cor escolhida no centro da amostra, com um anel do fundo do botão para destacar de qualquer tom. */
+.amostraCaixa { position: relative; flex: none; display: block; }
+.marcada {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--color-accent-300);
+  background: var(--tile-escolhido-bg);
+  border-radius: 50%;
+}
+
+.tamanho {
+  min-height: 64px;
+  min-width: 0;
+  padding: 0 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.tamanhoSigla { font-size: 20px; font-weight: 600; line-height: 1.1; }
+/* O saldo quebra em duas linhas ("estoque" / "12") só quando não cabe: a 320px a coluna tem ~62px úteis
+   e "estoque 12" mede ~66px. O botão cresce em altura; nunca passa da borda. */
+.tamanhoSaldo { font-size: 13px; line-height: 1.15; text-align: center; opacity: 0.85; overflow-wrap: anywhere; }
+
+/* Topo dentro do conteúdo: voltar 44×44 e título (cor/tamanho e cliente do pedido). */
+.titulo { display: flex; align-items: center; gap: 10px; }
+.tituloTexto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tituloPeca { margin: 0; font-size: 20px; font-weight: 600; line-height: 1.2; }
+.tituloApoio { font-size: 15px; color: var(--color-neutral-400); }
+
+.voltar {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-neutral-800);
+  background: transparent;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* Pedido (MI-24). */
+.cartaoVazio,
+.vazio {
+  padding: 16px 14px;
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--color-neutral-300);
+}
+
+.cartaoVazio { border-radius: var(--radius-lg); border: 1px solid var(--color-neutral-800); background: var(--color-surface); }
+
+.linhaCliente {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--color-neutral-800);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.linhaClienteIcone { flex: none; color: var(--color-neutral-400); }
+.linhaClienteTexto { flex: 1; min-width: 0; font-size: 16px; overflow-wrap: anywhere; }
+.alterar { flex: none; font-size: 15px; color: var(--color-accent-300); text-decoration: underline; }
+
+.secao { display: flex; flex-direction: column; gap: 8px; }
+.secaoTopo { display: flex; justify-content: space-between; align-items: baseline; padding: 0 2px; }
+.secaoTopo h2,
+.secaoTitulo { margin: 0; padding: 0 2px; }
+.secaoComplemento { font-size: 15px; color: var(--color-neutral-400); }
+
+/* Lista em cartão único, linhas separadas por um fio (peças do pedido e vendas do dia). */
+.lista {
+  border-radius: 12px;
+  border: 1px solid var(--color-neutral-800);
+  background: var(--color-surface);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.item { min-height: 64px; padding: 8px 4px 8px 14px; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+.item + .item { border-top: 1px solid var(--color-divider); }
+.itemLinha { display: flex; align-items: center; gap: 8px; }
+.itemTexto { flex: 1; min-width: 0; }
+.itemNome { font-size: 17px; font-weight: 500; line-height: 1.25; }
+.itemDetalhe { font-size: 14px; color: var(--color-neutral-400); line-height: 1.35; }
+.itemSubtotal { flex: none; font-size: 17px; font-weight: 600; white-space: nowrap; }
+
+.tirar {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--color-neutral-300);
+  cursor: pointer;
+}
+
+.limite { padding-right: 10px; font-size: 15px; font-weight: 600; color: var(--color-danger); }
+
+.linhaDesconto {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 60px;
+  padding: 6px 8px 6px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--color-neutral-800);
+  background: var(--color-surface);
+}
+
+/* Desconto de 4 dígitos ou mais (R$ 1.000,00) numa tela estreita: o título vira "Desco…" em vez de vazar. */
+.linhaDescontoTitulo { flex: 1; min-width: 0; margin: 0; font-size: 17px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* − e + do desconto, quadrados de 44px. */
+.passo { width: 44px; height: 44px; flex: none; padding: 0; display: flex; align-items: center; justify-content: center; }
+.valorDesconto { min-width: 92px; text-align: center; font-size: 17px; font-weight: 600; }
+
+/* Abaixo de 360px a linha não comporta "Desconto", os dois botões de 44px e "− R$ 140,00" com as folgas
+   do design: a 320px o título ficava ~7px mais largo que o espaço. Folgas e título um pouco menores. */
+@media (max-width: 359px) {
+  .linhaDesconto { gap: 6px; padding-left: 10px; }
+  .linhaDescontoTitulo { font-size: 16px; }
+  .valorDesconto { min-width: 0; font-size: 16px; }
+}
+
+.pagamento { height: 44px; min-width: 0; padding: 0 8px; font-size: 17px; }
+
+.cancelar {
+  align-self: center;
+  min-height: 44px;
+  padding: 0 12px;
+  background: transparent;
+  border: 0;
+  font-size: 16px;
+  color: var(--color-neutral-300);
+  text-decoration: underline;
+  cursor: pointer;
+}
+/* Desligado durante o envio da venda (INV-013): apagado, sem cursor de clique. */
+.cancelar:disabled { opacity: 0.4; cursor: default; }
+
+/* Cliente do pedido (MI-21). */
+.rotuloCampo { display: flex; flex-direction: column; gap: 6px; font-size: 16px; font-weight: 500; color: var(--color-neutral-200); }
 
 .campo {
   height: 54px;
   padding: 0 14px;
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-neutral-700);
+  border: 1px solid var(--color-neutral-600);
   background: var(--color-surface);
   color: var(--color-text);
   font-size: 18px;
@@ -230,30 +309,7 @@ img.circulo { object-fit: cover; }
 }
 
 .campo:focus { border-color: var(--color-accent); }
-
-.linhaCliente {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 64px;
-  padding: 10px 14px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.linhaCliente:active { background: var(--color-neutral-900); }
-.linhaClienteTexto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.linhaClienteNome { font-size: 17px; font-weight: 500; overflow-wrap: anywhere; }
-.linhaClienteCelular { font-size: 15px; color: var(--color-neutral-400); }
-.alterar { flex: none; font-size: 15px; color: var(--color-accent-300); text-decoration: underline; }
-
-/* 1a — Cliente: rótulo acima do campo e o botão secundário "Venda sem cliente". */
-.rotuloCampo { display: flex; flex-direction: column; gap: 6px; font-size: 16px; font-weight: 500; color: var(--color-neutral-200); }
-
-.ctaIcone { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.avisoCampo { font-size: 15px; color: var(--color-danger); }
 
 .semCliente {
   min-height: 44px;
@@ -265,112 +321,33 @@ img.circulo { object-fit: cover; }
   cursor: pointer;
 }
 
-.vazio { padding: 16px 14px; font-size: 16px; line-height: 1.4; color: var(--color-neutral-300); }
-
-.item { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
-.item + .item { border-top: 1px solid var(--color-divider); }
-.itemTopo { display: flex; align-items: flex-start; gap: 10px; }
-.itemTexto { flex: 1; min-width: 0; }
-.itemNome { font-size: 17px; font-weight: 500; line-height: 1.25; }
-.itemDetalhe { font-size: 15px; color: var(--color-neutral-400); line-height: 1.35; }
-.itemSubtotal { flex: none; font-size: 17px; font-weight: 600; white-space: nowrap; }
-
-.linha { display: flex; align-items: center; gap: 6px; }
-.cartaoCorpo.linha { flex-direction: row; gap: 8px; }
-/* Pagamento: a grade de 2 colunas vale também dentro do corpo do cartão (que é flex por padrão). */
-.cartaoCorpo.grade2 { display: grid; }
-
-.menos,
-.mais {
-  width: 44px;
-  height: 44px;
-  flex: none;
-  border-radius: var(--radius-md);
+/* Barra de baixo, só com a ação da tela (salvar cliente, adicionar ou fechar), presa no pé ao rolar. */
+.barra {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-divider);
+  padding: 10px 16px calc(12px + env(safe-area-inset-bottom));
   display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--color-neutral-700);
-  background: transparent;
-  color: var(--color-text);
-  cursor: pointer;
-}
-
-.mais { background: var(--color-accent-900); border-color: var(--color-accent); color: var(--color-accent-100); }
-.menos:disabled,
-.mais:disabled { opacity: 0.4; cursor: not-allowed; }
-.cartaoCorpo .menos,
-.cartaoCorpo .mais { width: 48px; height: 48px; }
-
-.qtd { width: 36px; text-align: center; font-size: 19px; font-weight: 600; }
-.unitario { flex: 1; min-width: 0; font-size: 14px; color: var(--color-neutral-400); padding-left: 4px; }
-
-.tirar {
-  flex: none;
-  height: 44px;
-  padding: 0 8px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  border: 0;
-  background: transparent;
-  color: var(--color-neutral-300);
-  font-size: 15px;
-  cursor: pointer;
-}
-
-.limite { font-size: 15px; font-weight: 600; color: var(--color-danger); }
-
-/* Abaixo de 360px a linha da peça não comporta "R$ 89,00 cada" e o "Tirar" lado a lado (a 320px sobram
-   ~37px para o preço, que precisa de ~64px): o texto "Tirar" fica só para leitores de tela e o botão
-   mostra o ícone da lixeira. */
-@media (max-width: 359px) {
-  .tirarTexto {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
-}
-
-.valorDescontoTotal { flex: 1; text-align: center; font-size: 18px; font-weight: 500; }
-
-.pagamento {
-  height: 52px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-neutral-800);
-  background: transparent;
-  color: var(--color-text);
-  font-size: 17px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
   gap: 8px;
-  cursor: pointer;
 }
 
-/* Resumo acima do botão de fechar e o próprio botão: rótulo à esquerda, total à direita. */
+/* Salvar cliente e fechar venda: roxo mais forte que o CTA de adicionar. */
+.ctaForte { background: var(--color-accent-800); }
+
 .resumoPedido { display: flex; flex-direction: column; gap: 2px; font-size: 15px; color: var(--color-neutral-300); }
 .totalLinha { display: flex; justify-content: space-between; }
 .fechar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .fecharRotulo { font-size: 18px; font-weight: 500; }
 .fecharTotal { font-size: 20px; font-weight: 600; white-space: nowrap; }
 
-.cancelar {
-  background: transparent;
-  border: 0;
-  padding: 8px 0;
-  font-size: 16px;
-  color: var(--color-neutral-300);
-  text-decoration: underline;
-  cursor: pointer;
-}
-/* Desligado durante o envio da venda (INV-013): apagado, sem cursor de clique. */
-.cancelar:disabled { opacity: 0.4; cursor: default; }
+/* Dia (MI-27): título e data no conteúdo, cartões do dia e lista das vendas. */
+.tituloDia { display: flex; align-items: baseline; gap: 10px; }
+.tituloDiaTexto { flex: 1; margin: 0; font-size: 22px; font-weight: 600; }
+.tituloDiaData { font-size: 15px; color: var(--color-neutral-400); }
 
-/* 1e — Dia: cartões do dia e lista das vendas (MI-08). */
 .caixasDia { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 8px; }
 
 .caixaTotal,
@@ -396,65 +373,11 @@ img.circulo { object-fit: cover; }
 .vendaDetalhe { font-size: 15px; color: var(--color-neutral-400); }
 .vendaTotal { flex: none; font-size: 17px; font-weight: 600; }
 
-/* Barra inferior fixa: o botão de ação da tela (quando houver) e as abas com ícone (MI-08). */
-.barra {
-  position: sticky;
-  bottom: 0;
-  z-index: 20;
-  background: var(--color-bg);
-  display: flex;
-  flex-direction: column;
-}
-
-.acao {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px 16px 12px;
-  border-top: 1px solid var(--color-divider);
-}
-.apoio { font-size: 16px; color: var(--color-neutral-300); }
-
-.abas {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  border-top: 1px solid var(--color-divider);
-  background: var(--color-surface);
-}
-
-.aba {
-  position: relative;
-  height: 60px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  font-size: 14px;
-  font-weight: 500;
-  border: none;
-  background: transparent;
-  color: var(--color-neutral-400);
-  cursor: pointer;
-}
-
-/* Aba ativa: texto claro e a marca de 2px no alto, no meio da aba. */
-.aba[aria-current='page'] { color: var(--color-accent-200); }
-.aba[aria-current='page']::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 28%;
-  right: 28%;
-  height: 2px;
-  background: var(--color-accent);
-}
-
-/* Aviso de venda registrada (MI-04): janela sobre o véu, sai só com o OK. */
+/* Aviso de venda registrada (MI-26): janela sobre o véu, sai só com "Nova venda". */
 .sombra {
   position: fixed;
   inset: 0;
-  background: var(--color-veu);
+  background: var(--color-veu-aviso);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -464,27 +387,34 @@ img.circulo { object-fit: cover; }
 
 .modal {
   width: 100%;
-  max-width: 420px;
+  max-width: 358px;
   background: var(--color-surface);
-  border: 1px solid var(--color-neutral-800);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-neutral-600);
+  border-radius: 16px;
   box-shadow: var(--shadow-lg);
-  padding: 20px 16px 16px;
+  padding: 24px 18px 18px;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 12px;
+  text-align: center;
 }
 
-.modalTitulo { margin: 0; font-size: 20px; font-weight: 500; color: var(--color-accent-200); }
-.modalResumo { margin: 0; font-size: 16px; line-height: 1.45; color: var(--color-neutral-300); }
+.modalIcone { color: var(--color-accent-400); }
+.modalTitulo { margin: 0; font-size: 24px; font-weight: 700; color: var(--color-accent-100); }
+.modalResumo { display: flex; flex-direction: column; gap: 4px; font-size: 17px; color: var(--color-neutral-300); }
+.modalTotal { font-size: 30px; font-weight: 700; color: var(--color-text); }
 
-.ok {
-  min-height: 52px;
+.novaVenda {
+  width: 100%;
+  min-height: 56px;
+  margin-top: 6px;
+  padding: 0 16px;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-accent);
-  background: var(--color-accent-900);
-  color: var(--color-accent-100);
+  background: var(--color-accent-700);
+  color: var(--tile-texto);
   font-size: 18px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
 }
