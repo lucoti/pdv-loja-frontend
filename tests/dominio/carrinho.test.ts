@@ -153,8 +153,9 @@ describe('descontos (RN-004)', () => {
     expect(p.itens.map((i) => i.descPercent)).toEqual([10, 0]);
   });
 
+  // Com peça no pedido: desde o ADR-004 (pdv-mobile-atualizado) o desconto nunca fica acima do bruto.
   it('desconto no total em passos de 500', () => {
-    const p = aplicar(base(), MAIS_TOTAL, MAIS_TOTAL, MAIS_TOTAL);
+    const p = aplicar(base(), add(top), MAIS_TOTAL, MAIS_TOTAL, MAIS_TOTAL);
     expect(p.descontoTotalCentavos).toBe(1500);
     expect(aplicar(p, { tipo: 'descontoTotalMenos' }).descontoTotalCentavos).toBe(1000);
   });
@@ -163,11 +164,12 @@ describe('descontos (RN-004)', () => {
   it('desconto no total para no bruto: o passo só entra se não passar do limite', () => {
     const limite = 1200; // bruto de R$ 12,00
     const mais = { tipo: 'descontoTotalMais', limite } as const;
-    expect(aplicar(base(), mais).descontoTotalCentavos).toBe(500);
-    expect(aplicar(base(), mais, mais).descontoTotalCentavos).toBe(1000);
-    expect(aplicar(base(), mais, mais, mais).descontoTotalCentavos).toBe(1000);
-    expect(aplicar(base(), { tipo: 'descontoTotalMais', limite: 1000 }, { tipo: 'descontoTotalMais', limite: 1000 }).descontoTotalCentavos).toBe(1000);
-    expect(aplicar(base(), { tipo: 'descontoTotalMais', limite: 499 }).descontoTotalCentavos).toBe(0);
+    const comTop = aplicar(base(), add(top)); // bruto 5500, acima dos limites usados aqui
+    expect(aplicar(comTop, mais).descontoTotalCentavos).toBe(500);
+    expect(aplicar(comTop, mais, mais).descontoTotalCentavos).toBe(1000);
+    expect(aplicar(comTop, mais, mais, mais).descontoTotalCentavos).toBe(1000);
+    expect(aplicar(comTop, { tipo: 'descontoTotalMais', limite: 1000 }, { tipo: 'descontoTotalMais', limite: 1000 }).descontoTotalCentavos).toBe(1000);
+    expect(aplicar(comTop, { tipo: 'descontoTotalMais', limite: 499 }).descontoTotalCentavos).toBe(0);
   });
 
   it('podeAumentarDescontoTotal: só quando mais R$ 5 cabem no bruto do pedido', () => {

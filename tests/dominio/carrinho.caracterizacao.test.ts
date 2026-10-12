@@ -8,7 +8,7 @@
  * - INV-011/INV-012: só `novo` troca a chave; `adicionar` soma no mesmo SKU sem passar do saldo.
  */
 import { describe, expect, it } from 'vitest';
-import { calcularPedido, pedidoVazio, podeAumentarDescontoTotal, reduzirPedido, type AcaoPedido, type NovaVariacao, type Pedido } from '../../src/dominio/carrinho';
+import { calcularPedido, pedidoVazio, podeAumentarDescontoTotal, podeDiminuirDescontoTotal, reduzirPedido, type AcaoPedido, type NovaVariacao, type Pedido } from '../../src/dominio/carrinho';
 import { PASSO_DESCONTO_TOTAL_CENTAVOS } from '../../src/dominio/precos';
 
 const legging: NovaVariacao = { skuId: 2, modeloNome: 'Calça Legging', tecidoNome: 'Suplex', tamanho: 'M', cor: 'Preto', precoUnitCentavos: 8900 };
@@ -98,6 +98,32 @@ describe('INV-031 — desconto no pedido de R$ 5 em R$ 5, nunca acima do bruto',
       vistos.push(p.descontoTotalCentavos);
     }
     expect(vistos).toEqual([500, 1000, 1500, 1000, 500, 0, 0, 0]);
+  });
+
+  // ADR-004 / MI-24 (pdv-mobile-atualizado): o desconto acompanha o bruto para baixo.
+  it('tirar peça baixa o desconto para o maior múltiplo de R$ 5 que cabe no bruto novo', () => {
+    let p = aumentarAteTravar(aplicar(pedidoVazio('k'), add(legging), add(top))); // bruto 14400 → 14000
+    expect(p.descontoTotalCentavos).toBe(14000);
+    p = reduzirPedido(p, { tipo: 'remover', chave: '2' }); // sobra o Top, bruto 5500
+    expect(p.descontoTotalCentavos).toBe(5500);
+    p = reduzirPedido(p, { tipo: 'remover', chave: '21' });
+    expect(p.descontoTotalCentavos).toBe(0);
+  });
+
+  it('recarga com preço menor baixa o desconto; sem mudança devolve o mesmo objeto', () => {
+    const p = aumentarAteTravar(aplicar(pedidoVazio('k'), add(top))); // 5500
+    const barato = reduzirPedido(p, { tipo: 'precos', precos: new Map([[21, 4320]]) });
+    expect(barato.descontoTotalCentavos).toBe(4000);
+    expect(reduzirPedido(barato, { tipo: 'precos', precos: new Map([[21, 4320]]) })).toBe(barato);
+    // Desconto abaixo do teto não muda e o objeto é o mesmo em ações que não mexem no pedido.
+    const meio = reduzirPedido(aplicar(pedidoVazio('k'), add(top)), { tipo: 'descontoTotalMais', limite: 5500 });
+    expect(reduzirPedido(meio, { tipo: 'precos', precos: new Map() })).toBe(meio);
+  });
+
+  it('podeDiminuirDescontoTotal: o "−" só fica ligado com desconto acima de zero', () => {
+    const p = aplicar(pedidoVazio('k'), add(top));
+    expect(podeDiminuirDescontoTotal(p)).toBe(false);
+    expect(podeDiminuirDescontoTotal(reduzirPedido(p, { tipo: 'descontoTotalMais', limite: 5500 }))).toBe(true);
   });
 
   it('pedido vazio: sem bruto não há desconto', () => {

@@ -51,11 +51,11 @@ describe('MI-02 — etapa Cliente no começo da venda', () => {
   it('celular com máscara enquanto digita; incompleto desabilita "Escolher produtos"; completo habilita', async () => {
     const { usuario } = await abrirNaEtapaCliente();
     await usuario.type(campoCelular(), '3198765');
-    expect(campoCelular()).toHaveValue('(31) 9876-5');
+    expect(campoCelular()).toHaveValue('(31) 98765');
     expect(botao('Escolher produtos')).toBeDisabled();
     // 10 dígitos (fixo ou celular sem o 9) também não vale: o back exige 11 (pdv-cliente-telefone).
     await usuario.type(campoCelular(), '432');
-    expect(campoCelular()).toHaveValue('(31) 9876-5432');
+    expect(campoCelular()).toHaveValue('(31) 98765-432');
     expect(botao('Escolher produtos')).toBeDisabled();
     await usuario.type(campoCelular(), '1');
     expect(campoCelular()).toHaveValue('(31) 98765-4321');

@@ -31,12 +31,13 @@ describe('celular', () => {
 
   it('mascararCelular formata enquanto digita e corta em 11 dígitos', () => {
     expect(mascararCelular('')).toBe('');
-    expect(mascararCelular('3')).toBe('3');
-    expect(mascararCelular('31')).toBe('31');
+    // ADR-005 (pdv-mobile-atualizado): máscara progressiva do design, sempre no formato de 11 dígitos.
+    expect(mascararCelular('3')).toBe('(3');
+    expect(mascararCelular('31')).toBe('(31');
     expect(mascararCelular('319')).toBe('(31) 9');
-    expect(mascararCelular('319876')).toBe('(31) 9876');
-    expect(mascararCelular('3198765')).toBe('(31) 9876-5');
-    expect(mascararCelular('3132345678')).toBe('(31) 3234-5678');
+    expect(mascararCelular('3198765')).toBe('(31) 98765');
+    expect(mascararCelular('31987654')).toBe('(31) 98765-4');
+    expect(mascararCelular('3132345678')).toBe('(31) 32345-678');
     expect(mascararCelular('31987654321')).toBe('(31) 98765-4321');
     expect(mascararCelular('(31) 98765-43219999')).toBe('(31) 98765-4321');
   });

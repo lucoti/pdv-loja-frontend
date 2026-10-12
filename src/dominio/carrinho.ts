@@ -39,7 +39,8 @@ export interface Pedido {
 
 export type NovaVariacao = Omit<ItemCarrinho, 'chave' | 'qtd' | 'descPercent'>;
 
-// "limite" = saldo do SKU no catálogo: adicionar e "+" nunca passam dele (RN-24 do ERP, RF-004).
+// "limite" = saldo do SKU no catálogo: adicionar nunca passa dele (RN-24 do ERP, RF-004). O −/+ de
+// quantidade na linha saiu com o design atualizado (INV-012 alterado, pdv-mobile-atualizado).
 export type AcaoPedido =
   | { tipo: 'adicionar'; variacao: NovaVariacao; limite: number }
   | { tipo: 'mais'; chave: string; limite: number }
@@ -82,8 +83,26 @@ function alterarItem(p: Pedido, chave: string, mudar: (i: ItemCarrinho) => ItemC
   return { ...p, itens };
 }
 
-/** Reducer do pedido: cada ação corresponde a um toque na tela (regras 2, 4, 6 e 7 do handoff). */
+/**
+ * Reducer do pedido: cada ação corresponde a um toque na tela (regras 2, 4 e 7 do handoff). Depois de
+ * qualquer ação, o desconto no pedido é limitado ao bruto (ADR-004 da pdv-mobile-atualizado).
+ */
 export function reduzirPedido(p: Pedido, acao: AcaoPedido): Pedido {
+  return limitarDesconto(aplicar(p, acao));
+}
+
+/**
+ * O desconto acompanha o bruto para baixo (MI-24): ao tirar peça ou recarregar um preço menor, ele cai
+ * para o maior múltiplo de R$ 5 que cabe no bruto. Sem mudança devolve o mesmo objeto, para a ação
+ * `precos` sem preço novo continuar sem disparar render (INV-015).
+ */
+function limitarDesconto(p: Pedido): Pedido {
+  const bruto = calcularPedido(p).totais.brutoCentavos;
+  const teto = Math.floor(bruto / PASSO_DESCONTO_TOTAL_CENTAVOS) * PASSO_DESCONTO_TOTAL_CENTAVOS;
+  return p.descontoTotalCentavos > teto ? { ...p, descontoTotalCentavos: teto } : p;
+}
+
+function aplicar(p: Pedido, acao: AcaoPedido): Pedido {
   switch (acao.tipo) {
     case 'adicionar': {
       // Regra 2 do handoff: o mesmo SKU soma na linha existente em vez de criar outra.
@@ -94,11 +113,8 @@ export function reduzirPedido(p: Pedido, acao: AcaoPedido): Pedido {
       return { ...p, itens: [...p.itens, { ...acao.variacao, chave, qtd: 1, descPercent: 0 }] };
     }
     case 'mais':
-      // No limite o "+" não faz nada (o botão já aparece desabilitado). Se o saldo caiu abaixo da
-      // quantidade (catálogo recarregado), a quantidade fica como está até o vendedor diminuir.
       return alterarItem(p, acao.chave, (i) => ({ ...i, qtd: i.qtd < acao.limite ? i.qtd + 1 : i.qtd }));
     case 'menos':
-      // Regra 6: "−" com quantidade 1 remove o item.
       return alterarItem(p, acao.chave, (i) => (i.qtd > 1 ? { ...i, qtd: i.qtd - 1 } : null));
     case 'remover':
       return alterarItem(p, acao.chave, () => null);
@@ -110,8 +126,6 @@ export function reduzirPedido(p: Pedido, acao: AcaoPedido): Pedido {
       // Teto no bruto (MI-03, ADR-005): o passo de R$ 5 só entra se o desconto novo não passar do valor
       // das peças. O desconto continua múltiplo de R$ 5, como o servidor exige.
       const novo = p.descontoTotalCentavos + PASSO_DESCONTO_TOTAL_CENTAVOS;
-      // ATENÇÃO: o teto só vale no "+". Se o vendedor tirar peças depois, o desconto pode ficar acima do
-      // bruto; o total exibido para em 0 (calcularTotais) e o servidor faz a mesma conta (ADR-005).
       return novo <= acao.limite ? { ...p, descontoTotalCentavos: novo } : p;
     }
     case 'descontoTotalMenos':
@@ -144,6 +158,11 @@ export function calcularPedido(p: Pedido): { itens: Array<ItemCarrinho & ItemCal
 /** O "+" do desconto no pedido só vale se mais R$ 5 não passarem do valor bruto (ADR-005). */
 export function podeAumentarDescontoTotal(p: Pedido): boolean {
   return p.descontoTotalCentavos + PASSO_DESCONTO_TOTAL_CENTAVOS <= calcularPedido(p).totais.brutoCentavos;
+}
+
+/** O "−" do desconto no pedido fica desligado em zero (MI-24). */
+export function podeDiminuirDescontoTotal(p: Pedido): boolean {
+  return p.descontoTotalCentavos > 0;
 }
 
 /** Regra 7: fechar a venda exige ao menos um item e a forma de pagamento. */
