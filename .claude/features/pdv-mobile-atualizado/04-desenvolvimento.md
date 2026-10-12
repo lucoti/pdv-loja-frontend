@@ -72,7 +72,7 @@ Riscos de nomes nos testes novos: `botaoCor` (nome pode incluir o check), `botao
 | 2026-10-12 | Marca da cor escolhida sobre a amostra, não ao lado do nome | Na coluna de ~164px (390px de tela) o ícone ao lado deixava ~44px para o nome e partia "Marinho" no meio (conferência no navegador) | Desvio visual pequeno do design |
 | 2026-10-12 | Abaixo de 380px as abas ficam sem ícone | "Pedido" + ícone + bolinha não cabia em 107px (360px) nem em 92px (320px) | A 390px (design) os ícones aparecem |
 | 2026-10-12 | Abaixo de 360px a linha do desconto usa folgas e fontes menores; título com reticências | A 320px o título "Desconto" ficava ~7px mais largo que o espaço | Guardas automáticas em `pdv.ajustes` (AP-003) |
-| 2026-10-12 | `.claude/launch.json` criado (servidor `pdv-simulado` na porta 5199) para a conferência no navegador | Ferramenta de preview do Claude | Fora do commit; decidir se fica no repositório |
+| 2026-10-12 | `.claude/launch.json` criado (servidor `pdv-simulado` na porta 5199) para a conferência no navegador | Ferramenta de preview do Claude | Incluído no repositório (Lucas, 2026-10-12) |
 
 ## Mudanças de escopo
 nenhuma
@@ -102,4 +102,4 @@ nenhuma
 nenhuma
 
 ## Pronto para documentação e testes
-não
+sim — 2026-10-12, Lucas ("pode seguir, ajustes ok"; os três desvios visuais do log foram aceitos)

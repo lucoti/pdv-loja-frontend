@@ -2,7 +2,7 @@
 
 Slug: pdv-mobile-atualizado
 Modo: refatoracao
-Fase atual: desenvolvimento
+Fase atual: documentacao
 Status: em_andamento
 Incidente atual: nenhum
 Criado em: 2026-10-12 00:09
@@ -24,7 +24,7 @@ Valores válidos de "Incidente atual": número do incidente aberto na Fase 7 (ex
 | Requisitos | aprovada | Lucas | 2026-10-12 00:19 | 02-requisitos.md |
 | Arquitetura | aprovada | Lucas | 2026-10-12 00:28 | 03-arquitetura.md |
 | Desenvolvimento | em_andamento | | | 04-desenvolvimento.md |
-| Documentação | pendente | | | docs/vN/documentacao.md |
+| Documentação | em_andamento | | | docs/vN/documentacao.md |
 | Testes | pendente | | | 05-testes.md |
 | Implantação | pendente | | | 06-implantacao.md |
 | Aprendizado (só refatoração) | pendente | | | .claude/aprendizados.md |
