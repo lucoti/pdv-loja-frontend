@@ -314,9 +314,11 @@ describe('INV-014 — erro do servidor: pedido intacto e recarga do catálogo s�
       }),
     );
     await montarUmaPeca(usuario);
+    // Entrar em Produtos/Pedido também busca o catálogo; conta só o que o "Fechar venda" disparou.
+    const antes = req.contar('GET /api/catalogo');
     await usuario.click(botaoFechar());
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(`Mensagem ${codigo}`));
-    await waitFor(() => expect(req.contar('GET /api/catalogo')).toBe(recarrega ? 2 : 1));
+    await waitFor(() => expect(req.contar('GET /api/catalogo') - antes).toBe(recarrega ? 1 : 0));
     expect(itensPedido()).toHaveLength(1);
     await usuario.click(botaoFechar());
     await esperarVendaRegistrada();

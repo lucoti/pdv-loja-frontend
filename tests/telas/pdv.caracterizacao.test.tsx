@@ -86,7 +86,7 @@ describe('INV-001 — chamadas à API', () => {
     await usuario.click(botao('Pix'));
     await usuario.click(botaoFechar());
     await usuario.click(await screen.findByRole('button', { name: 'Nova venda' }));
-    await waitFor(() => expect(chamadas.filter((c) => c === 'GET /api/catalogo')).toHaveLength(2));
+    await waitFor(() => expect(chamadas.filter((c) => c === 'GET /api/catalogo')).toHaveLength(3));
     await usuario.click(botao('Dia'));
     await screen.findByTestId('venda-dia');
     servidor.events.removeAllListeners();
@@ -97,6 +97,7 @@ describe('INV-001 — chamadas à API', () => {
       'GET /api/vendedores',
       'POST /api/auth/login',
       'GET /api/catalogo',
+      'GET /api/catalogo', // entrar na aba Pedido busca o catálogo de novo
       'POST /api/vendas',
       'GET /api/catalogo',
       'GET /api/vendas/hoje',

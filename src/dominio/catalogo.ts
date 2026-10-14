@@ -10,12 +10,14 @@ export type Sku = Produto['skus'][number];
 export type CorSku = Sku['cor'];
 
 // ATENÇÃO: com lista de SKUs vazia, Math.min devolve Infinity. O back nunca manda produto sem SKU ativo
-// (GET /catalogo filtra), então aqui não há tratamento; se esse filtro mudar, trate a lista vazia.
+// e com saldo (GET /catalogo filtra), então aqui não há tratamento; se esse filtro mudar, trate a lista vazia.
 /** Menor preço entre os SKUs do produto ("a partir de"). */
 export function precoMinimo(produto: Produto): number {
   return Math.min(...produto.skus.map((s) => s.precoCentavos));
 }
 
+// Desde que o GET /catalogo passou a mandar só SKUs com saldo, isto não acontece com o catálogo do
+// servidor; fica como proteção (e o simulado de dev ainda manda produtos zerados).
 /** Todos os SKUs com saldo 0: o card mostra "sem estoque" (mas ainda abre, para consulta). */
 export function semEstoque(skus: Sku[]): boolean {
   return skus.every((s) => s.saldo <= 0);

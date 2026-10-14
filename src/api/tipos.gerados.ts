@@ -225,7 +225,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Catálogo ativo na ordem de exibição (RF-004) */
+        /**
+         * Catálogo ativo na ordem de exibição (RF-004)
+         * @description Lido do banco a cada chamada, sem cache (`Cache-Control: no-store`): o front busca de novo
+         *     sempre que uma tela de venda aparece, e o que o ERP cadastrou ou deu entrada já vem na próxima
+         *     leitura. Só SKUs ativos com saldo > 0.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -238,6 +243,7 @@ export interface paths {
                 /** @description OK */
                 200: {
                     headers: {
+                        "Cache-Control"?: "no-store";
                         [name: string]: unknown;
                     };
                     content: {
@@ -454,12 +460,12 @@ export interface components {
             expiraEm: string;
         };
         /**
-         * @description Catálogo do ERP (integração PDV-ERP): produtos ativos com ao menos um SKU ativo, cada um com
-         *     seus SKUs ativos (cor → tamanho) e o saldo em estoque. Tipos e produtos em ordem alfabética;
-         *     SKUs pela ordem da cor (número) e do tamanho (grade).
+         * @description Catálogo do ERP (integração PDV-ERP): só o que dá para vender agora — produtos ativos com ao
+         *     menos um SKU ativo e com saldo, cada um só com seus SKUs ativos e com saldo > 0 (cor → tamanho).
+         *     Tipos e produtos em ordem alfabética; SKUs pela ordem da cor (número) e do tamanho (grade).
          */
         Catalogo: {
-            /** @description Só os tipos que têm produto na lista. */
+            /** @description Só os tipos que têm produto na lista (com estoque). */
             tipos: {
                 /** @example 1 */
                 id: number;
@@ -509,7 +515,10 @@ export interface components {
             };
             /** @example 8900 */
             precoCentavos: number;
-            /** @example 5 */
+            /**
+             * @description Saldo no momento da leitura. O GET /catalogo só manda SKUs com saldo > 0; a venda confere de novo.
+             * @example 5
+             */
             saldo: number;
         };
         ItemVendaEntrada: {

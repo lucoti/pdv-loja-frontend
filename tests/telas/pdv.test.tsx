@@ -903,6 +903,8 @@ describe('RF-F10 — erros da API', () => {
 });
 
 describe('RF-006 — recarga silenciosa do catálogo (depois da venda, 409 e item_invalido)', () => {
+  // A tela também busca o catálogo ao entrar em Produtos/Pedido; por isso os testes medem só as buscas
+  // feitas a partir do "Fechar venda" (diferença em relação a `antes`).
   /** Conta os GET /catalogo feitos pela tela. */
   function contarCatalogo() {
     const conta = { n: 0 };
@@ -918,9 +920,10 @@ describe('RF-006 — recarga silenciosa do catálogo (depois da venda, 409 e ite
     await adicionarPeca(usuario, LEGGING_M_PRETO);
     await adicionarPeca(usuario, LEGGING_M_PRETO);
     await usuario.click(aba('Pix'));
+    const antes = conta.n;
     await usuario.click(botaoFechar());
     await screen.findByRole('dialog');
-    await waitFor(() => expect(conta.n).toBe(2));
+    await waitFor(() => expect(conta.n - antes).toBe(1));
     expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
     await usuario.click(aba('Nova venda'));
     await usuario.click(aba('Calças'));
@@ -986,13 +989,14 @@ describe('RF-006 — recarga silenciosa do catálogo (depois da venda, 409 e ite
     await usuario.click(aba('Pix'));
     const top = simulado.estado.catalogo.produtos.find((p) => p.numero === 2)!;
     top.skus = top.skus.filter((k) => k.id !== skuId(2, 3, 1));
+    const antes = conta.n;
     await usuario.click(botaoFechar());
     expect(await screen.findByRole('alert')).toHaveTextContent('Item 1: produto indisponível.');
     expect(await within(itensPedido()[0]!).findByText('Sem estoque — tire a peça')).toBeInTheDocument();
     // O preço da linha fica o que era (SKU ausente do catálogo novo).
     expect(texto(itensPedido()[0]!)).toContain('R$ 55,00');
     expect(screen.getByRole('alert')).toHaveTextContent('Item 1: produto indisponível.');
-    expect(conta.n).toBe(2);
+    expect(conta.n - antes).toBe(1);
     servidor.events.removeAllListeners();
   });
 
@@ -1002,10 +1006,11 @@ describe('RF-006 — recarga silenciosa do catálogo (depois da venda, 409 e ite
     await adicionarPeca(usuario, TOP_NADADOR_P_VINHO);
     servidor.use(http.post('*/api/vendas', () => HttpResponse.json({ erro: { codigo: 'entrada_invalida', mensagem: 'Dados inválidos.' } }, { status: 400 })));
     await usuario.click(aba('Pix'));
+    const antes = conta.n;
     await usuario.click(botaoFechar());
     await screen.findByRole('alert');
     servidor.events.removeAllListeners();
-    expect(conta.n).toBe(1);
+    expect(conta.n - antes).toBe(0);
   });
 
   it('se o tipo escolhido some na recarga, a aba Produtos volta para o primeiro tipo', async () => {
@@ -1026,6 +1031,37 @@ describe('RF-006 — recarga silenciosa do catálogo (depois da venda, 409 e ite
     expect(screen.queryByRole('button', { name: 'Tops' })).not.toBeInTheDocument();
     expect(aba('Bermudas')).toHaveAttribute('aria-pressed', 'true');
     expect(aba(/^Bermuda Ciclista/)).toBeInTheDocument();
+  });
+
+  // O que o ERP cadastra ou dá entrada aparece sem recarregar a página: a tela busca o catálogo ao
+  // entrar em Produtos/Pedido e quando o app volta a ficar visível; a aba Dia não busca.
+  it('entrar em Produtos ou Pedido e voltar ao app buscam o catálogo; a aba Dia não', async () => {
+    const conta = contarCatalogo();
+    const { usuario, simulado } = await abrirPdv();
+    expect(conta.n).toBe(1);
+    // Produto novo no ERP (com estoque) enquanto o PDV está aberto.
+    const novo = structuredClone(simulado.estado.catalogo.produtos.find((p) => p.numero === 1)!);
+    Object.assign(novo, { id: 99, numero: 99, nome: 'Calça Flare' });
+    simulado.estado.catalogo.produtos.push(novo);
+    expect(screen.queryByRole('button', { name: /^Calça Flare/ })).not.toBeInTheDocument();
+    await usuario.click(aba('Dia'));
+    expect(conta.n).toBe(1);
+    await usuario.click(aba('Produtos'));
+    await waitFor(() => expect(conta.n).toBe(2));
+    await usuario.click(aba('Calças'));
+    expect(await screen.findByRole('button', { name: /^Calça Flare/ })).toBeInTheDocument();
+    await usuario.click(aba(/^Pedido/));
+    await waitFor(() => expect(conta.n).toBe(3));
+    // O celular saiu do navegador e voltou.
+    const visibilidade = vi.spyOn(document, 'visibilityState', 'get');
+    visibilidade.mockReturnValue('hidden');
+    act(() => void document.dispatchEvent(new Event('visibilitychange')));
+    expect(conta.n).toBe(3);
+    visibilidade.mockReturnValue('visible');
+    act(() => void document.dispatchEvent(new Event('visibilitychange')));
+    await waitFor(() => expect(conta.n).toBe(4));
+    visibilidade.mockRestore();
+    servidor.events.removeAllListeners();
   });
 
   it('falha na recarga silenciosa mantém o catálogo atual na tela (sem erro de carregamento)', async () => {

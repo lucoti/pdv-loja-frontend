@@ -343,8 +343,10 @@ describe('INV-015 — a recarga do catálogo atualiza o preço das linhas', () =
     const noSimulado = simulado.estado.catalogo.produtos.flatMap((p) => p.skus).find((k) => k.id === ID_LEGGING_M_PRETO)!;
     noSimulado.saldo = 1;
     noSimulado.precoCentavos = 9900;
+    // Entrar em Produtos/Pedido também busca o catálogo; conta só o que o "Fechar venda" disparou.
+    const antes = req.conta.catalogo;
     await fecharComErro(usuario, req);
-    await waitFor(() => expect(req.conta.catalogo).toBe(2));
+    await waitFor(() => expect(req.conta.catalogo - antes).toBe(1));
     await waitFor(() => expect(sem_nbsp(botaoFechar().textContent)).toContain('R$ 198,00'));
   });
 });
@@ -386,8 +388,9 @@ describe('INV-017 — tipo escolhido que some numa recarga volta para o primeiro
         return HttpResponse.json(catalogo);
       }),
     );
+    const antes = req.conta.catalogo;
     await fecharComSucesso(usuario, req);
-    await waitFor(() => expect(req.conta.catalogo).toBe(2));
+    await waitFor(() => expect(req.conta.catalogo - antes).toBe(1));
     await comecarNovaVenda(usuario);
     // Sobe para a lista de produtos (Peça/Tecido no design atualizado) sem escolher tipo.
     await abrirListaDeProdutos(usuario);

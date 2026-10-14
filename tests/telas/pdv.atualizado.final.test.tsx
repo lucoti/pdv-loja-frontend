@@ -88,9 +88,11 @@ describe('ADR-004 / MI-24 — o desconto acompanha o bruto para baixo, na tela e
     const noSimulado = simulado.estado.catalogo.produtos.flatMap((p) => p.skus).find((k) => k.id === ID_TOP_P_VINHO)!;
     noSimulado.saldo = 1;
     noSimulado.precoCentavos = 4320;
+    // Entrar em Produtos/Pedido também busca o catálogo; conta só o que o "Fechar venda" disparou.
+    const antes = req.conta.catalogo;
     await usuario.click(botaoFechar());
     await esperarErroAoFechar();
-    await waitFor(() => expect(req.conta.catalogo).toBe(2));
+    await waitFor(() => expect(req.conta.catalogo - antes).toBe(1));
     // Bruto novo R$ 86,40 → desconto R$ 85,00 (não R$ 86,40, não R$ 110,00).
     await waitFor(() => expect(valorDesconto()).toBe('− R$ 85,00'));
     expect(texto(botaoFechar().lastElementChild)).toBe('R$ 1,40');

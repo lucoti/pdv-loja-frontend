@@ -40,11 +40,24 @@ export function Pdv() {
   const [pedido, despacharPedido] = useReducer(reduzirPedido, undefined, () => pedidoVazio(crypto.randomUUID()));
   const pecas = calcularPedido(pedido).totais.pecas;
 
+  // O catálogo é buscado de novo sempre que uma tela de venda aparece: ao abrir o PDV (login ou recarga
+  // da página, pelo useCarregar), ao entrar nas abas Produtos e Pedido e quando o app volta a ficar
+  // visível (celular que saiu e voltou ao navegador). Assim o que o ERP cadastrou ou deu entrada aparece
+  // sem o vendedor recarregar a página. A busca é silenciosa e não mexe no pedido.
+  useEffect(() => {
+    const aoVoltar = () => {
+      if (document.visibilityState === 'visible') atualizarCatalogo();
+    };
+    document.addEventListener('visibilitychange', aoVoltar);
+    return () => document.removeEventListener('visibilitychange', aoVoltar);
+  }, [atualizarCatalogo]);
+
   // A troca de aba não tem trava em ref (ADR-003): grava direto no estado e não envia nada. Fechar o
   // formulário do cliente aqui é o que faz a troca de aba descartar a edição (MI-21).
   const trocarAba = (nova: Aba) => {
     setAba(nova);
     setEditandoCliente(false);
+    if (nova !== 'dia') atualizarCatalogo();
   };
 
   // As abas são desenhadas uma vez só, fora do ramo que depende do catálogo (ADR-001): quando a carga
@@ -82,7 +95,7 @@ export function Pdv() {
 /** Conteúdo do PDV com o catálogo já carregado: escolha da peça, pedido, cliente e fechamento. */
 function Venda(props: {
   catalogo: Catalogo;
-  /** Recarrega o catálogo sem sair da tela (saldos novos depois de um 409). */
+  /** Recarrega o catálogo sem sair da tela (saldos novos depois de uma venda ou de um 409). */
   atualizarCatalogo: () => void;
   aba: Aba;
   setAba: (aba: Aba) => void;

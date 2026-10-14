@@ -43,7 +43,11 @@ export interface OpcoesSimulado {
   pins?: Record<string, string>;
   /** Já começa com sessão aberta para este vendedor. */
   sessaoDe?: string;
-  /** Catálogo inicial (padrão: CATALOGO). É copiado: as vendas baixam o saldo só nesta cópia. */
+  /**
+   * Catálogo inicial (padrão: CATALOGO). É copiado: as vendas baixam o saldo só nesta cópia.
+   * ATENÇÃO: diferente do back, o simulado devolve também SKUs zerados, para os testes cobrirem a
+   * tela "estoque 0" (proteção); o GET /catalogo real só manda SKUs com saldo > 0.
+   */
   catalogo?: Catalogo;
 }
 
@@ -167,7 +171,7 @@ export function criarSimulado(opcoes: OpcoesSimulado = {}) {
       return new HttpResponse(null, { status: 204 });
     }),
 
-    http.get('*/api/catalogo', () => (vendedorDaSessao() ? HttpResponse.json(estado.catalogo) : semSessao())),
+    http.get('*/api/catalogo', () => (vendedorDaSessao() ? HttpResponse.json(estado.catalogo, { headers: { 'Cache-Control': 'no-store' } }) : semSessao())),
 
     http.post('*/api/vendas', async ({ request }) => {
       const vendedor = vendedorDaSessao();
