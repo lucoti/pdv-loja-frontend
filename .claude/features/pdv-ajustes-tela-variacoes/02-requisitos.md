@@ -26,10 +26,10 @@ No celular, a grade de tamanhos estoura a largura da tela e fica desalinhada; "s
 ### Comportamentos que devem ser preservados
 | ID | Comportamento | Como verificar |
 |---|---|---|
-| INV-010 | Tamanho com saldo 0 aparece desabilitado e não pode ser escolhido. | Teste de tela: botão do tamanho `disabled`. |
+| INV-010 (alterado) | Tamanho sem saldo não aparece (o `GET /catalogo` só manda SKUs com saldo > 0); todo tamanho que aparece pode ser escolhido. | Teste de tela: nenhum botão de tamanho `disabled` (`pdv.caracterizacao.test.tsx`). |
 | INV-011 | Cada tamanho mostra sigla, preço e saldo, nessa ordem, e os tamanhos mantêm a ordem de hoje. | Teste de tela: texto e ordem dos botões. |
 | INV-012 | Tamanhos só aparecem depois de escolher a cor; ao trocar de cor, o tamanho escolhido se mantém se tiver saldo na cor nova. | Testes existentes de `pdv.test.tsx`. |
-| INV-013 | Cor com todos os tamanhos zerados mostra "sem estoque" e continua clicável; o produto sem estoque mostra "sem estoque" na lista e abre para consulta. | Testes existentes (`Pretosem estoque`, card do produto). |
+| INV-013 (alterado) | O PDV mostra só o que tem estoque: produto sem nenhum SKU com saldo não aparece na lista (e o tipo sem produto some); cor sem nenhum tamanho com saldo não aparece; tamanho com saldo 0 não aparece. Não há tela de consulta com "estoque 0". | Testes de rota/repositório do back (catálogo sem SKUs zerados) e teste de tela "INV-013 — produto, cor e tamanho sem estoque não aparecem" (`pdv.caracterizacao.test.tsx`). |
 | INV-014 | Linha de apoio acima do botão fica igual: "Falta escolher: …", resumo com preço, "Só N em estoque — já no pedido". Avisos de limite do Pedido também ficam iguais. | Testes existentes de `resumoEscolha` e do Pedido. |
 | INV-015 | Botão de voltar, nome do produto e tecido na tela de cor/tamanho ficam iguais. | Testes existentes. |
 | INV-016 | As três abas de baixo, o contador "Pedido (N)" e os botões "Adicionar ao pedido" / "Fechar venda" ficam iguais. | Testes existentes. |
@@ -62,7 +62,8 @@ Também pode mudar: estrutura interna dos componentes, nomes de classes CSS, ass
 
 | ID | Mudança | Motivo | Aprovado por | Data |
 |---|---|---|---|---|
-| | | | | |
+| INV-013 | Produto, cor e tamanho sem estoque deixam de aparecer no PDV (antes: produto e cor zerados apareciam e abriam para consulta, com os tamanhos em "estoque 0"). O filtro é do back (`GET /catalogo` só com SKUs ativos e saldo > 0); o simulado do front filtra igual. | Decisão do Lucas: o PDV deve mostrar só SKUs disponíveis e com estoque. | Lucas | 2026-10-13 |
+| INV-010 | Sai o tamanho desligado: sem saldo, o tamanho nem aparece. | Consequência do INV-013 alterado. | Lucas | 2026-10-13 |
 
 ## Aprendizados aplicados
 Nenhum nesta fase (AP-001 não se aplica: não há ação disparada sem botão; AP-002 é da Implantação).

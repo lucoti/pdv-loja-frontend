@@ -29,8 +29,8 @@ Levar o front do PDV ao design atualizado (`PDV-loja/PDV Loja Mobile-atualizado.
 | INV-012 (alterado) | Mesmo SKU soma na linha existente; "Adicionar ao pedido" nunca passa do saldo, contando o que já está no pedido. O −/+ de quantidade deixa de existir (ver MI-24). | Testes de domínio (`carrinho.test.ts`) e de tela. |
 | INV-013 | Fechar exige ao menos uma peça e a forma de pagamento; sem envio duplo com um envio em andamento; "Cancelar pedido" desligado durante o envio. | Teste de tela: botão desligado sem peça/pagamento; um único `POST` com dois toques. |
 | INV-014 (alterado) | Erro do servidor fica na tela com o pedido intacto e some na próxima mudança do pedido; 409 `sem_estoque` ou 400 `item_invalido` recarregam o catálogo. Peça acima do saldo depois de recarga: a linha mostra "Só N em estoque — tire a peça e adicione de novo" (saldo > 0) ou "Sem estoque — tire a peça" (saldo 0). | Testes de tela com respostas de erro do simulado. |
-| INV-015 | Toda recarga do catálogo atualiza o preço das linhas do pedido; fechar a venda recarrega o catálogo. | Teste de domínio (ação `precos`) e de tela. |
-| INV-016 | Tamanho sem saldo aparece desligado (tracejado); trocar de cor mantém o tamanho se ele tiver saldo na cor nova; cada tamanho mostra "estoque N". | Testes de tela de cor/tamanho. |
+| INV-015 (alterado) | Toda recarga do catálogo atualiza o preço das linhas do pedido. O catálogo é buscado de novo sempre que uma tela de venda aparece: ao abrir o PDV (login ou recarga da página), ao entrar nas abas Produtos e Pedido, quando o app volta a ficar visível e ao fechar a venda; a aba Dia não busca. O back responde sem cache (`Cache-Control: no-store`). | Teste de domínio (ação `precos`) e de tela ("entrar em Produtos ou Pedido e voltar ao app buscam o catálogo"). |
+| INV-016 (alterado) | Tamanho sem saldo não aparece (ver INV-013 da `pdv-ajustes-tela-variacoes`); trocar de cor mantém o tamanho se ele existir na cor nova; cada tamanho mostra "estoque N". | Testes de tela de cor/tamanho. |
 | INV-017 | Primeiro tipo do catálogo já vem escolhido; se uma recarga tirar o tipo escolhido, volta para o primeiro. | Teste de tela. |
 | INV-018 | Aba Dia funciona com o catálogo carregando ou em falha. | Teste de tela. |
 | INV-019 | Pedido só em memória; nada no armazenamento do navegador. | Inspeção: nenhum uso de `localStorage`/`sessionStorage` no PDV. |
@@ -65,6 +65,8 @@ Levar o front do PDV ao design atualizado (`PDV-loja/PDV Loja Mobile-atualizado.
 | INV-014 | Aviso de saldo na linha passa a ser "Só N em estoque — tire a peça e adicione de novo" / "Sem estoque — tire a peça" (antes "…exclua o item"), já que não há mais −. | Fim do −/+ (MI-24); decisão B. | Lucas | 2026-10-12 |
 | INV-011 | "Cancelar pedido" também zera o cliente e volta para Produtos. | Decisões 1 e A (MI-25). | Lucas | 2026-10-12 |
 | INV-020 | Bug corrigido: abas desenhadas uma vez acima dos ramos (ADR-001), o toque numa aba no fim da carga deixa de se perder. | Consequência do design com abas no topo; ninguém dependia do bug. | Lucas (Arquitetura) | 2026-10-12 |
+| INV-015 | O catálogo passa a ser buscado também ao entrar em Produtos/Pedido e quando o app volta a ficar visível (antes: só ao abrir o PDV, depois da venda e em 409/400). Os testes que contavam buscas passam a medir só as disparadas pelo "Fechar venda". | Decisão do Lucas: o que o ERP cadastra deve aparecer no PDV toda vez que a tela é carregada. | Lucas | 2026-10-13 |
+| INV-016 | Sai o tamanho desligado (tracejado): sem saldo, o tamanho nem aparece; o catálogo só traz SKUs com saldo > 0. | Decisão do Lucas: o PDV mostra só SKUs disponíveis e com estoque (INV-013 da `pdv-ajustes-tela-variacoes`). | Lucas | 2026-10-13 |
 
 ## Aprendizados aplicados
 - AP-001: troca de aba, Nova venda, Cancelar e envio continuam com travas lidas de ref.
