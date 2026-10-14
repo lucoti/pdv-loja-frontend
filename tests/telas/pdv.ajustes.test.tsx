@@ -28,7 +28,7 @@ async function abrirPdv(catalogo?: Catalogo) {
 }
 
 /** Caso de referência (MUD-02): 6 tamanhos, preço de 3 dígitos; saldos positivo, zero e negativo. */
-const SALDOS = [3, 0, 12, 7, 1, -4];
+const SALDOS = [3, 2, 12, 7, 1, 4];
 function catalogoSeisTamanhos(): Catalogo {
   const catalogo = structuredClone(CATALOGO);
   const bermuda = catalogo.produtos.find((p) => p.numero === 3)!;
@@ -63,12 +63,12 @@ function declaracoesDoElemento(el: Element): Record<string, string> {
 }
 
 describe('MUD-01 — saldo do tamanho como "estoque N"', () => {
-  it('cada tamanho mostra "estoque N"; zerado e negativo mostram "estoque 0"; nada de "un." nem "sem estoque" no tamanho', async () => {
+  it('cada tamanho mostra "estoque N"; nada de "un." nem "sem estoque" no tamanho', async () => {
     const { usuario } = await abrirPdv(catalogoSeisTamanhos());
     await usuario.click(botao(/^Bermuda Ciclista/));
     await usuario.click(botaoCor('Preto'));
     const tamanhos = botoesTamanho();
-    expect(tamanhos.map((b) => texto(b.children[1]))).toEqual(['estoque 3', 'estoque 0', 'estoque 12', 'estoque 7', 'estoque 1', 'estoque 0']);
+    expect(tamanhos.map((b) => texto(b.children[1]))).toEqual(['estoque 3', 'estoque 2', 'estoque 12', 'estoque 7', 'estoque 1', 'estoque 4']);
     for (const b of tamanhos) expect(texto(b)).not.toMatch(/un\.|sem estoque|-\d/);
   });
 });

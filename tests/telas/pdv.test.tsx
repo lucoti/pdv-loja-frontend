@@ -109,14 +109,14 @@ const skuNoSimulado = (simulado: { estado: { catalogo: Catalogo } }, id: number)
 
 describe('RF-002 — aba Produtos com os tipos do ERP', () => {
   // MI-22 (pdv-mobile-atualizado): cartão "1 Peça" com os tipos e "2 Tecido" com os produtos do tipo.
-  it('tipos com produto vendável; primeiro selecionado; Tecido só com o produto (sem preço nem "sem estoque"); tipos filtram', async () => {
+  it('tipos com produto vendável; primeiro selecionado; Tecido só com produto com estoque (sem preço); tipos filtram', async () => {
     const { usuario } = await abrirPdv();
     const chips = ['Bermudas', 'Calças', 'Tops'];
     for (const t of chips) expect(aba(t)).toBeInTheDocument();
     expect(aba('Bermudas')).toHaveAttribute('aria-pressed', 'true');
     expect(aba('Calças')).toHaveAttribute('aria-pressed', 'false');
     const lista = () => within(screen.getByRole('region', { name: 'Tecido' })).getAllByRole('button').map(texto);
-    expect(lista()).toEqual(['Bermuda Ciclista', 'Short Curto']);
+    expect(lista()).toEqual(['Bermuda Ciclista']); // Short Curto, todo zerado, não aparece
     await usuario.click(aba('Calças'));
     expect(aba('Calças')).toHaveAttribute('aria-pressed', 'true');
     expect(aba('Bermudas')).toHaveAttribute('aria-pressed', 'false');
@@ -142,18 +142,6 @@ describe('RF-002 — aba Produtos com os tipos do ERP', () => {
     await usuario.click(aba('Adicionar ao pedido'));
     await usuario.click(aba(/^Pedido/));
     expect(texto(itensPedido()[0]!)).toContain('R$ 99,00');
-  });
-
-  it('produto sem estoque abre para consulta, com todos os tamanhos desabilitados e sem "Adicionar"', async () => {
-    const { usuario } = await abrirPdv();
-    await usuario.click(aba(/^Short Curto/));
-    expect(screen.getByText('Short Curto')).toBeInTheDocument();
-    await usuario.click(botaoCor('Preto'));
-    for (const t of ['P', 'M', 'G', 'GG']) {
-      expect(botaoTamanho(t)).toBeDisabled();
-      expect(texto(botaoTamanho(t))).toContain('estoque 0');
-    }
-    expect(screen.queryByRole('button', { name: 'Adicionar ao pedido' })).not.toBeInTheDocument();
   });
 
   it('catálogo do ERP vazio: aviso "Nenhum produto cadastrado no ERP."', async () => {
@@ -182,7 +170,7 @@ describe('RF-003 — variações: cor → tamanho', () => {
     expect(screen.getAllByRole('button', { name: /^(P|M|G|GG)estoque/ }).map(texto)).toEqual(['Pestoque 1', 'Mestoque 5', 'Gestoque 5', 'GGestoque 5']);
   });
 
-  it('SKU inativo não aparece (Bermuda Vinho sem GG) e tamanho sem saldo aparece desabilitado', async () => {
+  it('SKU inativo (Bermuda Vinho GG) e SKU sem saldo (Top Vinho GG) não aparecem', async () => {
     const { usuario } = await abrirPdv();
     await usuario.click(aba(/^Bermuda Ciclista/));
     await usuario.click(botaoCor('Vinho'));
@@ -191,28 +179,8 @@ describe('RF-003 — variações: cor → tamanho', () => {
     await usuario.click(aba('Tops'));
     await usuario.click(aba(/^Top Nadador/));
     await usuario.click(botaoCor('Vinho'));
-    expect(botaoTamanho('GG')).toBeDisabled();
-    expect(texto(botaoTamanho('GG'))).toBe('GGestoque 0');
-    await usuario.click(botaoTamanho('GG'));
-    expect(botaoTamanho('GG')).toHaveAttribute('aria-pressed', 'false');
-  });
-
-  // MI-06 (decisão do Lucas: seguir o design): a cor zerada não avisa mais "sem estoque"; o saldo
-  // aparece nos tamanhos, todos "estoque 0" e desabilitados.
-  it('cor com todos os tamanhos zerados: botão da cor só com o nome; tamanhos "estoque 0" desabilitados', async () => {
-    const catalogo = structuredClone(CATALOGO);
-    for (const k of catalogo.produtos.find((p) => p.numero === 3)!.skus) if (k.cor.nome === 'Preto') k.saldo = 0;
-    usarSimulado({ sessaoDe: 'carlos', catalogo });
-    const { usuario } = abrirApp();
-    await esperarCatalogo();
-    await usuario.click(aba(/^Bermuda Ciclista/));
-    expect(texto(botaoCor('Preto'))).toBe('Preto');
-    expect(texto(botaoCor('Marinho'))).toBe('Marinho');
-    await usuario.click(botaoCor('Preto'));
-    for (const t of ['P', 'M', 'G', 'GG']) {
-      expect(botaoTamanho(t)).toBeDisabled();
-      expect(texto(botaoTamanho(t))).toBe(`${t}estoque 0`);
-    }
+    expect(screen.getAllByRole('button', { name: /^(P|M|G|GG)estoque/ }).map((b) => texto(b).split('estoque')[0])).toEqual(['P', 'M', 'G']);
+    for (const b of screen.getAllByRole('button', { name: /^(P|M|G|GG)estoque/ })) expect(b).toBeEnabled();
   });
 
   it('estampa sem hex usa a miniatura da foto como amostra', async () => {
@@ -226,7 +194,7 @@ describe('RF-003 — variações: cor → tamanho', () => {
     expect(botaoCor('Marinho').querySelector('img')).toBeNull();
   });
 
-  it('trocar de cor mantém o tamanho se ele tem saldo na cor nova; senão limpa a escolha', async () => {
+  it('trocar de cor mantém o tamanho se ele existe na cor nova; senão limpa a escolha', async () => {
     const { usuario } = await abrirPdv();
     await usuario.click(aba('Tops'));
     await usuario.click(aba(/^Top Nadador/));
@@ -235,8 +203,9 @@ describe('RF-003 — variações: cor → tamanho', () => {
     await usuario.click(botaoCor('Marinho'));
     expect(botaoTamanho('M')).toHaveAttribute('aria-pressed', 'true');
     await usuario.click(botaoTamanho('GG'));
-    await usuario.click(botaoCor('Vinho')); // Vinho GG tem saldo 0
-    expect(botaoTamanho('GG')).toHaveAttribute('aria-pressed', 'false');
+    await usuario.click(botaoCor('Vinho')); // Vinho GG tem saldo 0: não aparece
+    expect(screen.queryByRole('button', { name: /^GGestoque/ })).not.toBeInTheDocument();
+    for (const t of ['P', 'M', 'G']) expect(botaoTamanho(t)).toHaveAttribute('aria-pressed', 'false');
     // Sem tamanho escolhido não há barra de adicionar (MI-23).
     expect(screen.queryByRole('button', { name: 'Adicionar ao pedido' })).not.toBeInTheDocument();
   });

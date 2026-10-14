@@ -15,7 +15,8 @@ export const PINS: Record<string, string> = { carlos: '12345678' };
 
 /*
  * Catálogo no formato do ERP, igual ao SEED_ERP do back (backend/src/banco/seed.ts): 4 produtos × 3
- * cores × 4 tamanhos, saldo 5 com exceções para exercitar "sem estoque" e "só N em estoque".
+ * cores × 4 tamanhos, saldo 5 com exceções para exercitar "só N em estoque" e a venda recusada por falta de estoque.
+ * Os SKUs zerados ficam no estado do simulado, mas o GET /catalogo os tira, como o back.
  */
 const TIPOS = [
   { id: 1, nome: 'Calças' },

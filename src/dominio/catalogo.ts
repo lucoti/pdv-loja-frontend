@@ -16,13 +16,6 @@ export function precoMinimo(produto: Produto): number {
   return Math.min(...produto.skus.map((s) => s.precoCentavos));
 }
 
-// Desde que o GET /catalogo passou a mandar só SKUs com saldo, isto não acontece com o catálogo do
-// servidor; fica como proteção (e o simulado de dev ainda manda produtos zerados).
-/** Todos os SKUs com saldo 0: o card mostra "sem estoque" (mas ainda abre, para consulta). */
-export function semEstoque(skus: Sku[]): boolean {
-  return skus.every((s) => s.saldo <= 0);
-}
-
 /** Cores do produto, sem repetição, na ordem do catálogo (número da cor no ERP). */
 export function coresDoProduto(produto: Produto): CorSku[] {
   const vistas = new Map<number, CorSku>();
@@ -48,8 +41,7 @@ export function saldosPorSku(catalogo: Catalogo): Map<number, number> {
   return new Map(catalogo.produtos.flatMap((p) => p.skus.map((s) => [s.id, s.saldo] as const)));
 }
 
-// Saldo zero ou negativo vira "estoque 0" (o botão do tamanho também fica desabilitado, em
-// Variacoes.tsx, que é o único lugar que usa esta função). Cabe em uma linha do botão do tamanho.
-// O "sem estoque" da cor e o do card do produto são textos escritos nas próprias telas, não vêm daqui.
-/** "estoque 3" / "estoque 0" — quantidade em estoque exibida em cada tamanho. */
-export const textoSaldo = (saldo: number) => `estoque ${Math.max(0, saldo)}`;
+// O GET /catalogo só manda SKUs com saldo, então o número é sempre positivo. Cabe em uma linha do
+// botão do tamanho (Variacoes.tsx, único uso).
+/** "estoque 3" — quantidade em estoque exibida em cada tamanho. */
+export const textoSaldo = (saldo: number) => `estoque ${saldo}`;

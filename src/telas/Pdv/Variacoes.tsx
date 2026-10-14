@@ -33,16 +33,15 @@ export function Variacoes(props: {
   aoVoltar: () => void;
 }) {
   const { produto, escolha, aoMudar } = props;
-  // Sem cor escolhida a lista fica vazia e o cartão Tamanho nem é desenhado. Com cor, vêm todos os SKUs
-  // dela, inclusive os zerados, na ordem da grade de tamanhos do ERP.
+  // Sem cor escolhida a lista fica vazia e o cartão Tamanho nem é desenhado. Com cor, vêm os SKUs dela
+  // na ordem da grade de tamanhos do ERP — todos com saldo, porque o GET /catalogo só manda esses.
   // Os botões ficam em `.gradeTamanhos` (Pdv.module.css): 4 colunas iguais com minmax(0, 1fr), que
   // encolhem com a tela em vez de passar da borda (AP-003). A 320px "estoque 12" quebra em duas linhas.
   const tamanhos = escolha.corId === null ? [] : skusDaCor(produto, escolha.corId);
 
-  // Ao trocar de cor, o tamanho escolhido continua se existir com estoque na cor nova (INV-016).
+  // Ao trocar de cor, o tamanho escolhido continua se existir na cor nova (INV-016).
   const escolherCor = (corId: number) => {
-    const mesmo = skuDe(produto, corId, escolha.tamanho);
-    aoMudar({ corId, tamanho: mesmo && mesmo.saldo > 0 ? escolha.tamanho : null });
+    aoMudar({ corId, tamanho: skuDe(produto, corId, escolha.tamanho) ? escolha.tamanho : null });
   };
 
   return (
@@ -59,7 +58,6 @@ export function Variacoes(props: {
 
       <Cartao numero={3} titulo="Cor">
         <div className={`${s.cartaoCorpo} ${s.grade2}`}>
-          {/* Cor sem nenhum tamanho com saldo continua clicável, para consulta; o saldo aparece nos tamanhos. */}
           {coresDoProduto(produto).map((cor) => (
             <button key={cor.id} type="button" className={`${c.tile} ${s.cor}`} aria-pressed={escolha.corId === cor.id} onClick={() => escolherCor(cor.id)}>
               {/* A marca da cor escolhida fica sobre a amostra, e não ao lado do nome como no design: na
@@ -79,13 +77,11 @@ export function Variacoes(props: {
         <Cartao numero={4} titulo="Tamanho">
           <div className={`${s.cartaoCorpo} ${s.gradeTamanhos}`}>
             {tamanhos.map((sku) => (
-              // Sem saldo não vende (RN-24 do ERP): o tamanho aparece, mas desligado (tracejado).
               <button
                 key={sku.id}
                 type="button"
                 className={`${c.tile} ${s.tamanho}`}
                 aria-pressed={escolha.tamanho === sku.tamanho.sigla}
-                disabled={sku.saldo <= 0}
                 onClick={() => aoMudar({ ...escolha, tamanho: sku.tamanho.sigla })}
               >
                 <span className={s.tamanhoSigla}>{sku.tamanho.sigla}</span>

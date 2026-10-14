@@ -52,7 +52,7 @@ describe('nomeNaLista — nome do produto na lista sem repetir o tipo', () => {
     const { usuario } = await abrirPdv(catalogo);
     await usuario.click(botao('Bermudas'));
     const grupo = within(screen.getByRole('region', { name: 'Tecido' }));
-    expect(grupo.getAllByRole('button').map((b) => texto(b))).toEqual(['Ciclista Suplex', 'Short Curto']);
+    expect(grupo.getAllByRole('button').map((b) => texto(b))).toEqual(['Ciclista Suplex']); // Short Curto zerado não aparece
     await usuario.click(grupo.getByRole('button', { name: 'Ciclista Suplex' }));
     // MI-23: título com a peça (tipo) e, embaixo, o tecido sem repetir o tipo.
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Bermudas');
@@ -80,7 +80,9 @@ describe('complementos dos cartões Peça e Tecido', () => {
   });
 
   it('catálogo de exemplo: o complemento acompanha o tipo escolhido', async () => {
-    const { usuario } = await abrirPdv(structuredClone(CATALOGO));
+    const catalogo = structuredClone(CATALOGO);
+    for (const k of catalogo.produtos.find((p) => p.numero === 4)!.skus) k.saldo = 3; // Short Curto com estoque
+    const { usuario } = await abrirPdv(catalogo);
     await usuario.click(botao('Bermudas'));
     expect(complemento('Peça')).toBe('Bermudas');
     expect(complemento('Tecido')).toBe('2 opções');

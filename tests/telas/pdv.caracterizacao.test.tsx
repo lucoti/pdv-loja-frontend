@@ -20,11 +20,8 @@ import { abrirApp, adicionarPeca, botaoCor, botaoFechar, botaoTamanho, enviarPin
 const botao = (nome: RegExp | string) => screen.getByRole('button', { name: nome });
 const texto = (el: Element | null | undefined) => sem_nbsp(el?.textContent);
 
-/**
- * Ponto único que depende de COMO o saldo aparece dentro do tamanho: "estoque N", com "estoque 0"
- * para saldo zerado ou negativo (MUD-01).
- */
-const mostraSaldo = (saldo: number) => new RegExp(`^estoque ${Math.max(0, saldo)}$`);
+/** Ponto único que depende de COMO o saldo aparece dentro do tamanho: "estoque N" (MUD-01). */
+const mostraSaldo = (saldo: number) => new RegExp(`^estoque ${saldo}$`);
 
 /** Botões de tamanho, na ordem da tela (os botões do cartão "4 Tamanho", pdv-mobile-atualizado). */
 const botoesTamanho = () => within(screen.getByRole('region', { name: 'Tamanho' })).getAllByRole('button');
@@ -43,14 +40,14 @@ const PRETO = CATALOGO.produtos[0]!.skus.find((k) => k.cor.nome === 'Preto')!.co
 
 /**
  * Caso de referência da refatoração: produto com 6 tamanhos e preço de 3 dígitos. Os SKUs vêm fora de
- * ordem, com preço e saldo diferentes em cada tamanho (zerado e negativo incluídos).
+ * ordem, com preço e saldo diferentes em cada tamanho (todos com saldo: o catálogo só traz esses).
  */
 const SEIS_TAMANHOS = [
   { sigla: 'G', ordem: 4, precoCentavos: 10400, saldo: 7 },
   { sigla: 'PP', ordem: 1, precoCentavos: 10100, saldo: 3 },
-  { sigla: 'XG', ordem: 6, precoCentavos: 10600, saldo: -1 },
+  { sigla: 'XG', ordem: 6, precoCentavos: 10600, saldo: 4 },
   { sigla: 'M', ordem: 3, precoCentavos: 10300, saldo: 12 },
-  { sigla: 'P', ordem: 2, precoCentavos: 10200, saldo: 0 },
+  { sigla: 'P', ordem: 2, precoCentavos: 10200, saldo: 2 },
   { sigla: 'GG', ordem: 5, precoCentavos: 10500, saldo: 1 },
 ];
 function catalogoSeisTamanhos(): Catalogo {
@@ -133,23 +130,16 @@ describe('INV-001 — chamadas à API', () => {
   });
 });
 
-describe('INV-010 — tamanho sem saldo fica desabilitado e não pode ser escolhido', () => {
-  it('saldo zero ou negativo: botão disabled; o toque não escolhe nem libera "Adicionar ao pedido"; com saldo, escolhe', async () => {
+// INV-010 revisto: o GET /catalogo só traz SKUs com saldo, e a tela não tem mais tamanho desligado.
+describe('INV-010 — todo tamanho que aparece pode ser escolhido', () => {
+  it('nenhum tamanho desligado; escolher libera "Adicionar ao pedido"', async () => {
     const { usuario } = await abrirPdv(catalogoSeisTamanhos());
     await usuario.click(botao(/^Bermuda Ciclista/));
     await usuario.click(botaoCor('Preto'));
-    const porSigla = Object.fromEntries(botoesTamanho().map((b) => [texto(b.firstElementChild), b]));
-    for (const t of SEIS_TAMANHOS) {
-      if (t.saldo > 0) expect(porSigla[t.sigla]).toBeEnabled();
-      else expect(porSigla[t.sigla]).toBeDisabled();
-    }
-    for (const sigla of ['P', 'XG']) {
-      await usuario.click(porSigla[sigla]!);
-      expect(porSigla[sigla]).toHaveAttribute('aria-pressed', 'false');
-      expect(adicionar()).toBeNull();
-    }
-    await usuario.click(porSigla.GG!);
-    expect(porSigla.GG).toHaveAttribute('aria-pressed', 'true');
+    for (const b of botoesTamanho()) expect(b).toBeEnabled();
+    const gg = botoesTamanho().find((b) => texto(b.firstElementChild) === 'GG')!;
+    await usuario.click(gg);
+    expect(gg).toHaveAttribute('aria-pressed', 'true');
     expect(botao('Adicionar ao pedido')).toBeEnabled();
   });
 });
@@ -217,45 +207,20 @@ describe('INV-012 — tamanhos só depois da cor; trocar de cor mantém o tamanh
   });
 });
 
-// MI-05/MI-06 (decisão do Lucas: seguir o design): cartão do produto e botão da cor não avisam mais
-// "sem estoque"; continuam clicáveis e o saldo zerado aparece nos tamanhos desabilitados.
-describe('INV-013 — produto e cor sem estoque continuam clicáveis; o saldo aparece nos tamanhos', () => {
-  it('produto sem estoque: card abre; cada cor pode ser tocada e mostra os tamanhos desabilitados', async () => {
-    const { usuario } = await abrirPdv();
-    const card = botao(/^Short Curto/);
-    expect(texto(card)).toBe('Short Curto');
-    expect(texto(botao(/^Bermuda Ciclista/))).toBe('Bermuda Ciclista');
-    expect(card).toBeEnabled();
-    await usuario.click(card);
-    // Título: a peça (tipo) e, embaixo, o tecido (nome do produto sem o tipo) — MI-23.
-    expect(screen.getByRole('heading', { level: 1, name: 'Bermudas' })).toBeInTheDocument();
-    expect(screen.getByText('Short Curto')).toBeInTheDocument();
-    for (const cor of ['Preto', 'Marinho', 'Vinho']) {
-      expect(texto(botaoCor(cor))).toBe(cor);
-      expect(botaoCor(cor)).toBeEnabled();
-    }
-    await usuario.click(botaoCor('Marinho'));
-    expect(botaoCor('Marinho')).toHaveAttribute('aria-pressed', 'true');
-    const tamanhos = botoesTamanho();
-    expect(tamanhos).toHaveLength(4);
-    for (const t of tamanhos) {
-      expect(t).toBeDisabled();
-      expect(texto(t.children[1])).toBe('estoque 0');
-    }
-    expect(adicionar()).toBeNull();
-  });
-
-  it('só uma cor zerada: ela continua clicável, sem aviso no botão; os tamanhos dela ficam desabilitados', async () => {
+// INV-013 revisto (2026-10-13, decisão do Lucas): o PDV mostra só o que tem estoque. Produto, cor e
+// tamanho sem saldo não aparecem (o GET /catalogo já os tira); não há mais tela "estoque 0".
+describe('INV-013 — produto, cor e tamanho sem estoque não aparecem', () => {
+  it('produto todo zerado some da lista; cor toda zerada some; tamanho zerado some', async () => {
     const catalogo = structuredClone(CATALOGO);
-    for (const k of catalogo.produtos.find((p) => p.numero === 3)!.skus) if (k.cor.nome === 'Preto') k.saldo = 0;
+    const bermuda = catalogo.produtos.find((p) => p.numero === 3)!;
+    for (const k of bermuda.skus) if (k.cor.nome === 'Preto' || (k.cor.nome === 'Marinho' && k.tamanho.sigla === 'M')) k.saldo = 0;
     const { usuario } = await abrirPdv(catalogo);
-    expect(texto(botao(/^Bermuda Ciclista/))).toBe('Bermuda Ciclista');
+    expect(screen.queryByRole('button', { name: /^Short Curto/ })).not.toBeInTheDocument();
     await usuario.click(botao(/^Bermuda Ciclista/));
-    expect(texto(botaoCor('Preto'))).toBe('Preto');
-    expect(texto(botaoCor('Marinho'))).toBe('Marinho');
-    await usuario.click(botaoCor('Preto'));
-    expect(botaoCor('Preto')).toHaveAttribute('aria-pressed', 'true');
-    for (const t of botoesTamanho()) expect(t).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /^Preto/ })).not.toBeInTheDocument();
+    await usuario.click(botaoCor('Marinho'));
+    expect(botoesTamanho().map((b) => texto(b.firstElementChild))).toEqual(['P', 'G', 'GG']);
+    for (const t of botoesTamanho()) expect(texto(t.children[1])).not.toBe('estoque 0');
   });
 });
 

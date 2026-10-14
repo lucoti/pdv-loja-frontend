@@ -45,8 +45,7 @@ export interface OpcoesSimulado {
   sessaoDe?: string;
   /**
    * Catálogo inicial (padrão: CATALOGO). É copiado: as vendas baixam o saldo só nesta cópia.
-   * ATENÇÃO: diferente do back, o simulado devolve também SKUs zerados, para os testes cobrirem a
-   * tela "estoque 0" (proteção); o GET /catalogo real só manda SKUs com saldo > 0.
+   * Pode ter SKUs zerados (a venda deles dá 409); o GET /catalogo os tira, como o back.
    */
   catalogo?: Catalogo;
 }
@@ -71,6 +70,16 @@ export function criarSimulado(opcoes: OpcoesSimulado = {}) {
   };
 
   const vendedorDaSessao = () => vendedores.find((v) => v.id === estado.sessao);
+
+  // Igual ao back: o GET /catalogo manda só SKUs com saldo, só produtos com algum deles e só os tipos
+  // desses produtos. O estado guarda tudo (as vendas baixam o saldo nele); o filtro é só na resposta.
+  const catalogoComEstoque = (): Catalogo => {
+    const produtos = estado.catalogo.produtos
+      .map((p) => ({ ...p, skus: p.skus.filter((s) => s.saldo > 0) }))
+      .filter((p) => p.skus.length > 0);
+    const tipos = estado.catalogo.tipos.filter((t) => produtos.some((p) => p.tipoId === t.id));
+    return { ...estado.catalogo, tipos, produtos };
+  };
 
   function registrar(vendedor: Vendedor, e: VendaEntrada) {
     if (e.itens.length === 0) return erro(400, 'sem_itens', 'Inclua uma peça');
@@ -171,7 +180,7 @@ export function criarSimulado(opcoes: OpcoesSimulado = {}) {
       return new HttpResponse(null, { status: 204 });
     }),
 
-    http.get('*/api/catalogo', () => (vendedorDaSessao() ? HttpResponse.json(estado.catalogo, { headers: { 'Cache-Control': 'no-store' } }) : semSessao())),
+    http.get('*/api/catalogo', () => (vendedorDaSessao() ? HttpResponse.json(catalogoComEstoque(), { headers: { 'Cache-Control': 'no-store' } }) : semSessao())),
 
     http.post('*/api/vendas', async ({ request }) => {
       const vendedor = vendedorDaSessao();

@@ -1,7 +1,7 @@
 /** Leitura do catálogo do ERP na tela de venda (integração PDV-ERP, RF-002..RF-004). */
 import { describe, expect, it } from 'vitest';
 import type { Catalogo } from '../../src/api/cliente';
-import { coresDoProduto, precoMinimo, saldosPorSku, semEstoque, skuDe, skusDaCor, textoSaldo, type Produto, type Sku } from '../../src/dominio/catalogo';
+import { coresDoProduto, precoMinimo, saldosPorSku, skuDe, skusDaCor, textoSaldo, type Produto, type Sku } from '../../src/dominio/catalogo';
 
 const PRETO = { id: 1, nome: 'Preto', hex: '#1B1B1B', fotoUrl: null };
 const VINHO = { id: 3, nome: 'Vinho', hex: '#6B2232', fotoUrl: null };
@@ -28,14 +28,6 @@ describe('precoMinimo', () => {
   it('menor preço entre os SKUs ("a partir de")', () => {
     expect(precoMinimo(produto)).toBe(8900);
     expect(precoMinimo({ ...produto, skus: [sku(1, PRETO, 'P', 1, 12000, 1), sku(2, PRETO, 'M', 2, 11000, 1)] })).toBe(11000);
-  });
-});
-
-describe('semEstoque', () => {
-  it('só quando todos os SKUs estão com saldo 0 (ou menos)', () => {
-    expect(semEstoque(produto.skus)).toBe(false);
-    expect(semEstoque([sku(1, PRETO, 'P', 1, 1, 0), sku(2, PRETO, 'M', 2, 1, -1)])).toBe(true);
-    expect(semEstoque([sku(1, PRETO, 'P', 1, 1, 0), sku(2, PRETO, 'M', 2, 1, 1)])).toBe(false);
   });
 });
 
@@ -85,10 +77,9 @@ describe('saldosPorSku', () => {
 });
 
 describe('textoSaldo', () => {
-  it('"estoque N" com saldo positivo; "estoque 0" com zero ou negativo', () => {
+  it('"estoque N" (o catálogo só traz saldo positivo)', () => {
     expect(textoSaldo(1)).toBe('estoque 1');
     expect(textoSaldo(3)).toBe('estoque 3');
-    expect(textoSaldo(0)).toBe('estoque 0');
-    expect(textoSaldo(-2)).toBe('estoque 0');
+    expect(textoSaldo(12)).toBe('estoque 12');
   });
 });

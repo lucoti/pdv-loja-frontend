@@ -351,8 +351,8 @@ describe('INV-015 — a recarga do catálogo atualiza o preço das linhas', () =
   });
 });
 
-describe('INV-016 — tamanho sem saldo desligado; trocar de cor mantém o tamanho com saldo', () => {
-  it('Top Nadador: M continua escolhido de Preto para Marinho; GG some ao ir para Vinho (saldo 0, desligado); "Adicionar" só com tamanho', async () => {
+describe('INV-016 — trocar de cor mantém o tamanho que existe na cor nova', () => {
+  it('Top Nadador: M continua escolhido de Preto para Marinho; GG some ao ir para Vinho (saldo 0, fora do catálogo); "Adicionar" só com tamanho', async () => {
     const { usuario } = await abrirPdv();
     await abrirProduto(usuario, TOP_NADADOR_P_VINHO);
     await usuario.click(botaoCor('Preto'));
@@ -363,14 +363,11 @@ describe('INV-016 — tamanho sem saldo desligado; trocar de cor mantém o taman
     expect(botaoAdicionar()).toBeEnabled();
     await usuario.click(botaoTamanho('GG'));
     await usuario.click(botaoCor('Vinho'));
-    expect(botaoTamanho('GG')).toBeDisabled();
-    expect(sem_nbsp(botaoTamanho('GG').textContent)).toBe('GGestoque 0');
-    for (const t of ['P', 'M', 'G', 'GG']) expect(botaoTamanho(t)).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByRole('button', { name: /^GGestoque/ })).not.toBeInTheDocument();
+    for (const t of ['P', 'M', 'G']) expect(botaoTamanho(t)).toHaveAttribute('aria-pressed', 'false');
     // Sem tamanho escolhido o botão não aparece (MI-23). Antes da refatoração aparecia desligado; a
     // asserção condicional da caracterização foi apertada na validação final (T8).
     expect(botaoAdicionar()).toBeNull();
-    await usuario.click(botaoTamanho('GG'));
-    expect(botaoTamanho('GG')).toHaveAttribute('aria-pressed', 'false');
   });
 });
 

@@ -156,7 +156,9 @@ describe('INV-002 — leituras da API sem mudança de rota nem de formato', () =
     const origem = window.location.origin;
 
     expect(await api.sessao()).toEqual({ vendedor: { id: 'carlos', nome: 'Carlos', cargo: 'Vendedor · loja' }, expiraEm: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/) });
-    expect(await api.catalogo()).toEqual(simulado.estado.catalogo);
+    // O simulado tira os SKUs zerados (e o produto/tipo que fica sem nenhum), como o back.
+    const comEstoque = simulado.estado.catalogo.produtos.map((p) => ({ ...p, skus: p.skus.filter((k) => k.saldo > 0) })).filter((p) => p.skus.length > 0);
+    expect(await api.catalogo()).toEqual({ ...simulado.estado.catalogo, produtos: comEstoque });
     expect(await api.vendasHoje()).toEqual({ vendas: [], totalDiaCentavos: 0, quantidadePedidos: 0 });
     expect((await api.vendedores()).vendedores.map((v) => v.id)).toEqual(['carlos']);
     expect(await api.config()).toEqual({ loja: { nome: 'FitMoveOn', unidade: 'Unidade Centro' } });
