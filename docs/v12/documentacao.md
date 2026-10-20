@@ -2,9 +2,12 @@
 
 > **Catálogo sempre atualizado e só com estoque (2026-10-13).** A tela de venda busca o catálogo de novo
 > sempre que aparece (ao abrir o PDV, ao entrar em Produtos ou Pedido e quando o celular volta ao
-> navegador) e mostra só o que tem estoque: acabaram as telas "estoque 0" e o tamanho tracejado. O
-> restante é o design da versão 11. Publicado no `main` (commits `c867f18` e `9a97d93`), junto com o
-> pdv-backend que só manda variações com estoque. A versão 11 descreve a tela antes desta mudança.
+> navegador) e não mostra produto nem cor sem estoque; acabaram as telas "estoque 0". O restante é o
+> design da versão 11. Publicado no `main` (commits `c867f18` e `9a97d93`), junto com o pdv-backend que
+> só manda variações com estoque. A versão 11 descreve a tela antes desta mudança.
+>
+> **Revisão de 2026-10-20 (commit `83c01dc`):** na cor escolhida, o tamanho sem estoque volta a aparecer
+> **desligado (tracejado), com "sem estoque"**, para o vendedor ver que aquele tamanho não é opção.
 
 ## Visão Geral
 
@@ -65,9 +68,11 @@ pedido é montado, com a mesma conta do servidor, mas o valor que vale é sempre
   - No alto, a seta "Voltar para peça e tecido" e o título com a peça e, abaixo, o tecido.
   - Cartão **"3 Cor"**: só as cores com algum tamanho em estoque, em 2 colunas, cada uma com a amostra do tom (ou a miniatura da estampa) e o
     nome; a escolhida fica em roxo, com uma marca sobre a amostra.
-  - Cartão **"4 Tamanho"**, só depois da cor: 4 colunas, cada tamanho com a sigla e "estoque N". **Só
-    aparecem os tamanhos com estoque**, e todos podem ser escolhidos (não existe mais tamanho tracejado
-    nem "estoque 0"). Trocar de cor mantém o tamanho, se ele existir na cor nova.
+  - Cartão **"4 Tamanho"**, só depois da cor: 4 colunas, cada tamanho com a sigla e "estoque N". Aparecem
+    os tamanhos do produto (os de todas as cores, na ordem do ERP); o que **não tem estoque na cor
+    escolhida fica desligado (tracejado), com "sem estoque"**, e não pode ser escolhido. Um tamanho sem
+    estoque em nenhuma cor não aparece (o servidor não o manda). Trocar de cor mantém o tamanho, se ele
+    tiver estoque na cor nova.
   - O botão **"Adicionar ao pedido"** só aparece com cor e tamanho escolhidos. Se o pedido já tem todo o
     estoque daquele tamanho, ele fica apagado, **sem texto extra**.
   - Saíram a linha "Falta escolher: cor e tamanho" e a linha de preço.
@@ -277,4 +282,4 @@ centavos, como no servidor.
 | v9 | 2026-10-06 | Design "PDV Mobile Refatorado" (feature pdv-mobile-refatorado, estado novo após a refatoração): tema escuro Nocturne em todas as telas (entrada só com cores e fonte novas), fonte Inter e ícones Phosphor; etapa **Cliente** no começo da venda, com nome e celular opcionais ("Venda sem cliente" para pular) e **"Alterar"** no Pedido; **CPF substituído pelo celular** (11 dígitos, com máscara), enviado como `telefone` só com os números; tipos em grade de 3 colunas e lista sem preço e sem "sem estoque", com selo "N no pedido"; cores em lista e tamanhos em 4 colunas, sem preço no botão; depois de adicionar, a tela fica em cor e tamanho; Pedido em quatro cartões, **sem desconto por peça**, desconto no pedido de R$ 5 em R$ 5 até o valor das peças e total dentro do botão de fechar; aviso de venda com **"OK"**, que volta para a etapa Cliente; topo com título e apoio por tela; abas com ícones; trava contra envio duplo na hora do toque. Desenvolvida (243 testes automáticos verdes); validação final e publicação pendentes, **em conjunto com o pdv-backend da pdv-cliente-telefone** (ordem A `db:migrar` → B back → C página → D recarregar os celulares). |
 | v10 | 2026-10-12 | **As-is antes da pdv-mobile-atualizado**: retrato da tela de venda no ar (funcionamento da v9): topo com título por tela e barra de baixo com o botão da tela e as abas Produtos / Pedido (N) / Dia; venda começando na etapa **Cliente** (nome e celular opcionais, "Venda sem cliente"); tipos em 3 colunas e lista de produtos com selo "N no pedido"; cores em lista e tamanhos em 4 colunas com "estoque N", ficando em cor e tamanho depois de adicionar; Pedido em quatro cartões numerados com "−"/"+" em cada peça, desconto no pedido de R$ 5 em R$ 5 com teto só no "+", pagamento com ícones; aviso "Venda registrada" com o número do pedido e "OK"; aba Dia. Registrados os sinais usados pelos testes, as travas contra toque duplo e os comportamentos que a refatoração vai trocar. Nenhuma mudança de funcionamento, só comentários no código. |
 | v11 | 2026-10-12 | **To-be da pdv-mobile-atualizado** (design "PDV Loja Mobile atualizado", estado novo após a refatoração): abas Produtos / Pedido / Dia **no topo**, com o número de peças numa bolinha, e barra de baixo só com o botão da tela; venda começando em **Produtos** (sem etapa Cliente), com cartões "1 Peça" e "2 Tecido" e, na tela seguinte, "3 Cor" (2 colunas, amostra) e "4 Tamanho" (4 colunas, "estoque N"); "Adicionar ao pedido" só com cor e tamanho, apagado sem texto no limite do estoque, e **volta para peça e tecido** depois de adicionar; Pedido com linha do cliente ("Alterar"), peças **só com a lixeira** (sem "−"/"+"), desconto de R$ 5 em R$ 5 que **diminui sozinho** quando o valor das peças cai, pagamento em 2 colunas sem ícones e "Cancelar pedido" no fim (que também apaga o cliente e volta para Produtos); formulário **"Cliente do pedido"** com mensagem de celular incompleto e máscara progressiva, descartado ao voltar ou trocar de aba; aviso de venda com total, peças, pagamento e cliente e o botão **"Nova venda"**, sem o número do pedido; Dia com título e data no conteúdo; botões com relevo; ajustes para telas de 360 e 320 pontos. Corrigido o toque perdido numa aba no fim da carga. Conteúdo enviado ao servidor e tela de entrada sem mudança. Desenvolvida (290 testes automáticos verdes, conferida no navegador); validação final e publicação pendentes (só a página). |
-| v12 | 2026-10-13 | Catálogo sempre atualizado e só com estoque: busca de novo ao abrir o PDV, ao entrar em Produtos ou Pedido e quando o celular volta ao navegador (a aba Dia não busca); produto, cor e tamanho sem estoque não aparecem (saem o tamanho tracejado e o "estoque 0"); modo simulado filtra como o servidor. Tipos gerados do contrato 1.1.0. Publicado no `main` (commits `c867f18` e `9a97d93`). |
+| v12 | 2026-10-13 | Catálogo sempre atualizado e só com estoque: busca de novo ao abrir o PDV, ao entrar em Produtos ou Pedido e quando o celular volta ao navegador (a aba Dia não busca); produto, cor e tamanho sem estoque não aparecem (saem o tamanho tracejado e o "estoque 0"); modo simulado filtra como o servidor. Tipos gerados do contrato 1.1.0. Publicado no `main` (commits `c867f18` e `9a97d93`). **Revista em 2026-10-20** (commit `83c01dc`): na cor escolhida, o tamanho do produto sem estoque volta a aparecer desligado (tracejado), com "sem estoque"; produto e cor sem estoque continuam fora. |
