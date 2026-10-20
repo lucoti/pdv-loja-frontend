@@ -91,7 +91,7 @@ export interface Peca {
  * Botão do tamanho: o nome acessível é a sigla seguida do saldo ("Mestoque 5"). Desde a
  * pdv-mobile-refatorado (MI-06) o preço não fica mais no botão.
  */
-export const botaoTamanho = (sigla: string) => screen.getByRole('button', { name: new RegExp(`^${sigla}estoque \\d+$`) });
+export const botaoTamanho = (sigla: string) => screen.getByRole('button', { name: new RegExp(`^${sigla}(estoque \\d+|sem estoque)$`) });
 /** Botão da cor: o nome começa pela cor (pode vir seguido de "sem estoque"). */
 export const botaoCor = (cor: string) => screen.getByRole('button', { name: new RegExp(`^${cor}(sem estoque)?$`) });
 

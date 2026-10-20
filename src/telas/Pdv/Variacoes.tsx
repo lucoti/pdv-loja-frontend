@@ -1,5 +1,5 @@
 import { ArrowLeft, CheckCircle } from '@phosphor-icons/react';
-import { coresDoProduto, skuDe, skusDaCor, textoSaldo, type CorSku, type Produto } from '../../dominio/catalogo';
+import { coresDoProduto, skuDe, tamanhosDoProduto, textoSaldo, type CorSku, type Produto } from '../../dominio/catalogo';
 import c from '../comum.module.css';
 import { Cartao } from './Cartao';
 import s from './Pdv.module.css';
@@ -21,7 +21,7 @@ function Amostra({ cor }: { cor: CorSku }) {
 /**
  * Tela de cor e tamanho (MI-23): voltar e título (peça e tecido) no alto, cartão "3 Cor" em 2 colunas e,
  * depois de escolher a cor, cartão "4 Tamanho" em 4 colunas, cada um com a sigla e o saldo ("estoque N",
- * INV-016). O botão "Adicionar ao pedido" fica na barra de baixo (Pdv.tsx) e só aparece com cor e tamanho.
+ * INV-016); o tamanho da grade sem estoque na cor aparece desligado, com "sem estoque". O botão "Adicionar ao pedido" fica na barra de baixo (Pdv.tsx) e só aparece com cor e tamanho.
  */
 export function Variacoes(props: {
   produto: Produto;
@@ -33,11 +33,11 @@ export function Variacoes(props: {
   aoVoltar: () => void;
 }) {
   const { produto, escolha, aoMudar } = props;
-  // Sem cor escolhida a lista fica vazia e o cartão Tamanho nem é desenhado. Com cor, vêm os SKUs dela
-  // na ordem da grade de tamanhos do ERP — todos com saldo, porque o GET /catalogo só manda esses.
+  // Sem cor escolhida a lista fica vazia e o cartão Tamanho nem é desenhado. Com cor, vem a grade de
+  // tamanhos do produto, cada um com o SKU da cor — ou sem SKU, se o GET /catalogo não o mandou (sem saldo).
   // Os botões ficam em `.gradeTamanhos` (Pdv.module.css): 4 colunas iguais com minmax(0, 1fr), que
   // encolhem com a tela em vez de passar da borda (AP-003). A 320px "estoque 12" quebra em duas linhas.
-  const tamanhos = escolha.corId === null ? [] : skusDaCor(produto, escolha.corId);
+  const tamanhos = escolha.corId === null ? [] : tamanhosDoProduto(produto).map((tamanho) => ({ tamanho, sku: skuDe(produto, escolha.corId, tamanho.sigla) }));
 
   // Ao trocar de cor, o tamanho escolhido continua se existir na cor nova (INV-016).
   const escolherCor = (corId: number) => {
@@ -76,16 +76,18 @@ export function Variacoes(props: {
       {escolha.corId !== null && (
         <Cartao numero={4} titulo="Tamanho">
           <div className={`${s.cartaoCorpo} ${s.gradeTamanhos}`}>
-            {tamanhos.map((sku) => (
+            {tamanhos.map(({ tamanho, sku }) => (
+              // Sem saldo não vende (RN-24 do ERP): o tamanho aparece, mas desligado (tracejado).
               <button
-                key={sku.id}
+                key={tamanho.sigla}
                 type="button"
                 className={`${c.tile} ${s.tamanho}`}
-                aria-pressed={escolha.tamanho === sku.tamanho.sigla}
-                onClick={() => aoMudar({ ...escolha, tamanho: sku.tamanho.sigla })}
+                aria-pressed={escolha.tamanho === tamanho.sigla}
+                disabled={!sku || sku.saldo <= 0}
+                onClick={() => aoMudar({ ...escolha, tamanho: tamanho.sigla })}
               >
-                <span className={s.tamanhoSigla}>{sku.tamanho.sigla}</span>
-                <span className={s.tamanhoSaldo}>{textoSaldo(sku.saldo)}</span>
+                <span className={s.tamanhoSigla}>{tamanho.sigla}</span>
+                <span className={s.tamanhoSaldo}>{textoSaldo(sku?.saldo)}</span>
               </button>
             ))}
           </div>

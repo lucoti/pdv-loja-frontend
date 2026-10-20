@@ -8,6 +8,7 @@ import type { Catalogo } from '../api/cliente';
 export type Produto = Catalogo['produtos'][number];
 export type Sku = Produto['skus'][number];
 export type CorSku = Sku['cor'];
+export type TamanhoSku = Sku['tamanho'];
 
 // ATENÇÃO: com lista de SKUs vazia, Math.min devolve Infinity. O back nunca manda produto sem SKU ativo
 // e com saldo (GET /catalogo filtra), então aqui não há tratamento; se esse filtro mudar, trate a lista vazia.
@@ -23,9 +24,13 @@ export function coresDoProduto(produto: Produto): CorSku[] {
   return [...vistas.values()];
 }
 
-/** SKUs de uma cor, na ordem da grade de tamanhos. */
-export function skusDaCor(produto: Produto, corId: number): Sku[] {
-  return produto.skus.filter((s) => s.cor.id === corId).sort((a, b) => a.tamanho.ordem - b.tamanho.ordem);
+// O GET /catalogo só manda SKUs com saldo: um tamanho zerado em todas as cores não chega aqui e não
+// entra na grade. Zerado só em algumas cores, ele entra e a tela o mostra desligado nessas cores.
+/** Tamanhos do produto (em qualquer cor), sem repetição, na ordem da grade do ERP. */
+export function tamanhosDoProduto(produto: Produto): TamanhoSku[] {
+  const vistos = new Map<string, TamanhoSku>();
+  for (const s of produto.skus) if (!vistos.has(s.tamanho.sigla)) vistos.set(s.tamanho.sigla, s.tamanho);
+  return [...vistos.values()].sort((a, b) => a.ordem - b.ordem);
 }
 
 /** SKU da combinação cor + tamanho (ou undefined). */
@@ -41,7 +46,7 @@ export function saldosPorSku(catalogo: Catalogo): Map<number, number> {
   return new Map(catalogo.produtos.flatMap((p) => p.skus.map((s) => [s.id, s.saldo] as const)));
 }
 
-// O GET /catalogo só manda SKUs com saldo, então o número é sempre positivo. Cabe em uma linha do
-// botão do tamanho (Variacoes.tsx, único uso).
-/** "estoque 3" — quantidade em estoque exibida em cada tamanho. */
-export const textoSaldo = (saldo: number) => `estoque ${saldo}`;
+// Sem SKU (o GET /catalogo não manda os zerados) ou com saldo 0 vira "sem estoque"; o botão do tamanho
+// fica desligado (Variacoes.tsx, único uso). Cabe em uma linha do botão do tamanho.
+/** "estoque 3" / "sem estoque" — quantidade em estoque exibida em cada tamanho. */
+export const textoSaldo = (saldo: number | undefined) => (saldo && saldo > 0 ? `estoque ${saldo}` : 'sem estoque');

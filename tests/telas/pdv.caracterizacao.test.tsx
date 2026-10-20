@@ -183,10 +183,13 @@ describe('INV-012 — tamanhos só depois da cor; trocar de cor mantém o tamanh
     expect(screen.getByRole('region', { name: 'Cor' })).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Tamanho' })).not.toBeInTheDocument();
     expect(screen.queryAllByRole('button', { name: /^(P|M|G|GG)estoque/ })).toHaveLength(0);
+    // A grade é a do produto: Vinho não tem GG com saldo, então o GG aparece desligado.
     await usuario.click(botaoCor('Vinho'));
-    expect(botoesTamanho().map((b) => texto(b.firstElementChild))).toEqual(['P', 'M', 'G']);
+    expect(botoesTamanho().map((b) => texto(b.firstElementChild))).toEqual(['P', 'M', 'G', 'GG']);
+    expect(botoesTamanho().filter((b) => b.hasAttribute('disabled')).map((b) => texto(b.firstElementChild))).toEqual(['GG']);
     await usuario.click(botaoCor('Preto'));
     expect(botoesTamanho().map((b) => texto(b.firstElementChild))).toEqual(['P', 'M', 'G', 'GG']);
+    expect(botoesTamanho().filter((b) => b.hasAttribute('disabled'))).toHaveLength(0);
   });
 
   it('tamanho escolhido continua na cor nova se ela tem saldo; some se não tem saldo ou não existe na cor', async () => {
@@ -207,10 +210,11 @@ describe('INV-012 — tamanhos só depois da cor; trocar de cor mantém o tamanh
   });
 });
 
-// INV-013 revisto (2026-10-13, decisão do Lucas): o PDV mostra só o que tem estoque. Produto, cor e
-// tamanho sem saldo não aparecem (o GET /catalogo já os tira); não há mais tela "estoque 0".
-describe('INV-013 — produto, cor e tamanho sem estoque não aparecem', () => {
-  it('produto todo zerado some da lista; cor toda zerada some; tamanho zerado some', async () => {
+// INV-013 revisto (2026-10-13, decisão do Lucas): o PDV mostra só o que tem estoque. Produto e cor sem
+// saldo não aparecem (o GET /catalogo já os tira). Revisto de novo (2026-10-20): o tamanho da grade do
+// produto sem saldo na cor aparece desligado, com "sem estoque", para mostrar que não é opção.
+describe('INV-013 — produto e cor sem estoque não aparecem; tamanho sem estoque aparece desligado', () => {
+  it('produto todo zerado some da lista; cor toda zerada some; tamanho zerado fica desligado', async () => {
     const catalogo = structuredClone(CATALOGO);
     const bermuda = catalogo.produtos.find((p) => p.numero === 3)!;
     for (const k of bermuda.skus) if (k.cor.nome === 'Preto' || (k.cor.nome === 'Marinho' && k.tamanho.sigla === 'M')) k.saldo = 0;
@@ -219,8 +223,13 @@ describe('INV-013 — produto, cor e tamanho sem estoque não aparecem', () => {
     await usuario.click(botao(/^Bermuda Ciclista/));
     expect(screen.queryByRole('button', { name: /^Preto/ })).not.toBeInTheDocument();
     await usuario.click(botaoCor('Marinho'));
-    expect(botoesTamanho().map((b) => texto(b.firstElementChild))).toEqual(['P', 'G', 'GG']);
-    for (const t of botoesTamanho()) expect(texto(t.children[1])).not.toBe('estoque 0');
+    expect(botoesTamanho().map((b) => texto(b.firstElementChild))).toEqual(['P', 'M', 'G', 'GG']);
+    const m = botaoTamanho('M');
+    expect(m).toBeDisabled();
+    expect(texto(m.children[1])).toBe('sem estoque');
+    await usuario.click(m);
+    expect(m).toHaveAttribute('aria-pressed', 'false');
+    expect(adicionar()).toBeNull();
   });
 });
 

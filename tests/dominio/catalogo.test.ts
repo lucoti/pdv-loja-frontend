@@ -1,7 +1,7 @@
 /** Leitura do catálogo do ERP na tela de venda (integração PDV-ERP, RF-002..RF-004). */
 import { describe, expect, it } from 'vitest';
 import type { Catalogo } from '../../src/api/cliente';
-import { coresDoProduto, precoMinimo, saldosPorSku, skuDe, skusDaCor, textoSaldo, type Produto, type Sku } from '../../src/dominio/catalogo';
+import { coresDoProduto, precoMinimo, saldosPorSku, skuDe, tamanhosDoProduto, textoSaldo, type Produto, type Sku } from '../../src/dominio/catalogo';
 
 const PRETO = { id: 1, nome: 'Preto', hex: '#1B1B1B', fotoUrl: null };
 const VINHO = { id: 3, nome: 'Vinho', hex: '#6B2232', fotoUrl: null };
@@ -31,19 +31,22 @@ describe('precoMinimo', () => {
   });
 });
 
-describe('coresDoProduto / skusDaCor / skuDe', () => {
+describe('coresDoProduto / tamanhosDoProduto / skuDe', () => {
   it('cores sem repetição, na ordem em que aparecem', () => {
     expect(coresDoProduto(produto)).toEqual([VINHO, PRETO]);
   });
 
-  it('SKUs de uma cor ordenados pela ordem do tamanho; cor sem SKU → lista vazia', () => {
-    expect(skusDaCor(produto, 1).map((s) => s.tamanho.sigla)).toEqual(['P', 'G']);
-    expect(skusDaCor(produto, 3).map((s) => s.id)).toEqual([9, 11]);
-    expect(skusDaCor(produto, 42)).toEqual([]);
+  it('tamanhos de todas as cores, sem repetição, ordenados pela ordem do tamanho', () => {
+    expect(tamanhosDoProduto(produto)).toEqual([
+      { sigla: 'P', ordem: 1 },
+      { sigla: 'G', ordem: 3 },
+    ]);
+    // M só existe no Preto: entra na grade (e fica desligado no Vinho, na tela).
+    expect(tamanhosDoProduto({ ...produto, skus: [...produto.skus, sku(5, PRETO, 'M', 2, 8900, 4)] }).map((t) => t.sigla)).toEqual(['P', 'M', 'G']);
   });
 
   it('não altera a ordem original dos SKUs do produto', () => {
-    skusDaCor(produto, 1);
+    tamanhosDoProduto(produto);
     expect(produto.skus.map((s) => s.id)).toEqual([11, 1, 9, 2]);
   });
 
@@ -77,9 +80,14 @@ describe('saldosPorSku', () => {
 });
 
 describe('textoSaldo', () => {
-  it('"estoque N" (o catálogo só traz saldo positivo)', () => {
+  it('"estoque N" com saldo positivo', () => {
     expect(textoSaldo(1)).toBe('estoque 1');
     expect(textoSaldo(3)).toBe('estoque 3');
     expect(textoSaldo(12)).toBe('estoque 12');
+  });
+
+  it('"sem estoque" sem SKU na cor (o catálogo não manda os zerados) ou com saldo 0', () => {
+    expect(textoSaldo(undefined)).toBe('sem estoque');
+    expect(textoSaldo(0)).toBe('sem estoque');
   });
 });
